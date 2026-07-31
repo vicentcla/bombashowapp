@@ -212,8 +212,10 @@ export function useAddPlay(scope: Scope) {
       const { error } = await supabase.from("play_events").insert({
         scope,
         period_id: period.id,
-        [idField]: songId,
+        street_song_id: scope === "street" ? songId : null,
+        arrangement_id: scope === "arrangement" ? songId : null,
       });
+
       if (error) throw error;
     },
     onSuccess: () => invalidate("play_events", "reset_periods"),
