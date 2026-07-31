@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Music, ListMusic, Clock, Users } from "lucide-react";
+import { Music, ListMusic, Clock } from "lucide-react";
 import logoAsset from "@/assets/logo.png.asset.json";
 import aniversarioAsset from "@/assets/aniversario.png.asset.json";
 import { useArrangements, useStreetSongs, useSetlists, useLyrics } from "@/lib/queries";
@@ -67,14 +67,6 @@ function Inicio() {
           </Link>
         ))}
       </div>
-
-      <Link
-        to="/miembros"
-        className="comic comic-press mt-3 flex items-center gap-3 rounded-xl bg-accent p-4 text-accent-foreground"
-      >
-        <Users className="h-6 w-6" />
-        <span className="text-xl">Miembros y permisos</span>
-      </Link>
     </div>
   );
 }

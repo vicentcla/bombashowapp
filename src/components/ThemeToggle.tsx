@@ -18,11 +18,11 @@ export function ThemeToggle() {
           onClick={() => setMode(m)}
           aria-label={`Tema ${label}`}
           title={`Tema ${label}`}
-          className={`p-2 ${
+          className={`p-2.5 ${
             mode === m ? "bg-primary text-primary-foreground" : "text-secondary-foreground"
           }`}
         >
-          <Icon className="h-4 w-4" />
+          <Icon className="h-5 w-5" />
         </button>
       ))}
     </div>
