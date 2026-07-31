@@ -14,16 +14,298 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      arrangements: {
+        Row: {
+          created_at: string
+          duration_seconds: number
+          id: string
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lyrics: {
+        Row: {
+          arrangement_id: string | null
+          content: string
+          created_at: string
+          id: string
+          kind: string
+          plain_text: string
+          street_song_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          arrangement_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          kind: string
+          plain_text?: string
+          street_song_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          arrangement_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          plain_text?: string
+          street_song_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lyrics_arrangement_id_fkey"
+            columns: ["arrangement_id"]
+            isOneToOne: false
+            referencedRelation: "arrangements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lyrics_street_song_id_fkey"
+            columns: ["street_song_id"]
+            isOneToOne: false
+            referencedRelation: "street_songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      play_events: {
+        Row: {
+          arrangement_id: string | null
+          created_by: string | null
+          id: string
+          period_id: string | null
+          played_at: string
+          scope: string
+          street_song_id: string | null
+        }
+        Insert: {
+          arrangement_id?: string | null
+          created_by?: string | null
+          id?: string
+          period_id?: string | null
+          played_at?: string
+          scope: string
+          street_song_id?: string | null
+        }
+        Update: {
+          arrangement_id?: string | null
+          created_by?: string | null
+          id?: string
+          period_id?: string | null
+          played_at?: string
+          scope?: string
+          street_song_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "play_events_arrangement_id_fkey"
+            columns: ["arrangement_id"]
+            isOneToOne: false
+            referencedRelation: "arrangements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "play_events_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "reset_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "play_events_street_song_id_fkey"
+            columns: ["street_song_id"]
+            isOneToOne: false
+            referencedRelation: "street_songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      reset_periods: {
+        Row: {
+          ended_at: string | null
+          id: string
+          label: string | null
+          scope: string
+          started_at: string
+        }
+        Insert: {
+          ended_at?: string | null
+          id?: string
+          label?: string | null
+          scope: string
+          started_at?: string
+        }
+        Update: {
+          ended_at?: string | null
+          id?: string
+          label?: string | null
+          scope?: string
+          started_at?: string
+        }
+        Relationships: []
+      }
+      setlist_items: {
+        Row: {
+          arrangement_id: string
+          created_at: string
+          id: string
+          position: number
+          setlist_id: string
+        }
+        Insert: {
+          arrangement_id: string
+          created_at?: string
+          id?: string
+          position?: number
+          setlist_id: string
+        }
+        Update: {
+          arrangement_id?: string
+          created_at?: string
+          id?: string
+          position?: number
+          setlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "setlist_items_arrangement_id_fkey"
+            columns: ["arrangement_id"]
+            isOneToOne: false
+            referencedRelation: "arrangements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "setlist_items_setlist_id_fkey"
+            columns: ["setlist_id"]
+            isOneToOne: false
+            referencedRelation: "setlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      setlists: {
+        Row: {
+          created_at: string
+          event_date: string | null
+          id: string
+          name: string
+          notes: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_date?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_date?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
+      street_songs: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "miembro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +432,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "miembro"],
+    },
   },
 } as const
