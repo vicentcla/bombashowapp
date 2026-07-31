@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Plus, Search, Trash2, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Search, Trash2, X, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Counters } from "@/components/Counters";
-import { useStreetSongs, useInvalidate } from "@/lib/queries";
+import { Counters, useCurrentCounts } from "@/components/Counters";
+import { SortBar, type SortMode } from "@/components/SortBar";
+import { LyricDialog } from "@/components/LyricDialog";
+import { useStreetSongs, useInvalidate, useLyrics, useReorder } from "@/lib/queries";
 
 export const Route = createFileRoute("/_authenticated/calle")({
   head: () => ({
@@ -26,10 +28,36 @@ export const Route = createFileRoute("/_authenticated/calle")({
 
 function Calle() {
   const songs = useStreetSongs();
+  const lyrics = useLyrics();
+  const counts = useCurrentCounts("calle");
+  const reorder = useReorder("street_songs");
   const invalidate = useInvalidate();
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
+  const [sort, setSort] = useState<SortMode>("alfabetico");
+  const [lyricFor, setLyricFor] = useState<{ id: string; title: string } | null>(null);
+
+  const list = useMemo(() => {
+    const sorted = [...(songs.data ?? [])];
+    if (sort === "alfabetico") sorted.sort((a, b) => a.title.localeCompare(b.title, "es"));
+    if (sort === "mas")
+      sorted.sort(
+        (a, b) =>
+          (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0) || a.title.localeCompare(b.title, "es"),
+      );
+    if (sort === "manual") sorted.sort((a, b) => a.sort_order - b.sort_order);
+    return sorted;
+  }, [songs.data, sort, counts]);
+
+  function move(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= list.length) return;
+    const ids = list.map((s) => s.id);
+    const [moved] = ids.splice(index, 1);
+    ids.splice(target, 0, moved!);
+    reorder.mutate(ids);
+  }
 
   async function add() {
     if (!title.trim()) return;
@@ -76,19 +104,29 @@ function Calle() {
         />
       </div>
 
+      <SortBar value={sort} onChange={setSort} options={["alfabetico", "mas", "manual"]} />
+
       <Counters
-        scope="street"
+        scope="calle"
         search={search}
-        items={(songs.data ?? []).map((s) => ({ id: s.id, title: s.title }))}
+        items={list.map((s) => ({ id: s.id, title: s.title }))}
+        {...(sort === "manual" ? { onMove: move } : {})}
       />
 
       {!!songs.data?.length && (
         <details className="comic mt-6 rounded-xl bg-card p-4">
-          <summary className="cursor-pointer text-xl">Gestionar canciones</summary>
+          <summary className="cursor-pointer text-xl">Gestionar canciones y letras</summary>
           <ul className="mt-3 space-y-1">
-            {songs.data.map((s) => (
+            {list.map((s) => (
               <li key={s.id} className="flex items-center gap-2 border-b border-border/40 py-1">
                 <span className="min-w-0 flex-1 truncate">{s.title}</span>
+                <button
+                  onClick={() => setLyricFor({ id: s.id, title: s.title })}
+                  aria-label={`Letra de ${s.title}`}
+                  className="comic-sm comic-press rounded bg-secondary p-1"
+                >
+                  <FileText className="h-3 w-3" />
+                </button>
                 <button
                   onClick={() => removeSong(s.id)}
                   aria-label={`Eliminar ${s.title}`}
@@ -100,6 +138,16 @@ function Calle() {
             ))}
           </ul>
         </details>
+      )}
+
+      {lyricFor && (
+        <LyricDialog
+          kind="calle"
+          refId={lyricFor.id}
+          defaultTitle={lyricFor.title}
+          existing={(lyrics.data ?? []).find((l) => l.street_song_id === lyricFor.id) ?? null}
+          onClose={() => setLyricFor(null)}
+        />
       )}
 
       {adding && (
