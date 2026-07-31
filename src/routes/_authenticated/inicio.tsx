@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Music, ListMusic, Clock } from "lucide-react";
+import { FileText, Clock, ListOrdered, Library } from "lucide-react";
 import logoAsset from "@/assets/logo.png.asset.json";
 import aniversarioAsset from "@/assets/aniversario.png.asset.json";
 import { useArrangements, useStreetSongs, useSetlists, useLyrics } from "@/lib/queries";
@@ -31,10 +31,10 @@ function Inicio() {
   const totalContadores = (street.data?.length ?? 0) + (arrangements.data?.length ?? 0);
 
   const cards = [
-    { to: "/letras", label: "Letras", icon: Music, count: `${lyrics.data?.length ?? 0} registros` },
+    { to: "/letras", label: "Letras", icon: FileText, count: `${lyrics.data?.length ?? 0} registros` },
     { to: "/contadores", label: "Contadores", icon: Clock, count: `${totalContadores} registros` },
-    { to: "/setlists", label: "Setlists", icon: ListMusic, count: `${setlists.data?.length ?? 0} registros` },
-    { to: "/repertorio", label: "Repertorio", icon: ListMusic, count: `${arrangements.data?.length ?? 0} arreglos` },
+    { to: "/setlists", label: "Setlists", icon: ListOrdered, count: `${setlists.data?.length ?? 0} registros` },
+    { to: "/repertorio", label: "Repertorio", icon: Library, count: `${arrangements.data?.length ?? 0} arreglos` },
   ] as const;
 
   return (
