@@ -30,7 +30,7 @@ function Inicio() {
 
   const cards = [
     { to: "/letras", label: "Letras", icon: Music, count: lyrics.data?.length ?? 0 },
-    { to: "/repertorio", label: "Repertorio", icon: ListMusic, count: setlists.data?.length ?? 0 },
+    { to: "/setlists", label: "Setlists", icon: ListMusic, count: setlists.data?.length ?? 0 },
     { to: "/calle", label: "Calle", icon: Megaphone, count: street.data?.length ?? 0 },
     { to: "/arreglos", label: "Arreglos", icon: Drum, count: arrangements.data?.length ?? 0 },
   ] as const;
