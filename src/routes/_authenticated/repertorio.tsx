@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, X, Pencil, FileText, ArrowUp, ArrowDown, Drum, Megaphone, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,10 @@ import {
 import { formatDuration, formatLongDuration } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/repertorio")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: search.tab === "calle" ? "calle" : ("arreglos" as "arreglos" | "calle"),
+    editLyricId: typeof search.editLyricId === "string" ? search.editLyricId : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Repertorio — La Bomba Show" },
@@ -34,7 +38,20 @@ export const Route = createFileRoute("/_authenticated/repertorio")({
 });
 
 function Repertorio() {
-  const [activeTab, setActiveTab] = useState<"arreglos" | "calle">("arreglos");
+  const search = Route.useSearch();
+  const [activeTab, setActiveTab] = useState<"arreglos" | "calle">(
+    search.tab === "calle" ? "calle" : "arreglos"
+  );
+
+  const handleTabChange = (newTab: "arreglos" | "calle") => {
+    setActiveTab(newTab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", newTab);
+      url.searchParams.delete("editLyricId");
+      window.history.replaceState({}, "", url.toString());
+    }
+  };
 
   return (
     <div>
@@ -46,7 +63,7 @@ function Repertorio() {
       <div className="comic-sm mb-4 flex overflow-hidden rounded-md bg-card p-1">
         <button
           type="button"
-          onClick={() => setActiveTab("arreglos")}
+          onClick={() => handleTabChange("arreglos")}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
             activeTab === "arreglos"
               ? "bg-primary text-primary-foreground shadow-sm"
@@ -58,7 +75,7 @@ function Repertorio() {
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab("calle")}
+          onClick={() => handleTabChange("calle")}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
             activeTab === "calle"
               ? "bg-primary text-primary-foreground shadow-sm"
@@ -70,12 +87,16 @@ function Repertorio() {
         </button>
       </div>
 
-      {activeTab === "arreglos" ? <RepertorioArreglos /> : <RepertorioCalle />}
+      {activeTab === "arreglos" ? (
+        <RepertorioArreglos initialEditLyricId={search.editLyricId} />
+      ) : (
+        <RepertorioCalle initialEditLyricId={search.editLyricId} />
+      )}
     </div>
   );
 }
 
-function RepertorioArreglos() {
+function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: string }) {
   const arrangements = useArrangements();
   const lyrics = useLyrics();
   const invalidate = useInvalidate();
@@ -84,6 +105,15 @@ function RepertorioArreglos() {
   const [lyricFor, setLyricFor] = useState<Arrangement | null>(null);
   const [sort, setSort] = useState<SortMode>("alfabetico");
   const [tag, setTag] = useState("");
+
+  useEffect(() => {
+    if (initialEditLyricId && arrangements.data?.length) {
+      const match = arrangements.data.find((a) => a.id === initialEditLyricId);
+      if (match) {
+        setLyricFor(match);
+      }
+    }
+  }, [initialEditLyricId, arrangements.data]);
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
@@ -255,7 +285,7 @@ function RepertorioArreglos() {
   );
 }
 
-function RepertorioCalle() {
+function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }) {
   const songs = useStreetSongs();
   const lyrics = useLyrics();
   const invalidate = useInvalidate();
@@ -265,6 +295,15 @@ function RepertorioCalle() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortMode>("alfabetico");
   const [lyricFor, setLyricFor] = useState<{ id: string; title: string } | null>(null);
+
+  useEffect(() => {
+    if (initialEditLyricId && songs.data?.length) {
+      const match = songs.data.find((s) => s.id === initialEditLyricId);
+      if (match) {
+        setLyricFor({ id: match.id, title: match.title });
+      }
+    }
+  }, [initialEditLyricId, songs.data]);
 
   const list = useMemo(() => {
     let base = songs.data ?? [];
