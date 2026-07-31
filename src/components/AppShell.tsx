@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Music, ListMusic, Megaphone, Drum, Users, LogOut, Home } from "lucide-react";
+import { Music, ListMusic, Megaphone, Drum, Users, LogOut, Home, Gamepad2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,10 +9,13 @@ import bannerAsset from "@/assets/banner.png.asset.json";
 const NAV = [
   { to: "/inicio", label: "Inicio", icon: Home },
   { to: "/letras", label: "Letras", icon: Music },
-  { to: "/repertorio", label: "Repertorio", icon: ListMusic },
   { to: "/calle", label: "Calle", icon: Megaphone },
   { to: "/arreglos", label: "Arreglos", icon: Drum },
+  { to: "/setlists", label: "Setlists", icon: ListMusic },
+  { to: "/repertorio", label: "Repertorio", icon: ListMusic },
 ] as const;
+
+const GAME_URL = "https://aythor.itch.io/la-bomba-show-runner";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -37,6 +40,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             />
           </Link>
           <div className="flex shrink-0 items-center gap-2">
+            <a
+              href={GAME_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="comic-sm comic-press flex items-center gap-1 rounded-md bg-accent px-2 py-2 text-xs font-extrabold uppercase text-accent-foreground"
+            >
+              <Gamepad2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Juego</span>
+            </a>
             <ThemeToggle />
             <Link
               to="/miembros"
@@ -54,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
           </div>
         </div>
-        <nav className="mx-auto hidden max-w-5xl gap-2 px-4 pb-2 md:flex">
+        <nav className="mx-auto hidden max-w-5xl flex-wrap gap-2 px-4 pb-2 md:flex">
           {NAV.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
@@ -73,14 +85,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t-[3px] border-ink bg-card md:hidden">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           {NAV.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
               activeProps={{ className: "text-primary" }}
               inactiveProps={{ className: "text-muted-foreground" }}
-              className="flex flex-col items-center gap-1 py-2 text-[11px] font-bold uppercase"
+              className="flex flex-col items-center gap-1 py-2 text-[10px] font-bold uppercase"
             >
               <Icon className="h-5 w-5" />
               {label}

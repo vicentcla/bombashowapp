@@ -18,6 +18,7 @@ import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedLetrasRouteImport } from './routes/_authenticated/letras'
 import { Route as AuthenticatedMiembrosRouteImport } from './routes/_authenticated/miembros'
 import { Route as AuthenticatedRepertorioRouteImport } from './routes/_authenticated/repertorio'
+import { Route as AuthenticatedSetlistsRouteImport } from './routes/_authenticated/setlists'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -63,6 +64,11 @@ const AuthenticatedRepertorioRoute = AuthenticatedRepertorioRouteImport.update({
   path: '/repertorio',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSetlistsRoute = AuthenticatedSetlistsRouteImport.update({
+  id: '/setlists',
+  path: '/setlists',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/letras': typeof AuthenticatedLetrasRoute
   '/miembros': typeof AuthenticatedMiembrosRoute
   '/repertorio': typeof AuthenticatedRepertorioRoute
+  '/setlists': typeof AuthenticatedSetlistsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/letras': typeof AuthenticatedLetrasRoute
   '/miembros': typeof AuthenticatedMiembrosRoute
   '/repertorio': typeof AuthenticatedRepertorioRoute
+  '/setlists': typeof AuthenticatedSetlistsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/_authenticated/letras': typeof AuthenticatedLetrasRoute
   '/_authenticated/miembros': typeof AuthenticatedMiembrosRoute
   '/_authenticated/repertorio': typeof AuthenticatedRepertorioRoute
+  '/_authenticated/setlists': typeof AuthenticatedSetlistsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/letras'
     | '/miembros'
     | '/repertorio'
+    | '/setlists'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/letras'
     | '/miembros'
     | '/repertorio'
+    | '/setlists'
   id:
     | '__root__'
     | '/'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/_authenticated/letras'
     | '/_authenticated/miembros'
     | '/_authenticated/repertorio'
+    | '/_authenticated/setlists'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -201,6 +213,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRepertorioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/setlists': {
+      id: '/_authenticated/setlists'
+      path: '/setlists'
+      fullPath: '/setlists'
+      preLoaderRoute: typeof AuthenticatedSetlistsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -211,6 +230,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedLetrasRoute: typeof AuthenticatedLetrasRoute
   AuthenticatedMiembrosRoute: typeof AuthenticatedMiembrosRoute
   AuthenticatedRepertorioRoute: typeof AuthenticatedRepertorioRoute
+  AuthenticatedSetlistsRoute: typeof AuthenticatedSetlistsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -220,6 +240,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedLetrasRoute: AuthenticatedLetrasRoute,
   AuthenticatedMiembrosRoute: AuthenticatedMiembrosRoute,
   AuthenticatedRepertorioRoute: AuthenticatedRepertorioRoute,
+  AuthenticatedSetlistsRoute: AuthenticatedSetlistsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
