@@ -42,7 +42,7 @@ function Inicio() {
         <div className="min-w-0">
           <h1 className="text-3xl leading-none">¡Hola, xaranguer@!</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Todo el repertorio de la banda en un mismo sitio.
+            Bienvenid@!
           </p>
         </div>
         <img
