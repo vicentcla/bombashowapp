@@ -16,6 +16,7 @@ import { Route as AuthenticatedArreglosRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedCalleRouteImport } from './routes/_authenticated/calle'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
 import { Route as AuthenticatedLetrasRouteImport } from './routes/_authenticated/letras'
+import { Route as AuthenticatedRepertorioRouteImport } from './routes/_authenticated/repertorio'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -51,6 +52,11 @@ const AuthenticatedLetrasRoute = AuthenticatedLetrasRouteImport.update({
   path: '/letras',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRepertorioRoute = AuthenticatedRepertorioRouteImport.update({
+  id: '/repertorio',
+  path: '/repertorio',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/calle': typeof AuthenticatedCalleRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/letras': typeof AuthenticatedLetrasRoute
+  '/repertorio': typeof AuthenticatedRepertorioRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/calle': typeof AuthenticatedCalleRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/letras': typeof AuthenticatedLetrasRoute
+  '/repertorio': typeof AuthenticatedRepertorioRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,12 +85,27 @@ export interface FileRoutesById {
   '/_authenticated/calle': typeof AuthenticatedCalleRoute
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
   '/_authenticated/letras': typeof AuthenticatedLetrasRoute
+  '/_authenticated/repertorio': typeof AuthenticatedRepertorioRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/arreglos' | '/calle' | '/inicio' | '/letras'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/arreglos'
+    | '/calle'
+    | '/inicio'
+    | '/letras'
+    | '/repertorio'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/arreglos' | '/calle' | '/inicio' | '/letras'
+  to:
+    | '/'
+    | '/auth'
+    | '/arreglos'
+    | '/calle'
+    | '/inicio'
+    | '/letras'
+    | '/repertorio'
   id:
     | '__root__'
     | '/'
@@ -92,6 +115,7 @@ export interface FileRouteTypes {
     | '/_authenticated/calle'
     | '/_authenticated/inicio'
     | '/_authenticated/letras'
+    | '/_authenticated/repertorio'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -151,6 +175,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLetrasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/repertorio': {
+      id: '/_authenticated/repertorio'
+      path: '/repertorio'
+      fullPath: '/repertorio'
+      preLoaderRoute: typeof AuthenticatedRepertorioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -159,6 +190,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCalleRoute: typeof AuthenticatedCalleRoute
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
   AuthenticatedLetrasRoute: typeof AuthenticatedLetrasRoute
+  AuthenticatedRepertorioRoute: typeof AuthenticatedRepertorioRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -166,6 +198,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCalleRoute: AuthenticatedCalleRoute,
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,
   AuthenticatedLetrasRoute: AuthenticatedLetrasRoute,
+  AuthenticatedRepertorioRoute: AuthenticatedRepertorioRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
