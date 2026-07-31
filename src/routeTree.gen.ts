@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedArreglosRouteImport } from './routes/_authenticated/arreglos'
 import { Route as AuthenticatedCalleRouteImport } from './routes/_authenticated/calle'
+import { Route as AuthenticatedContadoresRouteImport } from './routes/_authenticated/contadores'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
 import { Route as AuthenticatedLetrasRouteImport } from './routes/_authenticated/letras'
 import { Route as AuthenticatedMiembrosRouteImport } from './routes/_authenticated/miembros'
@@ -42,6 +43,11 @@ const AuthenticatedArreglosRoute = AuthenticatedArreglosRouteImport.update({
 const AuthenticatedCalleRoute = AuthenticatedCalleRouteImport.update({
   id: '/calle',
   path: '/calle',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedContadoresRoute = AuthenticatedContadoresRouteImport.update({
+  id: '/contadores',
+  path: '/contadores',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedInicioRoute = AuthenticatedInicioRouteImport.update({
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/arreglos': typeof AuthenticatedArreglosRoute
   '/calle': typeof AuthenticatedCalleRoute
+  '/contadores': typeof AuthenticatedContadoresRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/letras': typeof AuthenticatedLetrasRoute
   '/miembros': typeof AuthenticatedMiembrosRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/arreglos': typeof AuthenticatedArreglosRoute
   '/calle': typeof AuthenticatedCalleRoute
+  '/contadores': typeof AuthenticatedContadoresRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/letras': typeof AuthenticatedLetrasRoute
   '/miembros': typeof AuthenticatedMiembrosRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/arreglos': typeof AuthenticatedArreglosRoute
   '/_authenticated/calle': typeof AuthenticatedCalleRoute
+  '/_authenticated/contadores': typeof AuthenticatedContadoresRoute
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
   '/_authenticated/letras': typeof AuthenticatedLetrasRoute
   '/_authenticated/miembros': typeof AuthenticatedMiembrosRoute
@@ -112,6 +121,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/arreglos'
     | '/calle'
+    | '/contadores'
     | '/inicio'
     | '/letras'
     | '/miembros'
@@ -123,6 +133,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/arreglos'
     | '/calle'
+    | '/contadores'
     | '/inicio'
     | '/letras'
     | '/miembros'
@@ -135,6 +146,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/arreglos'
     | '/_authenticated/calle'
+    | '/_authenticated/contadores'
     | '/_authenticated/inicio'
     | '/_authenticated/letras'
     | '/_authenticated/miembros'
@@ -185,6 +197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCalleRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/contadores': {
+      id: '/_authenticated/contadores'
+      path: '/contadores'
+      fullPath: '/contadores'
+      preLoaderRoute: typeof AuthenticatedContadoresRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/inicio': {
       id: '/_authenticated/inicio'
       path: '/inicio'
@@ -226,6 +245,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedArreglosRoute: typeof AuthenticatedArreglosRoute
   AuthenticatedCalleRoute: typeof AuthenticatedCalleRoute
+  AuthenticatedContadoresRoute: typeof AuthenticatedContadoresRoute
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
   AuthenticatedLetrasRoute: typeof AuthenticatedLetrasRoute
   AuthenticatedMiembrosRoute: typeof AuthenticatedMiembrosRoute
@@ -236,6 +256,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedArreglosRoute: AuthenticatedArreglosRoute,
   AuthenticatedCalleRoute: AuthenticatedCalleRoute,
+  AuthenticatedContadoresRoute: AuthenticatedContadoresRoute,
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,
   AuthenticatedLetrasRoute: AuthenticatedLetrasRoute,
   AuthenticatedMiembrosRoute: AuthenticatedMiembrosRoute,
@@ -254,3 +275,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

@@ -72,7 +72,7 @@ function Letras() {
       </div>
 
       <p className="mb-3 text-xs font-bold uppercase text-muted-foreground">
-        Las letras se crean y editan desde Repertorio (arreglos) y desde Calle.
+        Las letras se crean y editan desde Repertorio (arreglos) y desde Contadores (Calle).
       </p>
 
       {list.length === 0 && (

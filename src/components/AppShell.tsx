@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Music, ListMusic, Megaphone, Drum, Users, LogOut, Home, Gamepad2 } from "lucide-react";
+import { Music, ListMusic, Clock, Users, LogOut, Home, Gamepad2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,8 +9,7 @@ import bannerAsset from "@/assets/banner.png.asset.json";
 const NAV = [
   { to: "/inicio", label: "Inicio", icon: Home },
   { to: "/letras", label: "Letras", icon: Music },
-  { to: "/calle", label: "Calle", icon: Megaphone },
-  { to: "/arreglos", label: "Arreglos", icon: Drum },
+  { to: "/contadores", label: "Contadores", icon: Clock },
   { to: "/setlists", label: "Setlists", icon: ListMusic },
   { to: "/repertorio", label: "Repertorio", icon: ListMusic },
 ] as const;
@@ -85,7 +84,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t-[3px] border-ink bg-card md:hidden">
-        <div className="grid grid-cols-6">
+        <div className="grid grid-cols-5">
           {NAV.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Music, ListMusic, Megaphone, Drum, Users } from "lucide-react";
+import { Music, ListMusic, Clock, Users } from "lucide-react";
 import logoAsset from "@/assets/logo.png.asset.json";
 import aniversarioAsset from "@/assets/aniversario.png.asset.json";
 import { useArrangements, useStreetSongs, useSetlists, useLyrics } from "@/lib/queries";
@@ -28,11 +28,13 @@ function Inicio() {
   const setlists = useSetlists();
   const lyrics = useLyrics();
 
+  const totalContadores = (street.data?.length ?? 0) + (arrangements.data?.length ?? 0);
+
   const cards = [
-    { to: "/letras", label: "Letras", icon: Music, count: lyrics.data?.length ?? 0 },
-    { to: "/setlists", label: "Setlists", icon: ListMusic, count: setlists.data?.length ?? 0 },
-    { to: "/calle", label: "Calle", icon: Megaphone, count: street.data?.length ?? 0 },
-    { to: "/arreglos", label: "Arreglos", icon: Drum, count: arrangements.data?.length ?? 0 },
+    { to: "/letras", label: "Letras", icon: Music, count: `${lyrics.data?.length ?? 0} registros` },
+    { to: "/contadores", label: "Contadores", icon: Clock, count: `${totalContadores} registros` },
+    { to: "/setlists", label: "Setlists", icon: ListMusic, count: `${setlists.data?.length ?? 0} registros` },
+    { to: "/repertorio", label: "Repertorio", icon: ListMusic, count: `${arrangements.data?.length ?? 0} arreglos` },
   ] as const;
 
   return (
@@ -61,7 +63,7 @@ function Inicio() {
           >
             <Icon className="h-7 w-7 text-primary" />
             <span className="text-2xl leading-none">{label}</span>
-            <span className="text-sm font-bold text-muted-foreground">{count} registros</span>
+            <span className="text-sm font-bold text-muted-foreground">{count}</span>
           </Link>
         ))}
       </div>
