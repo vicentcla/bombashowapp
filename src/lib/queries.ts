@@ -246,10 +246,11 @@ export function useResetCounters(scope: Scope) {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (label: string) => {
-      const now = new Date().toISOString();
+      const patch: { ended_at: string; label?: string } = { ended_at: new Date().toISOString() };
+      if (label.trim()) patch.label = label.trim();
       const { error: closeError } = await supabase
         .from("reset_periods")
-        .update({ ended_at: now, label: label || undefined })
+        .update(patch)
         .eq("scope", scope)
         .is("ended_at", null);
       if (closeError) throw closeError;
