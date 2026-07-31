@@ -1,24 +1,10 @@
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Clock, Megaphone, Drum, Plus, Search, Trash2, X, FileText } from "lucide-react";
-import { toast } from "sonner";
-import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
+import { Clock, Megaphone, Drum, Search } from "lucide-react";
 import { Counters, useCurrentCounts } from "@/components/Counters";
 import { SortBar, type SortMode } from "@/components/SortBar";
-import { LyricDialog } from "@/components/LyricDialog";
-import {
-  useStreetSongs,
-  useArrangements,
-  useInvalidate,
-  useLyrics,
-  useReorder,
-} from "@/lib/queries";
+import { useStreetSongs, useArrangements, useReorder } from "@/lib/queries";
 import { formatDuration } from "@/lib/format";
-
-const searchSchema = z.object({
-  tab: z.enum(["calle", "arreglos"]).optional().default("calle"),
-});
 
 export const Route = createFileRoute("/_authenticated/contadores")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -99,15 +85,10 @@ function Contadores() {
 
 function ContadoresCalle() {
   const songs = useStreetSongs();
-  const lyrics = useLyrics();
   const counts = useCurrentCounts("calle");
   const reorder = useReorder("street_songs");
-  const invalidate = useInvalidate();
   const [search, setSearch] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [title, setTitle] = useState("");
   const [sort, setSort] = useState<SortMode>("alfabetico");
-  const [lyricFor, setLyricFor] = useState<{ id: string; title: string } | null>(null);
 
   const list = useMemo(() => {
     const sorted = [...(songs.data ?? [])];
@@ -130,39 +111,10 @@ function ContadoresCalle() {
     reorder.mutate(ids);
   }
 
-  async function add() {
-    if (!title.trim()) return;
-    const { error } = await supabase.from("street_songs").insert({ title: title.trim() });
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    setTitle("");
-    setAdding(false);
-    invalidate("street_songs");
-    toast.success("Canción añadida");
-  }
-
-  async function removeSong(id: string) {
-    if (!confirm("¿Eliminar la canción y sus contadores?")) return;
-    const { error } = await supabase.from("street_songs").delete().eq("id", id);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    invalidate("street_songs", "play_events");
-  }
-
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-4">
         <h2 className="text-2xl font-bold">Canciones de calle</h2>
-        <button
-          onClick={() => setAdding(true)}
-          className="comic comic-press flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-extrabold uppercase text-primary-foreground"
-        >
-          <Plus className="h-4 w-4" /> Añadir canción
-        </button>
       </div>
 
       <div className="comic-sm mb-3 flex items-center gap-2 rounded-md bg-card px-3">
@@ -183,76 +135,12 @@ function ContadoresCalle() {
         items={list.map((s) => ({ id: s.id, title: s.title }))}
         {...(sort === "manual" ? { onMove: move } : {})}
       />
-
-      {!!songs.data?.length && (
-        <details className="comic mt-6 rounded-xl bg-card p-4">
-          <summary className="cursor-pointer text-xl">Gestionar canciones y letras</summary>
-          <ul className="mt-3 space-y-1">
-            {list.map((s) => (
-              <li key={s.id} className="flex items-center gap-2 border-b border-border/40 py-1">
-                <span className="min-w-0 flex-1 truncate">{s.title}</span>
-                <button
-                  onClick={() => setLyricFor({ id: s.id, title: s.title })}
-                  aria-label={`Letra de ${s.title}`}
-                  className="comic-sm comic-press rounded bg-secondary p-1"
-                >
-                  <FileText className="h-3 w-3" />
-                </button>
-                <button
-                  onClick={() => removeSong(s.id)}
-                  aria-label={`Eliminar ${s.title}`}
-                  className="comic-sm comic-press rounded bg-destructive p-1 text-destructive-foreground"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-
-      {lyricFor && (
-        <LyricDialog
-          kind="calle"
-          refId={lyricFor.id}
-          defaultTitle={lyricFor.title}
-          existing={(lyrics.data ?? []).find((l) => l.street_song_id === lyricFor.id) ?? null}
-          onClose={() => setLyricFor(null)}
-        />
-      )}
-
-      {adding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
-          <div className="comic w-full max-w-sm rounded-xl bg-card p-4">
-            <div className="mb-3 flex items-center">
-              <h2 className="mr-auto text-2xl leading-none">Nueva canción de calle</h2>
-              <button onClick={() => setAdding(false)} aria-label="Cerrar">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Título"
-              maxLength={120}
-              className="comic-sm mb-3 w-full rounded-md bg-background px-3 py-2 outline-none"
-            />
-            <button
-              onClick={add}
-              className="comic comic-press w-full rounded-md bg-primary px-4 py-2 font-extrabold uppercase text-primary-foreground"
-            >
-              Guardar
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
 function ContadoresArreglos() {
   const arrangements = useArrangements();
-  const lyrics = useLyrics();
   const counts = useCurrentCounts("arreglo");
   const reorder = useReorder("arrangements");
   const [search, setSearch] = useState("");
@@ -351,26 +239,6 @@ function ContadoresArreglos() {
         items={items}
         {...(sort === "manual" ? { onMove: move } : {})}
       />
-
-      <details className="comic mt-6 rounded-xl bg-card p-4">
-        <summary className="cursor-pointer text-xl">Letras de los arreglos</summary>
-        <div className="mt-3 space-y-3">
-          {(lyrics.data ?? [])
-            .filter((l) => l.kind === "arreglo")
-            .map((l) => (
-              <details key={l.id} className="comic-sm rounded-md bg-background p-3">
-                <summary className="cursor-pointer font-bold">{l.title}</summary>
-                <div
-                  className="lyrics-body mt-2 text-base leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: l.content }}
-                />
-              </details>
-            ))}
-          {!lyrics.data?.some((l) => l.kind === "arreglo") && (
-            <p className="text-muted-foreground">Todavía no hay letras de arreglos.</p>
-          )}
-        </div>
-      </details>
     </div>
   );
 }

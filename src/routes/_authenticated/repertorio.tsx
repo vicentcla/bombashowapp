@@ -1,25 +1,32 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Plus, Trash2, X, Pencil, FileText, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Trash2, X, Pencil, FileText, ArrowUp, ArrowDown, Drum, Megaphone, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LyricDialog } from "@/components/LyricDialog";
 import { SortBar, type SortMode } from "@/components/SortBar";
-import { useArrangements, useLyrics, useInvalidate, useReorder, type Arrangement } from "@/lib/queries";
+import {
+  useArrangements,
+  useStreetSongs,
+  useLyrics,
+  useInvalidate,
+  useReorder,
+  type Arrangement,
+} from "@/lib/queries";
 import { formatDuration, formatLongDuration } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/repertorio")({
   head: () => ({
     meta: [
-      { title: "Repertorio de arreglos — La Bomba Show" },
+      { title: "Repertorio — La Bomba Show" },
       {
         name: "description",
-        content: "Catálogo de arreglos con duración, etiquetas y letra de cada uno.",
+        content: "Catálogo de arreglos y canciones de calle con duración, etiquetas y letras.",
       },
-      { property: "og:title", content: "Repertorio de arreglos — La Bomba Show" },
+      { property: "og:title", content: "Repertorio — La Bomba Show" },
       {
         property: "og:description",
-        content: "Catálogo de arreglos con duración, etiquetas y letra de cada uno.",
+        content: "Catálogo de arreglos y canciones de calle con duración, etiquetas y letras.",
       },
     ],
   }),
@@ -27,6 +34,48 @@ export const Route = createFileRoute("/_authenticated/repertorio")({
 });
 
 function Repertorio() {
+  const [activeTab, setActiveTab] = useState<"arreglos" | "calle">("arreglos");
+
+  return (
+    <div>
+      <h1 className="mb-1 text-4xl leading-none">Repertorio</h1>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Aquí se construye todo: arreglos, canciones de calle, duraciones, etiquetas y letras.
+      </p>
+
+      <div className="comic-sm mb-4 flex overflow-hidden rounded-md bg-card p-1">
+        <button
+          type="button"
+          onClick={() => setActiveTab("arreglos")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
+            activeTab === "arreglos"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-muted/50"
+          }`}
+        >
+          <Drum className="h-4 w-4" />
+          Arreglos
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("calle")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
+            activeTab === "calle"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-muted/50"
+          }`}
+        >
+          <Megaphone className="h-4 w-4" />
+          Calle
+        </button>
+      </div>
+
+      {activeTab === "arreglos" ? <RepertorioArreglos /> : <RepertorioCalle />}
+    </div>
+  );
+}
+
+function RepertorioArreglos() {
   const arrangements = useArrangements();
   const lyrics = useLyrics();
   const invalidate = useInvalidate();
@@ -61,7 +110,7 @@ function Repertorio() {
   }
 
   async function remove(id: string) {
-    if (!confirm("¿Eliminar este arreglo?")) return;
+    if (!confirm("¿Eliminar este arreglo y sus datos asociados?")) return;
     const { error } = await supabase.from("arrangements").delete().eq("id", id);
     if (error) {
       toast.error(error.message);
@@ -74,11 +123,6 @@ function Repertorio() {
 
   return (
     <div>
-      <h1 className="mb-1 text-4xl leading-none">Repertorio</h1>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Aquí se construye todo: arreglos, duraciones, etiquetas y letras.
-      </p>
-
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <p className="mr-auto text-sm font-bold text-muted-foreground">
           {arrangements.data?.length ?? 0} arreglos · {formatLongDuration(total)} en total
@@ -206,6 +250,176 @@ function Repertorio() {
             setEditing(null);
           }}
         />
+      )}
+    </div>
+  );
+}
+
+function RepertorioCalle() {
+  const songs = useStreetSongs();
+  const lyrics = useLyrics();
+  const invalidate = useInvalidate();
+  const reorder = useReorder("street_songs");
+  const [adding, setAdding] = useState(false);
+  const [title, setTitle] = useState("");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<SortMode>("alfabetico");
+  const [lyricFor, setLyricFor] = useState<{ id: string; title: string } | null>(null);
+
+  const list = useMemo(() => {
+    let base = songs.data ?? [];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      base = base.filter((s) => s.title.toLowerCase().includes(q));
+    }
+    const copy = [...base];
+    if (sort === "alfabetico") copy.sort((a, b) => a.title.localeCompare(b.title, "es"));
+    if (sort === "manual") copy.sort((a, b) => a.sort_order - b.sort_order);
+    return copy;
+  }, [songs.data, search, sort]);
+
+  function move(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= list.length) return;
+    const ids = list.map((s) => s.id);
+    const [moved] = ids.splice(index, 1);
+    ids.splice(target, 0, moved!);
+    reorder.mutate(ids);
+  }
+
+  async function addSong() {
+    if (!title.trim()) return;
+    const { error } = await supabase.from("street_songs").insert({ title: title.trim() });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setTitle("");
+    setAdding(false);
+    invalidate("street_songs");
+    toast.success("Canción de calle añadida");
+  }
+
+  async function removeSong(id: string) {
+    if (!confirm("¿Eliminar la canción y sus contadores?")) return;
+    const { error } = await supabase.from("street_songs").delete().eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    invalidate("street_songs", "play_events", "lyrics");
+  }
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <p className="mr-auto text-sm font-bold text-muted-foreground">
+          {songs.data?.length ?? 0} canciones de calle
+        </p>
+        <button
+          onClick={() => setAdding(true)}
+          className="comic comic-press flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-extrabold uppercase text-primary-foreground"
+        >
+          <Plus className="h-4 w-4" /> Nueva canción de calle
+        </button>
+      </div>
+
+      <div className="comic-sm mb-3 flex items-center gap-2 rounded-md bg-card px-3">
+        <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar canción de calle…"
+          className="w-full bg-transparent py-2 text-base outline-none"
+        />
+      </div>
+
+      <SortBar value={sort} onChange={setSort} options={["alfabetico", "manual"]} />
+
+      <div className="space-y-2">
+        {list.map((s, index) => (
+          <div
+            key={s.id}
+            className="comic grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-card p-3"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-xl leading-tight">{s.title}</p>
+              <p className="text-xs font-bold text-muted-foreground">
+                {lyrics.data?.some((l) => l.street_song_id === s.id) ? "Con letra" : "Sin letra"}
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              {sort === "manual" && (
+                <>
+                  <button
+                    onClick={() => move(index, -1)}
+                    aria-label={`Subir ${s.title}`}
+                    className="comic-sm comic-press rounded bg-secondary p-2"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => move(index, 1)}
+                    aria-label={`Bajar ${s.title}`}
+                    className="comic-sm comic-press rounded bg-secondary p-2"
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => setLyricFor({ id: s.id, title: s.title })}
+                aria-label={`Letra de ${s.title}`}
+                className="comic-sm comic-press rounded bg-accent p-2 text-accent-foreground"
+              >
+                <FileText className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => removeSong(s.id)}
+                aria-label={`Eliminar ${s.title}`}
+                className="comic-sm comic-press rounded bg-destructive p-2 text-destructive-foreground"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {lyricFor && (
+        <LyricDialog
+          kind="calle"
+          refId={lyricFor.id}
+          defaultTitle={lyricFor.title}
+          existing={(lyrics.data ?? []).find((l) => l.street_song_id === lyricFor.id) ?? null}
+          onClose={() => setLyricFor(null)}
+        />
+      )}
+
+      {adding && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+          <div className="comic w-full max-w-sm rounded-xl bg-card p-4">
+            <div className="mb-3 flex items-center">
+              <h2 className="mr-auto text-2xl leading-none">Nueva canción de calle</h2>
+              <button onClick={() => setAdding(false)} aria-label="Cerrar">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Título"
+              maxLength={120}
+              className="comic-sm mb-3 w-full rounded-md bg-background px-3 py-2 outline-none"
+            />
+            <button
+              onClick={addSong}
+              className="comic comic-press w-full rounded-md bg-primary px-4 py-2 font-extrabold uppercase text-primary-foreground"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
