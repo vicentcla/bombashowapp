@@ -21,7 +21,9 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/_authenticated/contadores")({
-  validateSearch: (search) => searchSchema.parse(search),
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: search.tab === "arreglos" ? "arreglos" : ("calle" as "calle" | "arreglos"),
+  }),
   head: () => ({
     meta: [
       { title: "Contadores — La Bomba Show" },
@@ -40,16 +42,18 @@ export const Route = createFileRoute("/_authenticated/contadores")({
 });
 
 function Contadores() {
-  const { tab = "calle" } = useSearch({ from: "/_authenticated/contadores" });
-  const navigate = useNavigate({ from: "/_authenticated/contadores" });
+  const search = Route.useSearch();
+  const [activeTab, setActiveTab] = useState<"calle" | "arreglos">(
+    search.tab === "arreglos" ? "arreglos" : "calle"
+  );
 
-  const activeTab = tab === "arreglos" ? "arreglos" : "calle";
-
-  const setTab = (newTab: "calle" | "arreglos") => {
-    navigate({
-      search: (old) => ({ ...old, tab: newTab }),
-      replace: true,
-    });
+  const handleTabChange = (newTab: "calle" | "arreglos") => {
+    setActiveTab(newTab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", newTab);
+      window.history.replaceState({}, "", url.toString());
+    }
   };
 
   return (
@@ -63,7 +67,8 @@ function Contadores() {
 
       <div className="comic-sm mb-4 flex overflow-hidden rounded-md bg-card p-1">
         <button
-          onClick={() => setTab("calle")}
+          type="button"
+          onClick={() => handleTabChange("calle")}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
             activeTab === "calle"
               ? "bg-primary text-primary-foreground shadow-sm"
@@ -74,7 +79,8 @@ function Contadores() {
           Calle
         </button>
         <button
-          onClick={() => setTab("arreglos")}
+          type="button"
+          onClick={() => handleTabChange("arreglos")}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
             activeTab === "arreglos"
               ? "bg-primary text-primary-foreground shadow-sm"
