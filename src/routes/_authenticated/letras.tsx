@@ -54,7 +54,10 @@ function Letras() {
   async function remove(id: string) {
     if (!confirm("¿Eliminar esta letra?")) return;
     const { error } = await supabase.from("lyrics").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     invalidate("lyrics");
     toast.success("Letra eliminada");
   }
@@ -188,7 +191,10 @@ function LyricDialog({
   const [busy, setBusy] = useState(false);
 
   async function save() {
-    if (!title.trim()) return toast.error("Pon un título");
+    if (!title.trim()) {
+      toast.error("Pon un título");
+      return;
+    }
     setBusy(true);
     try {
       const clean = sanitizeLyricsHtml(content);
