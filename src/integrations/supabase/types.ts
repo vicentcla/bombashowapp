@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           duration_seconds: number
           id: string
+          sort_order: number
           tags: string[]
           title: string
           updated_at: string
@@ -27,6 +28,7 @@ export type Database = {
           created_at?: string
           duration_seconds?: number
           id?: string
+          sort_order?: number
           tags?: string[]
           title: string
           updated_at?: string
@@ -35,6 +37,7 @@ export type Database = {
           created_at?: string
           duration_seconds?: number
           id?: string
+          sort_order?: number
           tags?: string[]
           title?: string
           updated_at?: string
@@ -189,6 +192,36 @@ export type Database = {
         }
         Relationships: []
       }
+      role_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       setlist_items: {
         Row: {
           arrangement_id: string
@@ -256,16 +289,19 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          sort_order: number
           title: string
         }
         Insert: {
           created_at?: string
           id?: string
+          sort_order?: number
           title: string
         }
         Update: {
           created_at?: string
           id?: string
+          sort_order?: number
           title?: string
         }
         Relationships: []
