@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, X, Pencil, FileText, ArrowUp, ArrowDown, Drum, Megaphone, Search } from "lucide-react";
+import { Plus, Trash2, X, Pencil, FileText, Drum, Megaphone, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LyricDialog } from "@/components/LyricDialog";
 import { SortBar, type SortMode } from "@/components/SortBar";
+import { SortableList, SortableItem } from "@/components/SortableList";
 import {
   useArrangements,
   useStreetSongs,
@@ -130,13 +131,8 @@ function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: strin
     return copy;
   }, [arrangements.data, sort, tag]);
 
-  function move(index: number, dir: -1 | 1) {
-    const target = index + dir;
-    if (target < 0 || target >= list.length) return;
-    const ids = list.map((a) => a.id);
-    const [moved] = ids.splice(index, 1);
-    ids.splice(target, 0, moved!);
-    reorder.mutate(ids);
+  function handleReorder(newItems: Arrangement[]) {
+    reorder.mutate(newItems.map((a) => a.id));
   }
 
   async function remove(id: string) {
@@ -191,75 +187,115 @@ function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: strin
         </div>
       )}
 
-      <div className="space-y-2">
-        {list.map((a, index) => (
-          <div
-            key={a.id}
-            className="comic grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-card p-3"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-xl leading-tight">{a.title}</p>
-              <p className="text-xs font-bold text-muted-foreground">
-                {formatDuration(a.duration_seconds)}
-                {lyrics.data?.some((l) => l.arrangement_id === a.id) ? " · con letra" : ""}
-              </p>
-              {!!a.tags?.length && (
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {a.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[10px] font-bold uppercase"
-                    >
-                      {t}
-                    </span>
-                  ))}
+      {sort === "manual" ? (
+        <div className="space-y-2">
+          <SortableList items={list} onReorder={handleReorder} strategy="vertical">
+            {(a) => (
+              <SortableItem
+                key={a.id}
+                id={a.id}
+                handleOnly
+                className="comic grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-card p-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-xl leading-tight">{a.title}</p>
+                  <p className="text-xs font-bold text-muted-foreground">
+                    {formatDuration(a.duration_seconds)}
+                    {lyrics.data?.some((l) => l.arrangement_id === a.id) ? " · con letra" : ""}
+                  </p>
+                  {!!a.tags?.length && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {a.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[10px] font-bold uppercase"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <div className="flex shrink-0 gap-2">
-              {sort === "manual" && (
-                <>
+                <div className="flex shrink-0 gap-2">
                   <button
-                    onClick={() => move(index, -1)}
-                    aria-label={`Subir ${a.title}`}
-                    className="comic-sm comic-press rounded bg-secondary p-2"
+                    onClick={() => setLyricFor(a)}
+                    aria-label={`Letra de ${a.title}`}
+                    className="comic-sm comic-press rounded bg-accent p-2 text-accent-foreground"
                   >
-                    <ArrowUp className="h-4 w-4" />
+                    <FileText className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => move(index, 1)}
-                    aria-label={`Bajar ${a.title}`}
+                    onClick={() => setEditing(a)}
+                    aria-label={`Editar ${a.title}`}
                     className="comic-sm comic-press rounded bg-secondary p-2"
                   >
-                    <ArrowDown className="h-4 w-4" />
+                    <Pencil className="h-4 w-4" />
                   </button>
-                </>
-              )}
-              <button
-                onClick={() => setLyricFor(a)}
-                aria-label={`Letra de ${a.title}`}
-                className="comic-sm comic-press rounded bg-accent p-2 text-accent-foreground"
-              >
-                <FileText className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setEditing(a)}
-                aria-label={`Editar ${a.title}`}
-                className="comic-sm comic-press rounded bg-secondary p-2"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => remove(a.id)}
-                aria-label={`Eliminar ${a.title}`}
-                className="comic-sm comic-press rounded bg-destructive p-2 text-destructive-foreground"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+                  <button
+                    onClick={() => remove(a.id)}
+                    aria-label={`Eliminar ${a.title}`}
+                    className="comic-sm comic-press rounded bg-destructive p-2 text-destructive-foreground"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </SortableItem>
+            )}
+          </SortableList>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {list.map((a) => (
+            <div
+              key={a.id}
+              className="comic grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-card p-3"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-xl leading-tight">{a.title}</p>
+                <p className="text-xs font-bold text-muted-foreground">
+                  {formatDuration(a.duration_seconds)}
+                  {lyrics.data?.some((l) => l.arrangement_id === a.id) ? " · con letra" : ""}
+                </p>
+                {!!a.tags?.length && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {a.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[10px] font-bold uppercase"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  onClick={() => setLyricFor(a)}
+                  aria-label={`Letra de ${a.title}`}
+                  className="comic-sm comic-press rounded bg-accent p-2 text-accent-foreground"
+                >
+                  <FileText className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setEditing(a)}
+                  aria-label={`Editar ${a.title}`}
+                  className="comic-sm comic-press rounded bg-secondary p-2"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => remove(a.id)}
+                  aria-label={`Eliminar ${a.title}`}
+                  className="comic-sm comic-press rounded bg-destructive p-2 text-destructive-foreground"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {lyricFor && (
         <LyricDialog
@@ -317,13 +353,8 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
     return copy;
   }, [songs.data, search, sort]);
 
-  function move(index: number, dir: -1 | 1) {
-    const target = index + dir;
-    if (target < 0 || target >= list.length) return;
-    const ids = list.map((s) => s.id);
-    const [moved] = ids.splice(index, 1);
-    ids.splice(target, 0, moved!);
-    reorder.mutate(ids);
+  function handleReorder(newItems: { id: string; title: string; sort_order: number }[]) {
+    reorder.mutate(newItems.map((s) => s.id));
   }
 
   async function addSong() {
@@ -375,55 +406,75 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
 
       <SortBar value={sort} onChange={setSort} options={["alfabetico", "manual"]} />
 
-      <div className="space-y-2">
-        {list.map((s, index) => (
-          <div
-            key={s.id}
-            className="comic grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-card p-3"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-xl leading-tight">{s.title}</p>
-              <p className="text-xs font-bold text-muted-foreground">
-                {lyrics.data?.some((l) => l.street_song_id === s.id) ? "Con letra" : "Sin letra"}
-              </p>
-            </div>
-            <div className="flex shrink-0 gap-2">
-              {sort === "manual" && (
-                <>
+      {sort === "manual" ? (
+        <div className="space-y-2">
+          <SortableList items={list} onReorder={handleReorder} strategy="vertical">
+            {(s) => (
+              <SortableItem
+                key={s.id}
+                id={s.id}
+                handleOnly
+                className="comic grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-card p-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-xl leading-tight">{s.title}</p>
+                  <p className="text-xs font-bold text-muted-foreground">
+                    {lyrics.data?.some((l) => l.street_song_id === s.id) ? "Con letra" : "Sin letra"}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-2">
                   <button
-                    onClick={() => move(index, -1)}
-                    aria-label={`Subir ${s.title}`}
-                    className="comic-sm comic-press rounded bg-secondary p-2"
+                    onClick={() => setLyricFor({ id: s.id, title: s.title })}
+                    aria-label={`Letra de ${s.title}`}
+                    className="comic-sm comic-press rounded bg-accent p-2 text-accent-foreground"
                   >
-                    <ArrowUp className="h-4 w-4" />
+                    <FileText className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => move(index, 1)}
-                    aria-label={`Bajar ${s.title}`}
-                    className="comic-sm comic-press rounded bg-secondary p-2"
+                    onClick={() => removeSong(s.id)}
+                    aria-label={`Eliminar ${s.title}`}
+                    className="comic-sm comic-press rounded bg-destructive p-2 text-destructive-foreground"
                   >
-                    <ArrowDown className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
-                </>
-              )}
-              <button
-                onClick={() => setLyricFor({ id: s.id, title: s.title })}
-                aria-label={`Letra de ${s.title}`}
-                className="comic-sm comic-press rounded bg-accent p-2 text-accent-foreground"
-              >
-                <FileText className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => removeSong(s.id)}
-                aria-label={`Eliminar ${s.title}`}
-                className="comic-sm comic-press rounded bg-destructive p-2 text-destructive-foreground"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+                </div>
+              </SortableItem>
+            )}
+          </SortableList>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {list.map((s) => (
+            <div
+              key={s.id}
+              className="comic grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-card p-3"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-xl leading-tight">{s.title}</p>
+                <p className="text-xs font-bold text-muted-foreground">
+                  {lyrics.data?.some((l) => l.street_song_id === s.id) ? "Con letra" : "Sin letra"}
+                </p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  onClick={() => setLyricFor({ id: s.id, title: s.title })}
+                  aria-label={`Letra de ${s.title}`}
+                  className="comic-sm comic-press rounded bg-accent p-2 text-accent-foreground"
+                >
+                  <FileText className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => removeSong(s.id)}
+                  aria-label={`Eliminar ${s.title}`}
+                  className="comic-sm comic-press rounded bg-destructive p-2 text-destructive-foreground"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {lyricFor && (
         <LyricDialog

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Minus, Plus, RotateCcw, BarChart3, X, ArrowUp, ArrowDown } from "lucide-react";
+import { Minus, Plus, RotateCcw, BarChart3, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   useAddPlay,
@@ -9,6 +9,7 @@ import {
   type Scope,
 } from "@/lib/queries";
 import { normalize } from "@/lib/format";
+import { SortableList, SortableItem } from "@/components/SortableList";
 
 export type CounterItem = {
   id: string;
@@ -40,12 +41,13 @@ export function Counters({
   scope,
   items,
   search,
-  onMove,
+  onReorder,
 }: {
   scope: Scope;
   items: CounterItem[];
   search: string;
-  onMove?: (index: number, dir: -1 | 1) => void;
+  /** Callback con el array de items reordenados (modo manual). */
+  onReorder?: (newItems: CounterItem[]) => void;
 }) {
   const addPlay = useAddPlay(scope);
   const reset = useResetCounters(scope);
@@ -102,61 +104,80 @@ export function Counters({
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-        {filtered.map((item, index) => {
-          const count = counts.get(item.id) ?? 0;
-          return (
+      {onReorder ? (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          <SortableList
+            items={filtered}
+            onReorder={onReorder}
+            strategy="grid"
+          >
+            {(item) => (
+              <SortableItem key={item.id} id={item.id} handleOnly className="comic-sm flex flex-col rounded-lg bg-card p-2">
+                <CounterCard item={item} counts={counts} onChange={change} showGrip />
+              </SortableItem>
+            )}
+          </SortableList>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {filtered.map((item) => (
             <div key={item.id} className="comic-sm flex flex-col rounded-lg bg-card p-2">
-              <p className="line-clamp-2 min-h-8 text-sm font-extrabold leading-tight">
-                {item.title}
-              </p>
-              {item.subtitle && (
-                <p className="text-[10px] font-bold text-muted-foreground">{item.subtitle}</p>
-              )}
-              <div className="mt-1 flex items-center justify-between gap-1">
-                <button
-                  onClick={() => change(item.id, -1)}
-                  aria-label={`Restar a ${item.title}`}
-                  className="comic-sm comic-press rounded bg-secondary p-1.5"
-                >
-                  <Minus className="h-3.5 w-3.5" />
-                </button>
-                <span className="text-2xl leading-none">{count}</span>
-                <button
-                  onClick={() => change(item.id, 1)}
-                  aria-label={`Sumar a ${item.title}`}
-                  className="comic-sm comic-press rounded bg-primary p-1.5 text-primary-foreground"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              {onMove && (
-                <div className="mt-1 flex justify-center gap-1">
-                  <button
-                    onClick={() => onMove(index, -1)}
-                    aria-label={`Subir ${item.title}`}
-                    className="comic-sm comic-press rounded bg-secondary px-2 py-0.5"
-                  >
-                    <ArrowUp className="h-3 w-3" />
-                  </button>
-                  <button
-                    onClick={() => onMove(index, 1)}
-                    aria-label={`Bajar ${item.title}`}
-                    className="comic-sm comic-press rounded bg-secondary px-2 py-0.5"
-                  >
-                    <ArrowDown className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
+              <CounterCard item={item} counts={counts} onChange={change} showGrip={false} />
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
 
       {showStats && (
         <StatsDialog scope={scope} items={items} onClose={() => setShowStats(false)} />
       )}
     </div>
+  );
+}
+
+// ─── Tarjeta de contador individual ─────────────────────────────────────────
+
+function CounterCard({
+  item,
+  counts,
+  onChange,
+  showGrip,
+}: {
+  item: CounterItem;
+  counts: Map<string, number>;
+  onChange: (id: string, delta: 1 | -1) => Promise<void>;
+  showGrip: boolean;
+}) {
+  const count = counts.get(item.id) ?? 0;
+  return (
+    <>
+      <p className="line-clamp-2 min-h-8 text-sm font-extrabold leading-tight">{item.title}</p>
+      {item.subtitle && (
+        <p className="text-[10px] font-bold text-muted-foreground">{item.subtitle}</p>
+      )}
+      <div className="mt-auto flex items-center justify-between gap-1 pt-1">
+        <button
+          onClick={() => onChange(item.id, -1)}
+          aria-label={`Restar a ${item.title}`}
+          className="comic-sm comic-press rounded bg-secondary p-1.5"
+        >
+          <Minus className="h-3.5 w-3.5" />
+        </button>
+        <span className="text-2xl leading-none">{count}</span>
+        <button
+          onClick={() => onChange(item.id, 1)}
+          aria-label={`Sumar a ${item.title}`}
+          className="comic-sm comic-press rounded bg-primary p-1.5 text-primary-foreground"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {showGrip && (
+        <p className="mt-1 text-center text-[9px] font-bold uppercase text-muted-foreground/60">
+          ≡ arrastra
+        </p>
+      )}
+    </>
   );
 }
 

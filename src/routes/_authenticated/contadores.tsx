@@ -102,13 +102,8 @@ function ContadoresCalle() {
     return sorted;
   }, [songs.data, sort, counts]);
 
-  function move(index: number, dir: -1 | 1) {
-    const target = index + dir;
-    if (target < 0 || target >= list.length) return;
-    const ids = list.map((s) => s.id);
-    const [moved] = ids.splice(index, 1);
-    ids.splice(target, 0, moved!);
-    reorder.mutate(ids);
+  function handleReorder(newItems: { id: string; title: string }[]) {
+    reorder.mutate(newItems.map((i) => i.id));
   }
 
   return (
@@ -133,7 +128,7 @@ function ContadoresCalle() {
         scope="calle"
         search={search}
         items={list.map((s) => ({ id: s.id, title: s.title }))}
-        {...(sort === "manual" ? { onMove: move } : {})}
+        {...(sort === "manual" ? { onReorder: handleReorder } : {})}
       />
     </div>
   );
@@ -178,13 +173,8 @@ function ContadoresArreglos() {
     [list],
   );
 
-  function move(index: number, dir: -1 | 1) {
-    const target = index + dir;
-    if (target < 0 || target >= list.length) return;
-    const ids = list.map((a) => a.id);
-    const [moved] = ids.splice(index, 1);
-    ids.splice(target, 0, moved!);
-    reorder.mutate(ids);
+  function handleReorder(newItems: { id: string }[]) {
+    reorder.mutate(newItems.map((i) => i.id));
   }
 
   return (
@@ -237,7 +227,7 @@ function ContadoresArreglos() {
         scope="arreglo"
         search={search}
         items={items}
-        {...(sort === "manual" ? { onMove: move } : {})}
+        {...(sort === "manual" ? { onReorder: handleReorder } : {})}
       />
     </div>
   );
