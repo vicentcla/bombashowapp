@@ -14,6 +14,44 @@ export function formatLongDuration(totalSeconds: number): string {
   return `${m}m ${String(rest).padStart(2, "0")}s`;
 }
 
+export function formatMinutesToHours(totalMinutes: number): string {
+  const m = Math.max(0, Math.floor(totalMinutes));
+  const h = Math.floor(m / 60);
+  const restM = m % 60;
+  if (h > 0) {
+    return restM > 0 ? `${h}h ${restM}min` : `${h}h`;
+  }
+  return `${m}min`;
+}
+
+export function formatTimeComparison(addedSeconds: number, targetMinutes: number) {
+  const targetSeconds = targetMinutes * 60;
+  const percentage = targetSeconds > 0 ? Math.min(100, Math.round((addedSeconds / targetSeconds) * 100)) : 0;
+  const diffSeconds = addedSeconds - targetSeconds;
+
+  let status: "pending" | "exact" | "exceeded" = "pending";
+  if (targetSeconds > 0) {
+    if (Math.abs(diffSeconds) <= 60) status = "exact";
+    else if (diffSeconds > 60) status = "exceeded";
+  }
+
+  return {
+    percentage,
+    status,
+    diffSeconds,
+    addedText: formatLongDuration(addedSeconds),
+    targetText: formatMinutesToHours(targetMinutes),
+    diffText:
+      targetSeconds === 0
+        ? "Sin objetivo"
+        : diffSeconds === 0
+          ? "¡Duración exacta!"
+          : diffSeconds > 0
+            ? `+${formatLongDuration(diffSeconds)}`
+            : `-${formatLongDuration(Math.abs(diffSeconds))}`,
+  };
+}
+
 const ALLOWED_TAGS = new Set(["B", "STRONG", "I", "EM", "U", "P", "BR", "DIV", "HR", "SPAN"]);
 
 /** Limpia el HTML del editor dejando solo negrita, cursiva, subrayado y saltos. */
