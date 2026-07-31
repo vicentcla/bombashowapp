@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Minus, Plus, RotateCcw, BarChart3, X } from "lucide-react";
+import { Minus, Plus, RotateCcw, BarChart3, X, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import {
   useAddPlay,
@@ -17,25 +17,14 @@ export type CounterItem = {
   tags?: string[];
 };
 
-export function Counters({
-  scope,
-  items,
-  search,
-}: {
-  scope: Scope;
-  items: CounterItem[];
-  search: string;
-}) {
+/** Recuentos del periodo abierto para el ámbito indicado. */
+export function useCurrentCounts(scope: Scope) {
   const events = usePlayEvents(scope);
   const periods = usePeriods(scope);
-  const addPlay = useAddPlay(scope);
-  const reset = useResetCounters(scope);
-  const [showStats, setShowStats] = useState(false);
-
-  const idField = scope === "street" ? "street_song_id" : "arrangement_id";
+  const idField = scope === "calle" ? "street_song_id" : "arrangement_id";
   const currentPeriod = periods.data?.find((p) => p.ended_at === null) ?? null;
 
-  const currentCounts = useMemo(() => {
+  return useMemo(() => {
     const map = new Map<string, number>();
     for (const e of events.data ?? []) {
       if (currentPeriod && e.period_id !== currentPeriod.id) continue;
@@ -45,20 +34,43 @@ export function Counters({
     }
     return map;
   }, [events.data, currentPeriod, idField]);
+}
+
+export function Counters({
+  scope,
+  items,
+  search,
+  onMove,
+}: {
+  scope: Scope;
+  items: CounterItem[];
+  search: string;
+  onMove?: (index: number, dir: -1 | 1) => void;
+}) {
+  const addPlay = useAddPlay(scope);
+  const reset = useResetCounters(scope);
+  const counts = useCurrentCounts(scope);
+  const [showStats, setShowStats] = useState(false);
 
   const filtered = useMemo(() => {
     const q = normalize(search.trim());
     if (!q) return items;
     return items.filter(
-      (i) =>
-        normalize(i.title).includes(q) ||
-        (i.tags ?? []).some((t) => normalize(t).includes(q)),
+      (i) => normalize(i.title).includes(q) || (i.tags ?? []).some((t) => normalize(t).includes(q)),
     );
   }, [items, search]);
 
+  async function change(songId: string, delta: 1 | -1) {
+    try {
+      await addPlay.mutateAsync({ songId, delta });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo guardar");
+    }
+  }
+
   async function doReset() {
-    const label = prompt("Nombre para el periodo que cierras (opcional)", "") ?? "";
     if (!confirm("¿Poner todos los contadores a 0 y empezar un periodo nuevo?")) return;
+    const label = prompt("Nombre para el periodo que cierras (opcional)", "") ?? "";
     try {
       await reset.mutateAsync(label);
       toast.success("Contadores reiniciados");
@@ -90,49 +102,52 @@ export function Counters({
         </p>
       )}
 
-      <div className="space-y-2">
-        {filtered.map((item) => {
-          const count = currentCounts.get(item.id) ?? 0;
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        {filtered.map((item, index) => {
+          const count = counts.get(item.id) ?? 0;
           return (
-            <div
-              key={item.id}
-              className="comic grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-card p-3"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-xl leading-tight">{item.title}</p>
-                {item.subtitle && (
-                  <p className="text-xs font-bold text-muted-foreground">{item.subtitle}</p>
-                )}
-                {!!item.tags?.length && (
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {item.tags.map((t) => (
-                      <span
-                        key={t}
-                        className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[10px] font-bold uppercase"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
+            <div key={item.id} className="comic-sm flex flex-col rounded-lg bg-card p-2">
+              <p className="line-clamp-2 min-h-8 text-sm font-extrabold leading-tight">
+                {item.title}
+              </p>
+              {item.subtitle && (
+                <p className="text-[10px] font-bold text-muted-foreground">{item.subtitle}</p>
+              )}
+              <div className="mt-1 flex items-center justify-between gap-1">
                 <button
-                  onClick={() => addPlay.mutate({ songId: item.id, delta: -1 })}
+                  onClick={() => change(item.id, -1)}
                   aria-label={`Restar a ${item.title}`}
-                  className="comic-sm comic-press rounded-md bg-secondary p-2"
+                  className="comic-sm comic-press rounded bg-secondary p-1.5"
                 >
-                  <Minus className="h-4 w-4" />
+                  <Minus className="h-3.5 w-3.5" />
                 </button>
-                <span className="min-w-10 text-center text-3xl leading-none">{count}</span>
+                <span className="text-2xl leading-none">{count}</span>
                 <button
-                  onClick={() => addPlay.mutate({ songId: item.id, delta: 1 })}
+                  onClick={() => change(item.id, 1)}
                   aria-label={`Sumar a ${item.title}`}
-                  className="comic-sm comic-press rounded-md bg-primary p-2 text-primary-foreground"
+                  className="comic-sm comic-press rounded bg-primary p-1.5 text-primary-foreground"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" />
                 </button>
               </div>
+              {onMove && (
+                <div className="mt-1 flex justify-center gap-1">
+                  <button
+                    onClick={() => onMove(index, -1)}
+                    aria-label={`Subir ${item.title}`}
+                    className="comic-sm comic-press rounded bg-secondary px-2 py-0.5"
+                  >
+                    <ArrowUp className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={() => onMove(index, 1)}
+                    aria-label={`Bajar ${item.title}`}
+                    className="comic-sm comic-press rounded bg-secondary px-2 py-0.5"
+                  >
+                    <ArrowDown className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}
@@ -161,17 +176,23 @@ function StatsDialog({
   const [view, setView] = useState<View>("period");
   const [bucket, setBucket] = useState<string>("");
 
-  const idField = scope === "street" ? "street_song_id" : "arrangement_id";
+  const idField = scope === "calle" ? "street_song_id" : "arrangement_id";
 
   const buckets = useMemo(() => {
     const list = events.data ?? [];
     if (view === "month") {
       const set = new Set(list.map((e) => e.played_at.slice(0, 7)));
-      return [...set].sort().reverse().map((v) => ({ value: v, label: v }));
+      return [...set]
+        .sort()
+        .reverse()
+        .map((v) => ({ value: v, label: v }));
     }
     if (view === "year") {
       const set = new Set(list.map((e) => e.played_at.slice(0, 4)));
-      return [...set].sort().reverse().map((v) => ({ value: v, label: v }));
+      return [...set]
+        .sort()
+        .reverse()
+        .map((v) => ({ value: v, label: v }));
     }
     return (periods.data ?? []).map((p) => ({
       value: p.id,

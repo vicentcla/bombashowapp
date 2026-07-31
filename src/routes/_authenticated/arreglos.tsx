@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import { Counters } from "@/components/Counters";
-import { useArrangements, useLyrics } from "@/lib/queries";
+import { Counters, useCurrentCounts } from "@/components/Counters";
+import { SortBar, type SortMode } from "@/components/SortBar";
+import { useArrangements, useLyrics, useReorder } from "@/lib/queries";
 import { formatDuration } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/arreglos")({
@@ -26,8 +27,11 @@ export const Route = createFileRoute("/_authenticated/arreglos")({
 function Arreglos() {
   const arrangements = useArrangements();
   const lyrics = useLyrics();
+  const counts = useCurrentCounts("arreglo");
+  const reorder = useReorder("arrangements");
   const [search, setSearch] = useState("");
   const [tag, setTag] = useState("");
+  const [sort, setSort] = useState<SortMode>("alfabetico");
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
@@ -35,18 +39,39 @@ function Arreglos() {
     return [...set].sort();
   }, [arrangements.data]);
 
+  const list = useMemo(() => {
+    const base = (arrangements.data ?? []).filter((a) => !tag || (a.tags ?? []).includes(tag));
+    const sorted = [...base];
+    if (sort === "alfabetico") sorted.sort((a, b) => a.title.localeCompare(b.title, "es"));
+    if (sort === "duracion") sorted.sort((a, b) => b.duration_seconds - a.duration_seconds);
+    if (sort === "mas")
+      sorted.sort(
+        (a, b) =>
+          (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0) || a.title.localeCompare(b.title, "es"),
+      );
+    if (sort === "manual") sorted.sort((a, b) => a.sort_order - b.sort_order);
+    return sorted;
+  }, [arrangements.data, tag, sort, counts]);
+
   const items = useMemo(
     () =>
-      (arrangements.data ?? [])
-        .filter((a) => !tag || (a.tags ?? []).includes(tag))
-        .map((a) => ({
-          id: a.id,
-          title: a.title,
-          subtitle: formatDuration(a.duration_seconds),
-          tags: a.tags ?? [],
-        })),
-    [arrangements.data, tag],
+      list.map((a) => ({
+        id: a.id,
+        title: a.title,
+        subtitle: formatDuration(a.duration_seconds),
+        tags: a.tags ?? [],
+      })),
+    [list],
   );
+
+  function move(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= list.length) return;
+    const ids = list.map((a) => a.id);
+    const [moved] = ids.splice(index, 1);
+    ids.splice(target, 0, moved!);
+    reorder.mutate(ids);
+  }
 
   return (
     <div>
@@ -61,6 +86,12 @@ function Arreglos() {
           className="w-full bg-transparent py-2 text-base outline-none"
         />
       </div>
+
+      <SortBar
+        value={sort}
+        onChange={setSort}
+        options={["alfabetico", "mas", "duracion", "manual"]}
+      />
 
       {allTags.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-1">
@@ -86,13 +117,18 @@ function Arreglos() {
         </div>
       )}
 
-      <Counters scope="arrangement" search={search} items={items} />
+      <Counters
+        scope="arreglo"
+        search={search}
+        items={items}
+        {...(sort === "manual" ? { onMove: move } : {})}
+      />
 
       <details className="comic mt-6 rounded-xl bg-card p-4">
         <summary className="cursor-pointer text-xl">Letras de los arreglos</summary>
         <div className="mt-3 space-y-3">
           {(lyrics.data ?? [])
-            .filter((l) => l.kind === "arrangement")
+            .filter((l) => l.kind === "arreglo")
             .map((l) => (
               <details key={l.id} className="comic-sm rounded-md bg-background p-3">
                 <summary className="cursor-pointer font-bold">{l.title}</summary>
@@ -102,7 +138,7 @@ function Arreglos() {
                 />
               </details>
             ))}
-          {!lyrics.data?.some((l) => l.kind === "arrangement") && (
+          {!lyrics.data?.some((l) => l.kind === "arreglo") && (
             <p className="text-muted-foreground">Todavía no hay letras de arreglos.</p>
           )}
         </div>
