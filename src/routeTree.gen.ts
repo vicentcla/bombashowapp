@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedAjustesRouteImport } from './routes/_authenticated/ajustes'
 import { Route as AuthenticatedArreglosRouteImport } from './routes/_authenticated/arreglos'
 import { Route as AuthenticatedCalleRouteImport } from './routes/_authenticated/calle'
 import { Route as AuthenticatedContadoresRouteImport } from './routes/_authenticated/contadores'
@@ -34,6 +35,11 @@ const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAjustesRoute = AuthenticatedAjustesRouteImport.update({
+  id: '/ajustes',
+  path: '/ajustes',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedArreglosRoute = AuthenticatedArreglosRouteImport.update({
   id: '/arreglos',
@@ -79,6 +85,7 @@ const AuthenticatedSetlistsRoute = AuthenticatedSetlistsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/ajustes': typeof AuthenticatedAjustesRoute
   '/arreglos': typeof AuthenticatedArreglosRoute
   '/calle': typeof AuthenticatedCalleRoute
   '/contadores': typeof AuthenticatedContadoresRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/ajustes': typeof AuthenticatedAjustesRoute
   '/arreglos': typeof AuthenticatedArreglosRoute
   '/calle': typeof AuthenticatedCalleRoute
   '/contadores': typeof AuthenticatedContadoresRoute
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/ajustes': typeof AuthenticatedAjustesRoute
   '/_authenticated/arreglos': typeof AuthenticatedArreglosRoute
   '/_authenticated/calle': typeof AuthenticatedCalleRoute
   '/_authenticated/contadores': typeof AuthenticatedContadoresRoute
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/ajustes'
     | '/arreglos'
     | '/calle'
     | '/contadores'
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/ajustes'
     | '/arreglos'
     | '/calle'
     | '/contadores'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/ajustes'
     | '/_authenticated/arreglos'
     | '/_authenticated/calle'
     | '/_authenticated/contadores'
@@ -182,6 +194,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/ajustes': {
+      id: '/_authenticated/ajustes'
+      path: '/ajustes'
+      fullPath: '/ajustes'
+      preLoaderRoute: typeof AuthenticatedAjustesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/arreglos': {
       id: '/_authenticated/arreglos'
@@ -243,6 +262,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAjustesRoute: typeof AuthenticatedAjustesRoute
   AuthenticatedArreglosRoute: typeof AuthenticatedArreglosRoute
   AuthenticatedCalleRoute: typeof AuthenticatedCalleRoute
   AuthenticatedContadoresRoute: typeof AuthenticatedContadoresRoute
@@ -254,6 +274,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAjustesRoute: AuthenticatedAjustesRoute,
   AuthenticatedArreglosRoute: AuthenticatedArreglosRoute,
   AuthenticatedCalleRoute: AuthenticatedCalleRoute,
   AuthenticatedContadoresRoute: AuthenticatedContadoresRoute,

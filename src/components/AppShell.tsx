@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Music, ListMusic, Clock, Users, LogOut, Home, Gamepad2 } from "lucide-react";
+import { Music, ListMusic, Clock, Users, LogOut, Home, Gamepad2, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,11 +50,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             </a>
             <ThemeToggle />
             <Link
-              to="/miembros"
+              to="/ajustes"
               className="comic-sm comic-press hidden rounded-md bg-secondary p-2 text-secondary-foreground md:inline-flex"
-              aria-label="Miembros"
+              aria-label="Ajustes"
             >
-              <Users className="h-4 w-4" />
+              <Settings className="h-4 w-4" />
             </Link>
             <button
               onClick={signOut}
