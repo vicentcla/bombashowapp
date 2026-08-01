@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import {
   User,
   Shield,
-  Music,
   Check,
   X,
   Clock,
@@ -15,18 +14,13 @@ import {
   Lightbulb,
   UserCheck,
   UserPlus,
-  Crown,
+  Gem,
+  Star,
   UserX,
   ShieldPlus,
   ShieldMinus,
 } from "lucide-react";
-import {
-  PercusionIcon,
-  TrombonIcon,
-  TrompetaIcon,
-  SaxoIcon,
-  SousaphoneIcon,
-} from "@/components/InstrumentIcons";
+import { SousaphoneIcon } from "@/components/InstrumentIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useIsAdmin, useRole, type AppRole } from "@/hooks/useAuth";
 import { useRoleRequests, useSetlists, useInvalidate } from "@/lib/queries";
@@ -49,11 +43,14 @@ export const Route = createFileRoute("/_authenticated/ajustes")({
 const INSTRUMENTS = ["Percusión", "Trombón", "Trompeta", "Saxo", "Sousaphone"] as const;
 type Instrument = (typeof INSTRUMENTS)[number];
 
-const INSTRUMENT_ICONS: Record<string, React.ElementType> = {
-  Percusión: PercusionIcon,
-  Trombón: TrombonIcon,
-  Trompeta: TrompetaIcon,
-  Saxo: SaxoIcon,
+const INSTRUMENT_EMOJIS: Record<string, string> = {
+  Percusión: "🥁",
+  Trombón: "🪊",
+  Trompeta: "🎺",
+  Saxo: "🎷",
+};
+
+const INSTRUMENT_GENERATED_ICONS: Record<string, React.ElementType> = {
   Sousaphone: SousaphoneIcon,
 };
 
@@ -506,11 +503,11 @@ function Ajustes() {
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-background p-3">
                 <div className="flex items-center gap-2">
                   {role === "superadmin" ? (
-                    <Crown className="h-5 w-5 text-primary" />
+                    <Gem className="h-5 w-5 text-primary" />
+                  ) : role === "admin" ? (
+                    <Star className="h-5 w-5 text-primary" />
                   ) : (
-                    <Shield
-                      className={`h-5 w-5 ${isAdmin ? "text-primary" : "text-muted-foreground"}`}
-                    />
+                    <Shield className="h-5 w-5 text-muted-foreground" />
                   )}
                   <span className="font-extrabold">{ROLE_LABELS[role ?? "miembro"]}</span>
                 </div>
@@ -540,8 +537,31 @@ function Ajustes() {
               <label className="mb-1 block text-sm font-bold uppercase">Instrumento</label>
               <div className="comic-sm flex items-center rounded-md bg-background px-3 py-2">
                 {(() => {
-                  const InstrIcon = INSTRUMENT_ICONS[instrument] ?? Music;
-                  return <InstrIcon className="mr-2 h-4 w-4 text-primary transition-all" />;
+                  const emoji = INSTRUMENT_EMOJIS[instrument];
+                  if (emoji) {
+                    return (
+                      <span
+                        className="mr-2 text-2xl leading-none"
+                        role="img"
+                        aria-label={instrument}
+                      >
+                        {emoji}
+                      </span>
+                    );
+                  }
+                  const GeneratedIcon = INSTRUMENT_GENERATED_ICONS[instrument];
+                  if (GeneratedIcon) {
+                    return <GeneratedIcon className="mr-2 h-6 w-6 text-primary" />;
+                  }
+                  return (
+                    <span
+                      className="mr-2 text-2xl leading-none"
+                      role="img"
+                      aria-label="Instrumento"
+                    >
+                      🎵
+                    </span>
+                  );
                 })()}
                 <select
                   value={instrument}
@@ -679,7 +699,7 @@ function Ajustes() {
                             </span>
                           )}
                           <span
-                            className={`rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase ${
+                            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase ${
                               userRole === "superadmin"
                                 ? "bg-primary/15 text-primary"
                                 : userRole === "admin"
@@ -687,6 +707,11 @@ function Ajustes() {
                                   : "bg-muted text-muted-foreground"
                             }`}
                           >
+                            {userRole === "superadmin" ? (
+                              <Gem className="h-3 w-3" />
+                            ) : userRole === "admin" ? (
+                              <Star className="h-3 w-3" />
+                            ) : null}
                             {ROLE_LABELS[userRole]}
                           </span>
                         </div>

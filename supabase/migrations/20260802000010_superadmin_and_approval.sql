@@ -108,6 +108,17 @@ WHERE NOT EXISTS (
 ORDER BY p.created_at ASC
 LIMIT 1;
 
+-- Si la app tiene un único usuario, ese usuario es superadmin (caso app recién empezada)
+INSERT INTO public.user_roles (user_id, role)
+SELECT p.id, 'superadmin'::public.app_role
+FROM public.profiles p
+WHERE (SELECT COUNT(*) FROM public.profiles) = 1
+  AND NOT EXISTS (
+    SELECT 1 FROM public.user_roles ur
+    WHERE ur.user_id = p.id AND ur.role = 'superadmin'::public.app_role
+  )
+LIMIT 1;
+
 -- 5) Correo de usuarios para administradores (función RPC segura)
 CREATE OR REPLACE FUNCTION public.get_profile_email(_user_id uuid)
 RETURNS text
