@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { X, Upload, Check, FileSpreadsheet } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { X, Upload, FileSpreadsheet, CheckSquare, Square } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -97,10 +97,8 @@ function parsePastedTable(text: string): ImportItem[] {
   const items: ImportItem[] = [];
 
   for (const line of lines) {
-    // Si es cabecera, saltar
     if (line.toLowerCase().includes("nombre del arreglo") || line.startsWith("| ---")) continue;
 
-    // Separar por tubos | o tabuladores
     const parts = line.includes("|")
       ? line.split("|").map((p) => p.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1)
       : line.split("\t").map((p) => p.trim());
@@ -112,7 +110,6 @@ function parsePastedTable(text: string): ImportItem[] {
       const durStr = parts[1] || "";
       const alPuesto = parts[2] || "";
 
-      // Si AL PUESTO es NO, no añadir
       if (alPuesto.toUpperCase().trim() === "NO") continue;
 
       items.push({
@@ -137,25 +134,63 @@ export function ImportExcelDialog({
 }) {
   const [mode, setMode] = useState<"preset" | "paste">("preset");
   const [pastedText, setPastedText] = useState("");
+  const [selectedTitles, setSelectedTitles] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
 
-  const itemsToImport =
-    mode === "preset" ? PRESET_DATA : parsePastedTable(pastedText);
+  const rawItems = useMemo(
+    () => (mode === "preset" ? PRESET_DATA : parsePastedTable(pastedText)),
+    [mode, pastedText]
+  );
 
-  // Filtrar los que no existan aún en la base de datos
-  const newItems = itemsToImport.filter(
-    (item) => !existingTitles.has(item.title.toUpperCase().trim())
+  // Elementos elegibles (los que NO existen en la base de datos)
+  const eligibleItems = useMemo(
+    () => rawItems.filter((item) => !existingTitles.has(item.title.toUpperCase().trim())),
+    [rawItems, existingTitles]
+  );
+
+  // Al cambiar la lista elegible, por defecto seleccionamos todos los no duplicados
+  useEffect(() => {
+    setSelectedTitles(new Set(eligibleItems.map((item) => item.title)));
+  }, [eligibleItems]);
+
+  const allEligibleSelected =
+    eligibleItems.length > 0 && eligibleItems.every((item) => selectedTitles.has(item.title));
+
+  function toggleSelectAll() {
+    if (allEligibleSelected) {
+      setSelectedTitles(new Set());
+    } else {
+      setSelectedTitles(new Set(eligibleItems.map((item) => item.title)));
+    }
+  }
+
+  function toggleItem(title: string) {
+    setSelectedTitles((prev) => {
+      const next = new Set(prev);
+      if (next.has(title)) {
+        next.delete(title);
+      } else {
+        next.add(title);
+      }
+      return next;
+    });
+  }
+
+  // Lista final a importar: elegibles y que estén seleccionados por el usuario
+  const finalItemsToImport = useMemo(
+    () => eligibleItems.filter((item) => selectedTitles.has(item.title)),
+    [eligibleItems, selectedTitles]
   );
 
   async function handleImport() {
-    if (newItems.length === 0) {
-      toast.info("No hay canciones nuevas para importar (todas ya están en el repertorio).");
+    if (finalItemsToImport.length === 0) {
+      toast.info("No has seleccionado ninguna canción nueva para importar.");
       return;
     }
 
     setBusy(true);
     try {
-      const payload = newItems.map((item, idx) => ({
+      const payload = finalItemsToImport.map((item, idx) => ({
         title: item.title,
         duration_seconds: item.duration_seconds,
         tags: [],
@@ -165,7 +200,7 @@ export function ImportExcelDialog({
       const { error } = await supabase.from("arrangements").insert(payload);
       if (error) throw error;
 
-      toast.success(`¡Se han añadido ${newItems.length} canciones al repertorio!`);
+      toast.success(`¡Se han añadido ${finalItemsToImport.length} canciones al repertorio!`);
       onImported();
       onClose();
     } catch (err) {
@@ -208,65 +243,111 @@ export function ImportExcelDialog({
           </button>
         </div>
 
-        {mode === "preset" ? (
-          <div className="space-y-3 flex-1 overflow-hidden flex flex-col">
-            <p className="text-xs text-muted-foreground font-semibold">
-              Se han procesado las 68 canciones de tu lista (filtradas excluyendo las de "AL PUESTO = NO"):
-            </p>
-            <div className="comic-sm flex-1 overflow-y-auto rounded-md bg-background p-3 text-xs space-y-1.5 max-h-60">
-              {PRESET_DATA.map((item, idx) => {
+        {mode === "paste" && (
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase">
+              Pega aquí las filas de Excel o CSV:
+            </label>
+            <textarea
+              rows={4}
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+              placeholder="Pega la tabla copiada..."
+              className="comic-sm w-full rounded-md bg-background p-3 text-xs outline-none font-mono"
+            />
+          </div>
+        )}
+
+        {/* Lista de selección individual */}
+        <div className="space-y-2 flex-1 overflow-hidden flex flex-col min-h-[220px]">
+          <div className="flex items-center justify-between px-1 text-xs font-bold">
+            <span className="text-muted-foreground">
+              Canciones a importar: {selectedTitles.size} de {eligibleItems.length}
+            </span>
+
+            {eligibleItems.length > 0 && (
+              <button
+                onClick={toggleSelectAll}
+                className="flex items-center gap-1 text-primary hover:underline"
+              >
+                {allEligibleSelected ? (
+                  <>
+                    <CheckSquare className="h-3.5 w-3.5" /> Desmarcar todos
+                  </>
+                ) : (
+                  <>
+                    <Square className="h-3.5 w-3.5" /> Seleccionar todos
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+
+          <div className="comic-sm flex-1 overflow-y-auto rounded-md bg-background p-2 text-xs space-y-1 max-h-64">
+            {rawItems.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                No hay canciones detectadas. Pega datos arriba para previsualizar.
+              </div>
+            ) : (
+              rawItems.map((item, idx) => {
                 const exists = existingTitles.has(item.title.toUpperCase().trim());
+                const isSelected = selectedTitles.has(item.title);
                 const mins = Math.floor(item.duration_seconds / 60);
                 const secs = item.duration_seconds % 60;
                 const durFormatted = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 
                 return (
-                  <div
+                  <label
                     key={idx}
-                    className={`flex items-center justify-between p-1.5 rounded ${
-                      exists ? "opacity-40 bg-muted" : "bg-card"
+                    onClick={(e) => {
+                      if (exists) e.preventDefault();
+                    }}
+                    className={`flex items-center justify-between p-2 rounded-lg transition-colors cursor-pointer ${
+                      exists
+                        ? "opacity-40 bg-muted cursor-not-allowed"
+                        : isSelected
+                        ? "bg-primary/10 border border-primary/30"
+                        : "bg-card hover:bg-accent/40"
                     }`}
                   >
-                    <span className="font-bold">{item.title}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">{durFormatted}</span>
-                      {exists && <span className="text-[10px] bg-secondary px-1.5 py-0.5 rounded font-extrabold">Ya existe</span>}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={exists ? false : isSelected}
+                        disabled={exists}
+                        onChange={() => !exists && toggleItem(item.title)}
+                        className="h-4 w-4 rounded accent-primary cursor-pointer disabled:cursor-not-allowed"
+                      />
+                      <span className="font-bold truncate">{item.title}</span>
                     </div>
-                  </div>
+
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className="text-muted-foreground font-medium">{durFormatted}</span>
+                      {exists && (
+                        <span className="text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded font-extrabold">
+                          Ya existe
+                        </span>
+                      )}
+                    </div>
+                  </label>
                 );
-              })}
-            </div>
+              })
+            )}
           </div>
-        ) : (
-          <div className="space-y-2 flex-1 flex flex-col">
-            <label className="text-xs font-bold uppercase">
-              Pega aquí el contenido copiado de Excel / Tabla:
-            </label>
-            <textarea
-              rows={6}
-              value={pastedText}
-              onChange={(e) => setPastedText(e.target.value)}
-              placeholder="Pega las filas aquí..."
-              className="comic-sm w-full rounded-md bg-background p-3 text-xs outline-none font-mono"
-            />
-            <p className="text-[11px] text-muted-foreground">
-              Canciones válidas a añadir: <strong className="text-primary">{newItems.length}</strong>
-            </p>
-          </div>
-        )}
+        </div>
 
         {/* Resumen e importación */}
-        <div className="pt-2 border-t flex items-center justify-between gap-3">
+        <div className="pt-3 border-t flex items-center justify-between gap-3">
           <span className="text-xs font-bold text-muted-foreground">
-            {newItems.length} {newItems.length === 1 ? "canción nueva" : "canciones nuevas"}
+            {finalItemsToImport.length} {finalItemsToImport.length === 1 ? "seleccionada" : "seleccionadas"}
           </span>
           <button
             onClick={handleImport}
-            disabled={busy || newItems.length === 0}
+            disabled={busy || finalItemsToImport.length === 0}
             className="comic comic-press flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
           >
             <Upload className="h-4 w-4" />
-            {busy ? "Importando..." : `Importar ${newItems.length} arreglos`}
+            {busy ? "Importando..." : `Importar ${finalItemsToImport.length} seleccionadas`}
           </button>
         </div>
       </div>
