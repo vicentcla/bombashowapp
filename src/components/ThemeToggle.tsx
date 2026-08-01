@@ -1,30 +1,28 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme, type ThemeMode } from "@/lib/theme";
 
-const OPTIONS: { mode: ThemeMode; icon: typeof Sun; label: string }[] = [
-  { mode: "auto", icon: Monitor, label: "Automático" },
-  { mode: "light", icon: Sun, label: "Claro" },
-  { mode: "dark", icon: Moon, label: "Oscuro" },
-];
+const CYCLE: ThemeMode[] = ["auto", "light", "dark"];
+
+const META: Record<ThemeMode, { icon: typeof Sun; label: string }> = {
+  auto: { icon: Monitor, label: "Sistema" },
+  light: { icon: Sun, label: "Claro" },
+  dark: { icon: Moon, label: "Oscuro" },
+};
 
 export function ThemeToggle() {
   const { mode, setMode } = useTheme();
+  const next = CYCLE[(CYCLE.indexOf(mode) + 1) % CYCLE.length] ?? "auto";
+  const { icon: Icon, label } = META[mode];
 
   return (
-    <div className="comic-sm flex shrink-0 overflow-hidden rounded-md bg-secondary">
-      {OPTIONS.map(({ mode: m, icon: Icon, label }) => (
-        <button
-          key={m}
-          onClick={() => setMode(m)}
-          aria-label={`Tema ${label}`}
-          title={`Tema ${label}`}
-          className={`p-2.5 ${
-            mode === m ? "bg-primary text-primary-foreground" : "text-secondary-foreground"
-          }`}
-        >
-          <Icon className="h-5 w-5" />
-        </button>
-      ))}
-    </div>
+    <button
+      type="button"
+      onClick={() => setMode(next)}
+      aria-label={`Tema ${label}`}
+      title={`Tema ${label} (siguiente: ${META[next].label})`}
+      className="comic-sm comic-press flex items-center justify-center rounded-lg bg-secondary p-2 text-secondary-foreground"
+    >
+      <Icon className="h-5 w-5 shrink-0" />
+    </button>
   );
 }
