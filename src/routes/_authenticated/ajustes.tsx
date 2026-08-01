@@ -256,6 +256,8 @@ function Ajustes() {
               setlist_id: sl.id,
               arrangement_id: bi.arrangement_id,
               position: bi.position,
+              manual_title: bi.manual_title ?? null,
+              manual_duration_seconds: bi.manual_duration_seconds ?? null,
             })),
           )
           .select("id");

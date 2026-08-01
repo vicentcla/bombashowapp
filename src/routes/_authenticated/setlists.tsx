@@ -24,6 +24,7 @@ import {
   Undo2,
   Lightbulb,
   Save,
+  StickyNote,
 } from "lucide-react";
 import {
   DndContext,
@@ -114,11 +115,13 @@ export type SetlistProposal = {
   kind?: "single_song" | "bulk_edit"; // default "single_song" para compatibilidad
   // Solo para kind="bulk_edit"
   bulk_items?: {
-    arrangement_id: string;
+    arrangement_id: string | null;
     pass_id: string;
     position: number;
     title: string;
     duration_seconds: number;
+    manual_title?: string | null;
+    manual_duration_seconds?: number | null;
   }[];
 };
 
@@ -237,19 +240,44 @@ export function serializeSetlistNotes(config: SetlistNotesConfig): string {
 // de propuesta del cliente hasta que un admin la aprueba.
 export type VirtualItem = {
   id: string;
-  arrangement_id: string;
+  arrangement_id: string | null;
   position: number;
   pass_id: string;
   arrangements: Arrangement | null;
+  manual_title: string | null;
+  manual_duration_seconds: number | null;
 };
 
 // Forma común de item para el renderizado (real desde la BD o virtual).
 export type DisplayItem = {
   id: string;
-  arrangement_id: string;
+  arrangement_id: string | null;
   position: number;
   arrangements: Arrangement | null;
+  manual_title: string | null;
+  manual_duration_seconds: number | null;
 };
+
+/** Título visible de un item (canción manual o arreglo). */
+export function itemTitleOf(item: {
+  arrangements: Arrangement | null;
+  manual_title?: string | null;
+}): string {
+  return item.manual_title?.trim() || item.arrangements?.title || "";
+}
+
+/** Duración en segundos de un item (canción manual o arreglo). */
+export function itemDurationOf(item: {
+  arrangements: Arrangement | null;
+  manual_duration_seconds?: number | null;
+}): number {
+  return item.manual_duration_seconds ?? item.arrangements?.duration_seconds ?? 0;
+}
+
+/** True si el item es una canción fuera de repertorio (sin arreglo vinculado). */
+export function isManualItem(item: { arrangement_id: string | null }): boolean {
+  return !item.arrangement_id;
+}
 
 /** Recalcula posiciones globales 1..n siguiendo el orden de section_order por pase. */
 export function renumberVirtualItems(
@@ -438,8 +466,10 @@ function SetlistsPage() {
     items: {
       id: string;
       setlist_id: string;
-      arrangement_id: string;
+      arrangement_id: string | null;
       position: number;
+      manual_title: string | null;
+      manual_duration_seconds: number | null;
     }[];
   };
 
@@ -513,6 +543,8 @@ function SetlistsPage() {
             setlist_id: newSetlist.id,
             arrangement_id: item.arrangement_id,
             position: item.position,
+            manual_title: item.manual_title,
+            manual_duration_seconds: item.manual_duration_seconds,
           })
           .select("id")
           .single();
@@ -559,8 +591,10 @@ function SetlistsPage() {
           (iData as {
             id: string;
             setlist_id: string;
-            arrangement_id: string;
+            arrangement_id: string | null;
             position: number;
+            manual_title: string | null;
+            manual_duration_seconds: number | null;
           }[]) ?? [],
       };
       setLastDeletedSetlist(backup);
@@ -606,6 +640,8 @@ function SetlistsPage() {
         setlist_id: item.setlist_id,
         arrangement_id: item.arrangement_id,
         position: item.position,
+        manual_title: item.manual_title,
+        manual_duration_seconds: item.manual_duration_seconds,
       }));
       await supabase.from("setlist_items").insert(itemsToInsert);
     }
@@ -1110,10 +1146,7 @@ function SetlistCard({
   onArchive: () => void;
 }) {
   const items = useSetlistItems(setlist.id);
-  const totalSeconds = (items.data ?? []).reduce(
-    (acc, i) => acc + (i.arrangements?.duration_seconds ?? 0),
-    0,
-  );
+  const totalSeconds = (items.data ?? []).reduce((acc, i) => acc + itemDurationOf(i), 0);
 
   const comp = formatTimeComparison(totalSeconds, config.target_minutes);
 
@@ -1512,6 +1545,105 @@ function AddSongsToPassModal({
   );
 }
 
+// ─── Modal para Añadir Canción Manual (fuera de repertorio) ───────────────────
+function AddManualSongModal({
+  passName,
+  onClose,
+  onAdd,
+}: {
+  passName: string;
+  onClose: () => void;
+  onAdd: (title: string, durationSeconds: number) => Promise<void>;
+}) {
+  const [title, setTitle] = useState("");
+  const [minutes, setMinutes] = useState("0");
+  const [seconds, setSeconds] = useState("0");
+  const [busy, setBusy] = useState(false);
+
+  async function handleConfirm() {
+    if (!title.trim()) {
+      toast.error("Pon el nombre de la canción");
+      return;
+    }
+    const durationSeconds =
+      (parseInt(minutes || "0", 10) || 0) * 60 + (parseInt(seconds || "0", 10) || 0);
+    setBusy(true);
+    await onAdd(title.trim(), durationSeconds);
+    setBusy(false);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+      <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4 shadow-2xl">
+        <div className="flex items-center justify-between border-b pb-3">
+          <div>
+            <h2 className="text-2xl font-extrabold leading-none">Añadir canción manual</h2>
+            <p className="text-xs font-bold text-muted-foreground mt-1">
+              Fuera de repertorio · Asignar a <span className="text-primary">{passName}</span>
+            </p>
+          </div>
+          <button onClick={onClose} aria-label="Cerrar">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-bold uppercase">Nombre de la canción</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="P. ej. Guateque en la feria"
+            maxLength={120}
+            autoFocus
+            className="comic-sm w-full rounded-md bg-background px-3 py-2 text-base outline-none"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block text-xs font-bold uppercase">
+            Minutos
+            <input
+              type="number"
+              min={0}
+              max={600}
+              value={minutes}
+              onChange={(e) => setMinutes(e.target.value)}
+              className="comic-sm mt-1 w-full rounded-md bg-background px-3 py-2 text-base outline-none"
+            />
+          </label>
+          <label className="block text-xs font-bold uppercase">
+            Segundos
+            <input
+              type="number"
+              min={0}
+              max={59}
+              value={seconds}
+              onChange={(e) => setSeconds(e.target.value)}
+              className="comic-sm mt-1 w-full rounded-md bg-background px-3 py-2 text-base outline-none"
+            />
+          </label>
+        </div>
+
+        <p className="text-xs font-bold text-muted-foreground">
+          Duración:{" "}
+          {formatDuration(
+            (parseInt(minutes || "0", 10) || 0) * 60 + (parseInt(seconds || "0", 10) || 0),
+          )}
+        </p>
+
+        <button
+          onClick={handleConfirm}
+          disabled={busy}
+          className="comic comic-press flex items-center justify-center gap-2 w-full rounded-md bg-primary py-3 font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+        >
+          <Plus className="h-5 w-5" /> Añadir a {passName}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Modal para Añadir Descanso (entre pases) ────────────────────────────────
 function AddBreakModal({
   passes,
@@ -1802,6 +1934,9 @@ function SetlistDetail({
 
   // Modal state para añadir canciones o descansos a un pase específico
   const [addingSongsPass, setAddingSongsPass] = useState<{ id: string; name: string } | null>(null);
+  const [addingManualPass, setAddingManualPass] = useState<{ id: string; name: string } | null>(
+    null,
+  );
   const [showBreakModal, setShowBreakModal] = useState(false);
 
   // Confirmación de borrado de pase
@@ -1835,6 +1970,8 @@ function SetlistDetail({
             arrangement_id: vi.arrangement_id,
             position: vi.position,
             arrangements: vi.arrangements ?? null,
+            manual_title: vi.manual_title,
+            manual_duration_seconds: vi.manual_duration_seconds,
           }))
         : (items.data ?? []),
     [isProposalMode, proposalItems, items.data],
@@ -1888,7 +2025,7 @@ function SetlistDetail({
 
   // Total acumulado general (canciones + descansos)
   const totalSecondsSongs = useMemo(
-    () => activeItems.reduce((acc, i) => acc + (i.arrangements?.duration_seconds ?? 0), 0),
+    () => activeItems.reduce((acc, i) => acc + itemDurationOf(i), 0),
     [activeItems],
   );
   const totalSecondsBreaks = useMemo(
@@ -2015,6 +2152,8 @@ function SetlistDetail({
           position: 0,
           pass_id: passId,
           arrangements: arr ?? null,
+          manual_title: null,
+          manual_duration_seconds: null,
         };
       });
       const nextMap = { ...proposalPassMap };
@@ -2068,6 +2207,59 @@ function SetlistDetail({
         ? "1 arreglo añadido al pase"
         : `${songIds.length} arreglos añadidos al pase`,
     );
+  }
+
+  // Añadir una canción fuera de repertorio (nombre + duración manuales)
+  async function handleAddManualSong(passId: string, title: string, durationSeconds: number) {
+    if (isProposalMode) {
+      const tempId = `virtual_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const vi: VirtualItem = {
+        id: tempId,
+        arrangement_id: null,
+        position: 0,
+        pass_id: passId,
+        arrangements: null,
+        manual_title: title.trim(),
+        manual_duration_seconds: Math.max(0, durationSeconds),
+      };
+      const nextMap = { ...proposalPassMap, [tempId]: passId };
+      setProposalPassMap(nextMap);
+      setProposalItems((prev) =>
+        renumberVirtualItems([...prev, vi], nextMap, sectionOrder, fallbackPass),
+      );
+      toast.success("Canción manual añadida a la propuesta");
+      return;
+    }
+
+    const startPos = (items.data?.length ?? 0) + 1;
+    const { data: inserted, error } = await supabase
+      .from("setlist_items")
+      .insert({
+        setlist_id: setlistId,
+        arrangement_id: null,
+        manual_title: title.trim(),
+        manual_duration_seconds: Math.max(0, durationSeconds),
+        position: startPos,
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (!inserted) return;
+
+    const newPassMap = { ...itemPassMap, [inserted.id]: passId };
+    const updatedConfig: SetlistNotesConfig = { ...config, item_pass_map: newPassMap };
+
+    await supabase
+      .from("setlists")
+      .update({ notes: serializeSetlistNotes(updatedConfig) })
+      .eq("id", setlistId);
+
+    invalidate("setlist_items", "setlists");
+    toast.success("Canción manual añadida al pase");
   }
 
   // Añadir un nuevo pase al final del timeline
@@ -2247,7 +2439,7 @@ function SetlistDetail({
     invalidate("setlist_items", "setlists");
 
     if (itemToDelete) {
-      toast(`Tema "${itemToDelete.arrangements?.title}" quitado del setlist`, {
+      toast(`Tema "${itemTitleOf(itemToDelete)}" quitado del setlist`, {
         action: {
           label: "Deshacer",
           onClick: async () => {
@@ -2258,6 +2450,8 @@ function SetlistDetail({
                 setlist_id: setlistId,
                 arrangement_id: itemToDelete.arrangement_id,
                 position: itemToDelete.position,
+                manual_title: itemToDelete.manual_title,
+                manual_duration_seconds: itemToDelete.manual_duration_seconds,
               })
               .select("id")
               .single();
@@ -2329,13 +2523,20 @@ function SetlistDetail({
       arrangement_id: vi.arrangement_id,
       pass_id: proposalPassMap[vi.id] || config.passes[0]?.id || "",
       position: vi.position,
-      title: vi.arrangements?.title || "",
-      duration_seconds: vi.arrangements?.duration_seconds || 0,
+      title: itemTitleOf(vi),
+      duration_seconds: itemDurationOf(vi),
+      manual_title: vi.manual_title,
+      manual_duration_seconds: vi.manual_duration_seconds,
     }));
 
     // Si no hay diferencias frente al estado inicial, no tiene sentido proponer
     const signature = (items: VirtualItem[], map: Record<string, string>) =>
-      items.map((i) => `${i.arrangement_id}:${map[i.id] ?? ""}:${i.position}`).join("|");
+      items
+        .map(
+          (i) =>
+            `${i.arrangement_id ?? "manual"}:${i.manual_title ?? ""}:${i.manual_duration_seconds ?? 0}:${map[i.id] ?? ""}:${i.position}`,
+        )
+        .join("|");
     const start = proposalStartRef.current;
     if (
       start &&
@@ -2443,6 +2644,17 @@ function SetlistDetail({
         />
       )}
 
+      {/* Modal para añadir una canción manual (fuera de repertorio) */}
+      {addingManualPass && (
+        <AddManualSongModal
+          passName={addingManualPass.name}
+          onClose={() => setAddingManualPass(null)}
+          onAdd={async (title, durationSeconds) => {
+            await handleAddManualSong(addingManualPass.id, title, durationSeconds);
+          }}
+        />
+      )}
+
       {/* Modal para añadir descanso entre secciones */}
       {showBreakModal && (
         <AddBreakModal
@@ -2516,6 +2728,8 @@ function SetlistDetail({
                   position: item.position,
                   pass_id: itemPassMap[item.id] || fallbackPass,
                   arrangements: item.arrangements,
+                  manual_title: item.manual_title,
+                  manual_duration_seconds: item.manual_duration_seconds,
                 }));
                 setProposalItems(currentVirtual);
                 setProposalPassMap({ ...itemPassMap });
@@ -2573,7 +2787,7 @@ function SetlistDetail({
 
           <div className="flex items-center gap-2">
             <span className="comic-sm rounded bg-primary px-3 py-1 text-xs font-extrabold uppercase text-primary-foreground">
-              {activeItems.length} arreglos
+              {activeItems.length} temas
             </span>
           </div>
         </div>
@@ -2677,10 +2891,7 @@ function SetlistDetail({
             const passItems = activeItems.filter(
               (i) => (activePassMap[i.id] || fallbackPass) === p.id,
             );
-            const passSeconds = passItems.reduce(
-              (s, i) => s + (i.arrangements?.duration_seconds ?? 0),
-              0,
-            );
+            const passSeconds = passItems.reduce((s, i) => s + itemDurationOf(i), 0);
 
             return (
               <button
@@ -2808,10 +3019,7 @@ function SetlistDetail({
                 return assignedPass === pass.id;
               });
 
-              const passSongSeconds = passItems.reduce(
-                (acc, i) => acc + (i.arrangements?.duration_seconds ?? 0),
-                0,
-              );
+              const passSongSeconds = passItems.reduce((acc, i) => acc + itemDurationOf(i), 0);
 
               const passComp = formatTimeComparison(passSongSeconds, pass.target_minutes);
 
@@ -2836,6 +3044,13 @@ function SetlistDetail({
                             className="comic-sm comic-press flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-extrabold uppercase text-primary-foreground"
                           >
                             <Plus className="h-3.5 w-3.5" /> Añadir canciones
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAddingManualPass({ id: pass.id, name: pass.name })}
+                            className="comic-sm comic-press flex items-center gap-1 rounded-md bg-amber-500/15 px-3 py-1.5 text-xs font-extrabold uppercase text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/20"
+                          >
+                            <StickyNote className="h-3.5 w-3.5" /> Manual
                           </button>
                           {isAdmin && config.passes.length > 1 && (
                             <button
@@ -2911,12 +3126,17 @@ function SetlistDetail({
                               <div className="min-w-0">
                                 <p className="text-xs font-extrabold text-primary mb-0.5">
                                   #{index + 1}
+                                  {isManualItem(item) && (
+                                    <span className="comic-sm ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-amber-700 dark:text-amber-300">
+                                      Fuera de repertorio
+                                    </span>
+                                  )}
                                 </p>
                                 <p className="truncate text-base font-extrabold leading-tight">
-                                  {item.arrangements?.title || "Cargando..."}
+                                  {itemTitleOf(item) || "Cargando..."}
                                 </p>
                                 <p className="text-xs font-bold text-muted-foreground">
-                                  {formatDuration(item.arrangements?.duration_seconds ?? 0)}
+                                  {formatDuration(itemDurationOf(item))}
                                 </p>
                               </div>
 
@@ -2953,8 +3173,13 @@ function SetlistDetail({
                               </span>
                               <div className="min-w-0">
                                 <p className="truncate text-lg font-extrabold leading-tight">
-                                  {item.arrangements?.title || "Cargando..."}
+                                  {itemTitleOf(item) || "Cargando..."}
                                 </p>
+                                {isManualItem(item) && (
+                                  <span className="comic-sm mt-0.5 inline-block rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-amber-700 dark:text-amber-300">
+                                    Fuera de repertorio
+                                  </span>
+                                )}
                                 {!!item.arrangements?.tags?.length && (
                                   <div className="mt-0.5 flex flex-wrap gap-1">
                                     {item.arrangements.tags.map((t) => (
@@ -2972,7 +3197,7 @@ function SetlistDetail({
 
                             <div className="flex shrink-0 items-center gap-2">
                               <span className="text-sm font-extrabold text-muted-foreground font-mono">
-                                {formatDuration(item.arrangements?.duration_seconds ?? 0)}
+                                {formatDuration(itemDurationOf(item))}
                               </span>
                               {lyric && <BookOpen className="h-4 w-4 text-primary/60" />}
                             </div>
@@ -2996,10 +3221,10 @@ function SetlistDetail({
                 <div className="comic flex items-center gap-3 rounded-xl bg-primary text-primary-foreground p-3 shadow-2xl opacity-90">
                   <GripVertical className="h-5 w-5 shrink-0" />
                   <span className="font-extrabold text-base">
-                    {draggedItem.arrangements?.title || "Canción"}
+                    {itemTitleOf(draggedItem) || "Canción"}
                   </span>
                   <span className="ml-auto text-xs font-bold opacity-75">
-                    {formatDuration(draggedItem.arrangements?.duration_seconds ?? 0)}
+                    {formatDuration(itemDurationOf(draggedItem))}
                   </span>
                 </div>
               );

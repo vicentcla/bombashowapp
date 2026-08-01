@@ -123,6 +123,15 @@ export function useSetlists() {
   });
 }
 
+export type SetlistItem = {
+  id: string;
+  position: number;
+  arrangement_id: string | null;
+  manual_title: string | null;
+  manual_duration_seconds: number | null;
+  arrangements: Arrangement | null;
+};
+
 export function useSetlistItems(setlistId: string | null) {
   return useQuery({
     queryKey: ["setlist_items", setlistId],
@@ -130,16 +139,13 @@ export function useSetlistItems(setlistId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("setlist_items")
-        .select("id, position, arrangement_id, arrangements(id, title, duration_seconds, tags)")
+        .select(
+          "id, position, arrangement_id, manual_title, manual_duration_seconds, arrangements(id, title, duration_seconds, tags)",
+        )
         .eq("setlist_id", setlistId!)
         .order("position", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as unknown as {
-        id: string;
-        position: number;
-        arrangement_id: string;
-        arrangements: Arrangement | null;
-      }[];
+      return (data ?? []) as unknown as SetlistItem[];
     },
   });
 }
