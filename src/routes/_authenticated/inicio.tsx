@@ -103,7 +103,7 @@ function Inicio() {
           rel="noopener noreferrer"
           aria-label="Juego"
           title="Juego"
-          className="comic-sm comic-press flex items-center justify-center rounded-lg bg-accent p-2 text-accent-foreground"
+          className="comic-sm comic-press flex items-center justify-center rounded-lg bg-secondary p-2 text-secondary-foreground"
         >
           <Gamepad2 className="h-5 w-5 shrink-0" />
         </a>

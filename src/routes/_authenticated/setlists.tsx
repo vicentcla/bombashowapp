@@ -1442,8 +1442,8 @@ function AddSongsToPassModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
-      <div className="comic flex max-h-[85vh] w-full max-w-lg flex-col rounded-xl bg-card p-5 space-y-4 shadow-2xl">
-        <div className="flex items-center justify-between border-b pb-3">
+      <div className="comic flex max-h-[85vh] w-full max-w-lg flex-col rounded-xl bg-card p-4 space-y-3 shadow-2xl">
+        <div className="flex items-center justify-between border-b pb-2">
           <div>
             <h2 className="text-2xl font-extrabold leading-none">Añadir canciones</h2>
             <p className="text-xs font-bold text-muted-foreground mt-1">
@@ -1512,9 +1512,9 @@ function AddSongsToPassModal({
         {/* Lista con Checkboxes / crear canción manual */}
         <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-72 border rounded-lg p-2 bg-background">
           {creating !== null ? (
-            <div className="space-y-3 p-1">
+            <div className="space-y-2 p-1">
               <div>
-                <label className="mb-1 block text-xs font-bold uppercase">
+                <label className="mb-0.5 block text-xs font-bold uppercase">
                   Nombre de la canción
                 </label>
                 <input
@@ -1522,7 +1522,7 @@ function AddSongsToPassModal({
                   onChange={(e) => setCreating(e.target.value)}
                   maxLength={120}
                   autoFocus
-                  className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-base outline-none"
+                  className="comic-sm w-full rounded-md border border-border bg-background px-3 py-1.5 text-base outline-none"
                 />
               </div>
 
@@ -1535,7 +1535,7 @@ function AddSongsToPassModal({
                   placeholder="0:00"
                   value={formatDurationInput(duration)}
                   onChange={(e) => setDuration(e.target.value)}
-                  className="comic-sm mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-base outline-none"
+                  className="comic-sm mt-0.5 w-full rounded-md border border-border bg-background px-3 py-1.5 text-base outline-none"
                 />
               </label>
 
@@ -1546,14 +1546,14 @@ function AddSongsToPassModal({
               <button
                 onClick={handleCreateManual}
                 disabled={busy || !creating.trim()}
-                className="comic comic-press flex w-full items-center justify-center gap-2 rounded-md bg-primary py-3 font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+                className="comic comic-press flex w-full items-center justify-center gap-2 rounded-md bg-primary py-2.5 font-extrabold uppercase text-primary-foreground disabled:opacity-50"
               >
                 <Plus className="h-5 w-5" /> Crear y añadir a {passName}
               </button>
               <button
                 type="button"
                 onClick={() => setCreating(null)}
-                className="comic-sm w-full rounded-md py-2 text-xs font-extrabold uppercase text-muted-foreground hover:bg-muted/60"
+                className="comic-sm w-full rounded-md py-1.5 text-xs font-extrabold uppercase text-muted-foreground hover:bg-muted/60"
               >
                 Volver a la búsqueda
               </button>
