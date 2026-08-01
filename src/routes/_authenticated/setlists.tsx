@@ -354,9 +354,23 @@ function SetlistsPage() {
 
             <div>
               <label className="mb-1 block text-xs font-bold uppercase">
-                Duración objetivo total
+                Duración objetivo total (minutos)
               </label>
-              <HMMInput value={targetMinutes} onChange={setTargetMinutes} />
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  min={1}
+                  max={600}
+                  value={targetMinutes}
+                  onChange={(e) => setTargetMinutes(Number(e.target.value))}
+                  className="comic-sm w-32 rounded-md bg-background px-3 py-2 text-base font-bold outline-none"
+                />
+                <span className="text-xs font-bold text-muted-foreground">
+                  ({formatMinutesToHours(targetMinutes)})
+                </span>
+              </div>
             </div>
 
             {/* Estructura unificada y reordenable de pases y descansos */}
@@ -994,109 +1008,6 @@ function AddBreakModal({
   );
 }
 
-// ─── Componente teclado numérico HMM (1h + 2min = 3 dígitos) ─────────────────
-// value = minutos totales, onChange recibe minutos totales
-function HMMInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  // Convertir minutos -> dígitos HMM
-  const toDigits = (totalMin: number) => {
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    return `${h}${String(m).padStart(2, "0")}`;
-  };
-
-  const [digits, setDigits] = useState(toDigits(value));
-
-  // Sincronizar si value cambia externamente
-  const parsedExternal = toDigits(value);
-  if (digits !== parsedExternal && document.activeElement?.getAttribute("data-hmm") !== "1") {
-    // No sobreescribir si el usuario está editando
-  }
-
-  const parseDigits = (d: string) => {
-    const h = parseInt(d.slice(0, 1) || "0", 10);
-    const m = parseInt(d.slice(1) || "0", 10);
-    return h * 60 + Math.min(59, m);
-  };
-
-  const display = () => {
-    const h = digits.slice(0, 1) || "0";
-    const m = (digits.slice(1) || "00").padEnd(2, "0");
-    return { h, m };
-  };
-
-  function pressDigit(d: string) {
-    const next = (digits + d).slice(-3);
-    setDigits(next);
-    onChange(parseDigits(next));
-  }
-
-  function pressDelete() {
-    const next = digits.slice(0, -1);
-    setDigits(next);
-    onChange(parseDigits(next));
-  }
-
-  function pressClear() {
-    setDigits("0");
-    onChange(0);
-  }
-
-  const { h, m } = display();
-  const totalMin = parseDigits(digits);
-
-  return (
-    <div className="space-y-2">
-      {/* Display */}
-      <div className="comic-sm flex items-baseline gap-1.5 rounded-lg bg-background px-4 py-2.5 border border-ink/20 w-fit">
-        <span className="text-3xl font-extrabold tabular-nums leading-none text-foreground">{h}</span>
-        <span className="text-lg font-extrabold text-muted-foreground">h</span>
-        <span className="text-3xl font-extrabold tabular-nums leading-none text-foreground">{m}</span>
-        <span className="text-lg font-extrabold text-muted-foreground">m</span>
-        {totalMin > 0 && (
-          <span className="ml-2 text-xs font-bold text-muted-foreground">= {totalMin} min</span>
-        )}
-      </div>
-
-      {/* Teclado numérico */}
-      <div className="grid grid-cols-3 gap-1.5 w-fit">
-        {["1","2","3","4","5","6","7","8","9"].map((d) => (
-          <button
-            key={d}
-            type="button"
-            onClick={() => pressDigit(d)}
-            className="comic-sm w-12 h-10 rounded-lg bg-secondary font-extrabold text-base hover:bg-secondary/70 active:scale-95 transition-transform"
-          >
-            {d}
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={pressClear}
-          className="comic-sm w-12 h-10 rounded-lg bg-destructive/10 text-destructive font-extrabold text-xs hover:bg-destructive/20 active:scale-95 transition-transform"
-          title="Borrar todo"
-        >
-          C
-        </button>
-        <button
-          type="button"
-          onClick={() => pressDigit("0")}
-          className="comic-sm w-12 h-10 rounded-lg bg-secondary font-extrabold text-base hover:bg-secondary/70 active:scale-95 transition-transform"
-        >
-          0
-        </button>
-        <button
-          type="button"
-          onClick={pressDelete}
-          className="comic-sm w-12 h-10 rounded-lg bg-secondary font-extrabold text-base hover:bg-secondary/70 active:scale-95 transition-transform"
-          title="Borrar último"
-        >
-          ⌫
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ─── Componente para cada sección (pase o descanso) reordenable en la configuración ───
 function ConfigSectionRow({
   index,
@@ -1176,6 +1087,8 @@ function ConfigSectionRow({
           <div className="flex items-center gap-1 shrink-0">
             <input
               type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
               min={0}
               value={pass.target_minutes}
               onChange={(e) => onUpdatePass({ ...pass, target_minutes: Number(e.target.value) })}
@@ -1207,6 +1120,8 @@ function ConfigSectionRow({
           <div className="flex items-center gap-1 shrink-0">
             <input
               type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
               min={1}
               max={180}
               value={breakItem.minutes}
@@ -2204,9 +2119,23 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
 
             <div>
               <label className="mb-1 block text-xs font-bold uppercase">
-                Duración objetivo total
+                Duración objetivo total (minutos)
               </label>
-              <HMMInput value={editTargetMinutes} onChange={setEditTargetMinutes} />
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  min={1}
+                  max={600}
+                  value={editTargetMinutes}
+                  onChange={(e) => setEditTargetMinutes(Number(e.target.value))}
+                  className="comic-sm w-32 rounded-md bg-background px-3 py-2 text-base font-bold outline-none"
+                />
+                <span className="text-xs font-bold text-muted-foreground">
+                  ({formatMinutesToHours(editTargetMinutes)})
+                </span>
+              </div>
             </div>
 
             {/* Estructura unificada y reordenable de pases y descansos */}
