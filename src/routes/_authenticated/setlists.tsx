@@ -2705,9 +2705,9 @@ function SetlistDetail({
           </button>
           <button
             onClick={() => setIsEditingItems(false)}
-            className="comic-sm rounded bg-emerald-600 px-2.5 py-1.5 text-xs font-extrabold uppercase text-white hover:opacity-90 ml-auto"
+            className="comic-sm comic-press flex items-center gap-1.5 rounded bg-emerald-600 px-2.5 py-1.5 text-xs font-extrabold uppercase text-white hover:opacity-90 ml-auto"
           >
-            ✓ Guardar
+            <Save className="h-3.5 w-3.5" /> Guardar
           </button>
         </div>
       )}
