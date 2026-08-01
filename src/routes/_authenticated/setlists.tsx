@@ -78,18 +78,20 @@ export type PassConfig = {
   target_minutes: number;
 };
 
+// Un descanso es una sección independiente entre pases (sin pass_id)
 export type BreakItem = {
   id: string;
-  pass_id: string;
   minutes: number;
   title?: string;
 };
 
+// section_order lista IDs de pases y descansos en el orden que deben aparecer en el timeline
 export type SetlistNotesConfig = {
   target_minutes: number;
   passes: PassConfig[];
   item_pass_map: Record<string, string>; // item_id -> pass_id
   breaks?: BreakItem[];
+  section_order?: string[]; // ordered IDs: pass IDs and break IDs interleaved
   notes_text?: string;
 };
 
@@ -100,6 +102,7 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
       passes: [{ id: "p1", name: "Pase único", target_minutes: 0 }],
       item_pass_map: {},
       breaks: [],
+      section_order: ["p1"],
     };
   }
   try {
@@ -118,20 +121,26 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
         typeof parsed.item_pass_map === "object" && parsed.item_pass_map
           ? (parsed.item_pass_map as Record<string, string>)
           : {};
-      const breaks =
+      // Breaks: parse without pass_id (top-level sections)
+      const breaks: BreakItem[] =
         Array.isArray(parsed.breaks)
           ? parsed.breaks.map((b: Record<string, unknown>) => ({
               id: String(b['id'] || `b_${Math.random()}`),
-              pass_id: String(b['pass_id'] || "p1"),
               minutes: Number(b['minutes']) || 15,
               title: typeof b['title'] === "string" ? b['title'] : "Descanso",
             }))
           : [];
+      // section_order: if stored, use it; else derive from passes (backward compat)
+      const section_order: string[] =
+        Array.isArray(parsed.section_order) && parsed.section_order.length > 0
+          ? (parsed.section_order as string[])
+          : passes.map((p) => p.id);
       return {
         target_minutes,
         passes,
         item_pass_map,
         breaks,
+        section_order,
         notes_text: typeof parsed.notes_text === "string" ? parsed.notes_text : "",
       };
     }
@@ -143,6 +152,7 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
     passes: [{ id: "p1", name: "Pase único", target_minutes: 0 }],
     item_pass_map: {},
     breaks: [],
+    section_order: ["p1"],
     notes_text: notes,
   };
 }
@@ -803,28 +813,40 @@ function AddSongsToPassModal({
   );
 }
 
-// ─── Modal para Añadir Descanso a un Pase ────────────────────────────────────
+// ─── Modal para Añadir Descanso (entre secciones) ────────────────────────────
 function AddBreakModal({
-  passName,
+  passes,
+  sectionOrder,
   onClose,
   onAdd,
 }: {
-  passName: string;
+  passes: PassConfig[];
+  sectionOrder: string[];
   onClose: () => void;
-  onAdd: (minutes: number, title?: string) => Promise<void>;
+  onAdd: (minutes: number, afterSectionId: string, title?: string) => Promise<void>;
 }) {
   const [minutes, setMinutes] = useState(15);
   const [title, setTitle] = useState("Descanso");
+  const [afterSectionId, setAfterSectionId] = useState(
+    sectionOrder.length > 0 ? sectionOrder[sectionOrder.length - 1] : passes[0]?.id ?? ""
+  );
   const [busy, setBusy] = useState(false);
 
   const presets = [5, 10, 15, 20, 30, 45];
 
   async function handleConfirm() {
     setBusy(true);
-    await onAdd(minutes, title);
+    await onAdd(minutes, afterSectionId, title);
     setBusy(false);
     onClose();
   }
+
+  // Build position options from sectionOrder
+  const positionOptions = sectionOrder.map((id, idx) => {
+    const pass = passes.find((p) => p.id === id);
+    const label = pass ? pass.name : `Sección ${idx + 1}`;
+    return { id, label };
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
@@ -833,13 +855,30 @@ function AddBreakModal({
           <div>
             <h2 className="text-2xl font-extrabold leading-none">Añadir descanso</h2>
             <p className="text-xs font-bold text-muted-foreground mt-1">
-              Para <span className="text-primary">{passName}</span>
+              Inserta una pausa entre secciones
             </p>
           </div>
           <button onClick={onClose} aria-label="Cerrar">
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {positionOptions.length > 1 && (
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase">Insertar después de</label>
+            <select
+              value={afterSectionId}
+              onChange={(e) => setAfterSectionId(e.target.value)}
+              className="comic-sm w-full rounded-md bg-background px-3 py-2 text-base outline-none"
+            >
+              {positionOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <label className="mb-1 block text-xs font-bold uppercase">Duración (minutos)</label>
@@ -912,7 +951,7 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
 
   // Modal state para añadir canciones o descansos a un pase específico
   const [addingSongsPass, setAddingSongsPass] = useState<{ id: string; name: string } | null>(null);
-  const [addingBreakPass, setAddingBreakPass] = useState<{ id: string; name: string } | null>(null);
+  const [showBreakModal, setShowBreakModal] = useState(false);
 
   // Formulario de edición de configuración
   const [editName, setEditName] = useState(setlist?.name || "");
@@ -1016,19 +1055,60 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
     );
   }
 
-  // Gestión de descansos
-  async function handleAddBreakToPass(passId: string, minutes: number, title?: string) {
+  // Añadir un nuevo pase al final del timeline
+  async function handleAddPass() {
+    const newPassNumber = config.passes.length + 1;
+    const newPass: PassConfig = {
+      id: `p${Date.now()}`,
+      name: `Pase ${newPassNumber}`,
+      target_minutes: 0,
+    };
+
+    const currentOrder = config.section_order ?? config.passes.map((p) => p.id);
+    const updatedConfig: SetlistNotesConfig = {
+      ...config,
+      passes: [...config.passes, newPass],
+      section_order: [...currentOrder, newPass.id],
+    };
+
+    const { error } = await supabase
+      .from("setlists")
+      .update({ notes: serializeSetlistNotes(updatedConfig) })
+      .eq("id", setlistId);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    invalidate("setlists");
+    toast.success(`"${newPass.name}" añadido al setlist`);
+  }
+
+  // Añadir descanso (insertado DESPUÉS de un pase específico en el timeline)
+  async function handleAddBreak(minutes: number, afterSectionId: string, title?: string) {
     const newBreak: BreakItem = {
       id: `b_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      pass_id: passId,
       minutes: Math.max(1, minutes),
       title: title?.trim() || "Descanso",
     };
 
     const currentBreaks = config.breaks || [];
+    const currentOrder = config.section_order ?? config.passes.map((p) => p.id);
+
+    // Insertar en section_order justo después de afterSectionId
+    const insertIdx = currentOrder.indexOf(afterSectionId);
+    const newOrder = [...currentOrder];
+    if (insertIdx >= 0) {
+      newOrder.splice(insertIdx + 1, 0, newBreak.id);
+    } else {
+      newOrder.push(newBreak.id); // fallback: al final
+    }
+
     const updatedConfig: SetlistNotesConfig = {
       ...config,
       breaks: [...currentBreaks, newBreak],
+      section_order: newOrder,
     };
 
     const { error } = await supabase
@@ -1069,11 +1149,11 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
 
   async function handleRemoveBreak(breakId: string) {
     const currentBreaks = config.breaks || [];
-    const updatedBreaks = currentBreaks.filter((b) => b.id !== breakId);
-
+    const currentOrder = config.section_order ?? config.passes.map((p) => p.id);
     const updatedConfig: SetlistNotesConfig = {
       ...config,
-      breaks: updatedBreaks,
+      breaks: currentBreaks.filter((b) => b.id !== breakId),
+      section_order: currentOrder.filter((id) => id !== breakId),
     };
 
     await supabase
@@ -1205,13 +1285,14 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
         />
       )}
 
-      {/* Modal para añadir descansos a un pase */}
-      {addingBreakPass && (
+      {/* Modal para añadir descanso entre secciones */}
+      {showBreakModal && (
         <AddBreakModal
-          passName={addingBreakPass.name}
-          onClose={() => setAddingBreakPass(null)}
-          onAdd={async (minutes, title) => {
-            await handleAddBreakToPass(addingBreakPass.id, minutes, title);
+          passes={config.passes}
+          sectionOrder={config.section_order ?? config.passes.map((p) => p.id)}
+          onClose={() => setShowBreakModal(false)}
+          onAdd={async (minutes, afterSectionId, title) => {
+            await handleAddBreak(minutes, afterSectionId, title);
           }}
         />
       )}
@@ -1352,10 +1433,7 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
             const passItems = (items.data ?? []).filter(
               (i) => (itemPassMap[i.id] || config.passes[0]?.id) === p.id,
             );
-            const passBreaks = (config.breaks ?? []).filter((b) => b.pass_id === p.id);
-            const passSeconds =
-              passItems.reduce((s, i) => s + (i.arrangements?.duration_seconds ?? 0), 0) +
-              passBreaks.reduce((s, b) => s + b.minutes * 60, 0);
+            const passSeconds = passItems.reduce((s, i) => s + (i.arrangements?.duration_seconds ?? 0), 0);
 
             return (
               <button
@@ -1374,15 +1452,26 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
         </div>
       )}
 
-      {/* Notificación de Modo Edición Activo */}
+      {/* Barra de acciones de estructura del setlist (entre tabs y tarjetas de pase) */}
       {isEditingItems && (
-        <div className="comic rounded-xl bg-card p-3 flex flex-wrap items-center justify-between gap-2 border-2 border-primary">
-          <h3 className="text-xs font-extrabold uppercase text-primary flex items-center gap-1.5">
-            <Pencil className="h-4 w-4" /> Modo Edición: Añade canciones o descansos a cada pase directamente a continuación
-          </h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleAddPass}
+            className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 text-xs font-extrabold uppercase border border-primary/30"
+          >
+            <Plus className="h-3.5 w-3.5" /> Añadir Pase
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowBreakModal(true)}
+            className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 px-3 py-1.5 text-xs font-extrabold uppercase border border-amber-500/30"
+          >
+            <Coffee className="h-3.5 w-3.5" /> Añadir Descanso
+          </button>
           <button
             onClick={() => setIsEditingItems(false)}
-            className="comic-sm rounded bg-emerald-600 px-2.5 py-1 text-xs font-extrabold uppercase text-white hover:opacity-90 ml-auto"
+            className="comic-sm rounded bg-emerald-600 px-2.5 py-1.5 text-xs font-extrabold uppercase text-white hover:opacity-90 ml-auto"
           >
             ✓ Concluir Edición
           </button>
@@ -1397,24 +1486,88 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
         onDragEnd={handleDragEnd}
       >
         <div className="space-y-6">
-          {config.passes
-            .filter((p) => activePassId === "all" || activePassId === p.id)
-            .map((pass) => {
+          {/* Render sections in section_order: each can be a pass card or a break bar */}
+          {(config.section_order ?? config.passes.map((p) => p.id))
+            .filter((sectionId) => {
+              // Filter: if a specific pass is selected, show only that pass section (and skip breaks/other passes)
+              if (activePassId === "all") return true;
+              const isPass = config.passes.some((p) => p.id === sectionId);
+              if (isPass) return sectionId === activePassId;
+              return false; // hide breaks when filtering by specific pass
+            })
+            .map((sectionId) => {
+              // Check if this section is a break
+              const breakItem = (config.breaks ?? []).find((b) => b.id === sectionId);
+              if (breakItem) {
+                // Render break bar as top-level section
+                return isEditingItems ? (
+                  <div
+                    key={breakItem.id}
+                    className="comic flex items-center justify-between gap-3 rounded-xl bg-amber-500/10 border-2 border-amber-500/30 p-3 text-amber-900 dark:text-amber-200"
+                  >
+                    <div className="flex items-center gap-2 font-extrabold text-sm">
+                      <Coffee className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span>{breakItem.title || "DESCANSO"}</span>
+                      <span className="comic-sm rounded bg-amber-500/20 px-2 py-0.5 text-xs font-bold">
+                        {breakItem.minutes} min
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleUpdateBreak(breakItem.id, -5)}
+                        className="comic-sm rounded bg-background px-2 py-0.5 text-xs font-bold hover:bg-muted"
+                        title="Reducir 5 min"
+                      >
+                        -5m
+                      </button>
+                      <button
+                        onClick={() => handleUpdateBreak(breakItem.id, 5)}
+                        className="comic-sm rounded bg-background px-2 py-0.5 text-xs font-bold hover:bg-muted"
+                        title="Aumentar 5 min"
+                      >
+                        +5m
+                      </button>
+                      <button
+                        onClick={() => handleRemoveBreak(breakItem.id)}
+                        aria-label="Eliminar descanso"
+                        className="comic-sm comic-press rounded bg-destructive/10 p-1.5 text-destructive hover:bg-destructive hover:text-destructive-foreground ml-1"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    key={breakItem.id}
+                    className="comic flex items-center justify-between gap-3 rounded-xl bg-amber-500/15 border border-amber-500/40 p-3 text-amber-900 dark:text-amber-200 shadow-sm"
+                  >
+                    <div className="flex items-center gap-2 font-extrabold text-base">
+                      <Coffee className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span>{breakItem.title || "DESCANSO"}</span>
+                    </div>
+                    <span className="comic-sm rounded bg-amber-500/25 px-3 py-1 text-xs font-extrabold uppercase font-mono">
+                      ☕ {breakItem.minutes} MIN
+                    </span>
+                  </div>
+                );
+              }
+
+              // Otherwise render a pass card
+              const pass = config.passes.find((p) => p.id === sectionId);
+              if (!pass) return null;
+
               const passItems = (items.data ?? []).filter((i) => {
                 const assignedPass = itemPassMap[i.id] || config.passes[0]?.id || "p1";
                 return assignedPass === pass.id;
               });
 
-              const passBreaks = (config.breaks ?? []).filter((b) => b.pass_id === pass.id);
-
               const passSongSeconds = passItems.reduce(
                 (acc, i) => acc + (i.arrangements?.duration_seconds ?? 0),
                 0,
               );
-              const passBreakSeconds = passBreaks.reduce((acc, b) => acc + b.minutes * 60, 0);
 
               const passComp = formatTimeComparison(
-                passSongSeconds + passBreakSeconds,
+                passSongSeconds,
                 pass.target_minutes,
               );
 
@@ -1425,8 +1578,7 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
                     <div>
                       <h3 className="text-2xl font-extrabold leading-none">{pass.name}</h3>
                       <p className="mt-1 text-xs font-bold text-muted-foreground">
-                        {passItems.length} temas
-                        {passBreaks.length > 0 ? ` · ${passBreaks.length} descansos` : ""} ·{" "}
+                        {passItems.length} temas ·{" "}
                         {passComp.addedText}
                         {pass.target_minutes > 0 ? ` de ${passComp.targetText} objetivo` : ""}
                       </p>
@@ -1441,13 +1593,6 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
                             className="comic-sm comic-press flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-extrabold uppercase text-primary-foreground"
                           >
                             <Plus className="h-3.5 w-3.5" /> Añadir canciones
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAddingBreakPass({ id: pass.id, name: pass.name })}
-                            className="comic-sm comic-press flex items-center gap-1 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/30 px-2.5 py-1.5 text-xs font-extrabold uppercase"
-                          >
-                            <Coffee className="h-3.5 w-3.5" /> + Descanso
                           </button>
                         </>
                       ) : (
@@ -1481,65 +1626,6 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
                           style={{ width: `${Math.min(100, passComp.percentage)}%` }}
                         />
                       </div>
-                    </div>
-                  )}
-
-                  {/* Renderizado de Descansos del Pase */}
-                  {passBreaks.length > 0 && (
-                    <div className="space-y-2">
-                      {passBreaks.map((b) =>
-                        isEditingItems ? (
-                          <div
-                            key={b.id}
-                            className="comic flex items-center justify-between gap-3 rounded-xl bg-amber-500/10 border-2 border-amber-500/30 p-3 text-amber-900 dark:text-amber-200"
-                          >
-                            <div className="flex items-center gap-2 font-extrabold text-sm">
-                              <Coffee className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                              <span>{b.title || "DESCANSO"}</span>
-                              <span className="comic-sm rounded bg-amber-500/20 px-2 py-0.5 text-xs font-bold">
-                                {b.minutes} min
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => handleUpdateBreak(b.id, -5)}
-                                className="comic-sm rounded bg-background px-2 py-0.5 text-xs font-bold hover:bg-muted"
-                                title="Reducir 5 min"
-                              >
-                                -5m
-                              </button>
-                              <button
-                                onClick={() => handleUpdateBreak(b.id, 5)}
-                                className="comic-sm rounded bg-background px-2 py-0.5 text-xs font-bold hover:bg-muted"
-                                title="Aumentar 5 min"
-                              >
-                                +5m
-                              </button>
-                              <button
-                                onClick={() => handleRemoveBreak(b.id)}
-                                aria-label="Eliminar descanso"
-                                className="comic-sm comic-press rounded bg-destructive/10 p-1.5 text-destructive hover:bg-destructive hover:text-destructive-foreground ml-1"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div
-                            key={b.id}
-                            className="comic flex items-center justify-between gap-3 rounded-xl bg-amber-500/15 border border-amber-500/40 p-3 text-amber-900 dark:text-amber-200 shadow-sm"
-                          >
-                            <div className="flex items-center gap-2 font-extrabold text-base">
-                              <Coffee className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                              <span>{b.title || "DESCANSO"}</span>
-                            </div>
-                            <span className="comic-sm rounded bg-amber-500/25 px-3 py-1 text-xs font-extrabold uppercase font-mono">
-                              ☕ {b.minutes} MIN
-                            </span>
-                          </div>
-                        ),
-                      )}
                     </div>
                   )}
 
