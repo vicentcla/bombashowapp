@@ -131,16 +131,26 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
             }))
           : [];
       // section_order: if stored, use it; else derive from passes (backward compat)
-      const section_order: string[] =
+      const rawOrder: string[] =
         Array.isArray(parsed.section_order) && parsed.section_order.length > 0
           ? (parsed.section_order as string[])
           : passes.map((p) => p.id);
+
+      // Ensure all pass IDs are present in section_order
+      passes.forEach((p) => {
+        if (!rawOrder.includes(p.id)) rawOrder.push(p.id);
+      });
+      // Ensure all break IDs are present in section_order
+      breaks.forEach((b) => {
+        if (!rawOrder.includes(b.id)) rawOrder.push(b.id);
+      });
+
       return {
         target_minutes,
         passes,
         item_pass_map,
         breaks,
-        section_order,
+        section_order: rawOrder,
         notes_text: typeof parsed.notes_text === "string" ? parsed.notes_text : "",
       };
     }
@@ -401,59 +411,60 @@ function SetlistsPage() {
               </div>
 
               <p className="text-[11px] text-muted-foreground font-bold">
-                Arrastra el icono <GripVertical className="inline h-3 w-3" /> para reordenar los pases y descansos.
+                Usa los botones <span className="font-mono">▲</span> y <span className="font-mono">▼</span> para ordenar la secuencia.
               </p>
 
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCorners}
-                onDragEnd={(event) => {
-                  const { active, over } = event;
-                  if (over && active.id !== over.id) {
-                    const oldIndex = createSectionOrder.indexOf(String(active.id));
-                    const newIndex = createSectionOrder.indexOf(String(over.id));
-                    if (oldIndex !== -1 && newIndex !== -1) {
-                      setCreateSectionOrder(arrayMove(createSectionOrder, oldIndex, newIndex));
-                    }
-                  }
-                }}
-              >
-                <SortableContext items={createSectionOrder} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                    {createSectionOrder.map((sectionId) => {
-                      const pass = createPasses.find((p) => p.id === sectionId);
-                      const breakItem = createBreaks.find((b) => b.id === sectionId);
-                      const isPass = !!pass;
-                      if (!pass && !breakItem) return null;
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {createSectionOrder.map((sectionId, idx) => {
+                  const pass = createPasses.find((p) => p.id === sectionId);
+                  const breakItem = createBreaks.find((b) => b.id === sectionId);
+                  const isPass = !!pass;
+                  if (!pass && !breakItem) return null;
 
-                      return (
-                        <ConfigSortableSectionItem
-                          key={sectionId}
-                          id={sectionId}
-                          isPass={isPass}
-                          pass={pass}
-                          breakItem={breakItem}
-                          onUpdatePass={(updated) => {
-                            setCreatePasses(createPasses.map((p) => (p.id === updated.id ? updated : p)));
-                          }}
-                          onUpdateBreak={(updated) => {
-                            setCreateBreaks(createBreaks.map((b) => (b.id === updated.id ? updated : b)));
-                          }}
-                          onRemovePass={() => {
-                            setCreatePasses(createPasses.filter((p) => p.id !== sectionId));
-                            setCreateSectionOrder(createSectionOrder.filter((id) => id !== sectionId));
-                          }}
-                          onRemoveBreak={() => {
-                            setCreateBreaks(createBreaks.filter((b) => b.id !== sectionId));
-                            setCreateSectionOrder(createSectionOrder.filter((id) => id !== sectionId));
-                          }}
-                          canRemovePass={createPasses.length > 1}
-                        />
-                      );
-                    })}
-                  </div>
-                </SortableContext>
-              </DndContext>
+                  return (
+                    <ConfigSectionRow
+                      key={sectionId}
+                      index={idx}
+                      total={createSectionOrder.length}
+                      id={sectionId}
+                      isPass={isPass}
+                      pass={pass}
+                      breakItem={breakItem}
+                      onMoveUp={() => {
+                        if (idx > 0) {
+                          const next = [...createSectionOrder];
+                          const [item] = next.splice(idx, 1);
+                          if (item) next.splice(idx - 1, 0, item);
+                          setCreateSectionOrder(next);
+                        }
+                      }}
+                      onMoveDown={() => {
+                        if (idx < createSectionOrder.length - 1) {
+                          const next = [...createSectionOrder];
+                          const [item] = next.splice(idx, 1);
+                          if (item) next.splice(idx + 1, 0, item);
+                          setCreateSectionOrder(next);
+                        }
+                      }}
+                      onUpdatePass={(updated) => {
+                        setCreatePasses(createPasses.map((p) => (p.id === updated.id ? updated : p)));
+                      }}
+                      onUpdateBreak={(updated) => {
+                        setCreateBreaks(createBreaks.map((b) => (b.id === updated.id ? updated : b)));
+                      }}
+                      onRemovePass={() => {
+                        setCreatePasses(createPasses.filter((p) => p.id !== sectionId));
+                        setCreateSectionOrder(createSectionOrder.filter((id) => id !== sectionId));
+                      }}
+                      onRemoveBreak={() => {
+                        setCreateBreaks(createBreaks.filter((b) => b.id !== sectionId));
+                        setCreateSectionOrder(createSectionOrder.filter((id) => id !== sectionId));
+                      }}
+                      canRemovePass={createPasses.length > 1}
+                    />
+                  );
+                })}
+              </div>
             </div>
 
             <button
@@ -994,65 +1005,64 @@ function AddBreakModal({
 }
 
 // ─── Componente para cada sección (pase o descanso) reordenable en la configuración ───
-function ConfigSortableSectionItem({
-  id,
+function ConfigSectionRow({
+  index,
+  total,
   isPass,
   pass,
   breakItem,
+  onMoveUp,
+  onMoveDown,
   onUpdatePass,
   onUpdateBreak,
   onRemovePass,
   onRemoveBreak,
   canRemovePass,
 }: {
-  id: string;
+  index: number;
+  total: number;
   isPass: boolean;
   pass?: PassConfig;
   breakItem?: BreakItem;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   onUpdatePass: (updated: PassConfig) => void;
   onUpdateBreak: (updated: BreakItem) => void;
   onRemovePass: () => void;
   onRemoveBreak: () => void;
   canRemovePass: boolean;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    setActivatorNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-    zIndex: isDragging ? 20 : undefined,
-  };
-
   return (
     <div
-      ref={setNodeRef}
-      style={style}
       className={`comic-sm flex items-center gap-2 rounded-lg p-2.5 bg-background border transition-all ${
         isPass
           ? "border-primary/40 shadow-sm"
           : "border-amber-500/40 bg-amber-500/5 shadow-sm"
       }`}
     >
-      <button
-        ref={setActivatorNodeRef}
-        {...attributes}
-        {...listeners}
-        type="button"
-        className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground touch-none shrink-0"
-        title="Arrastra para reordenar"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
+      {/* Botones de posición Arriba / Abajo */}
+      <div className="flex flex-col gap-0.5 shrink-0">
+        <button
+          type="button"
+          onClick={onMoveUp}
+          disabled={index === 0}
+          className="comic-sm rounded bg-accent/60 px-1 py-0.5 text-[10px] font-extrabold hover:bg-accent disabled:opacity-30 disabled:pointer-events-none"
+          title="Mover arriba"
+        >
+          ▲
+        </button>
+        <button
+          type="button"
+          onClick={onMoveDown}
+          disabled={index === total - 1}
+          className="comic-sm rounded bg-accent/60 px-1 py-0.5 text-[10px] font-extrabold hover:bg-accent disabled:opacity-30 disabled:pointer-events-none"
+          title="Mover abajo"
+        >
+          ▼
+        </button>
+      </div>
 
+      {/* Badge tipo */}
       <span
         className={`comic-sm rounded px-2 py-0.5 text-[10px] font-extrabold uppercase shrink-0 ${
           isPass ? "bg-primary text-primary-foreground" : "bg-amber-500/20 text-amber-700 dark:text-amber-300"
@@ -1061,6 +1071,7 @@ function ConfigSortableSectionItem({
         {isPass ? "Pase" : "Descanso"}
       </span>
 
+      {/* Inputs según tipo */}
       {isPass && pass && (
         <>
           <input
@@ -2143,59 +2154,60 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
               </div>
 
               <p className="text-[11px] text-muted-foreground font-bold">
-                Arrastra el icono <GripVertical className="inline h-3 w-3" /> para reordenar los pases y descansos.
+                Usa los botones <span className="font-mono">▲</span> y <span className="font-mono">▼</span> para ordenar la secuencia.
               </p>
 
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCorners}
-                onDragEnd={(event) => {
-                  const { active, over } = event;
-                  if (over && active.id !== over.id) {
-                    const oldIndex = editSectionOrder.indexOf(String(active.id));
-                    const newIndex = editSectionOrder.indexOf(String(over.id));
-                    if (oldIndex !== -1 && newIndex !== -1) {
-                      setEditSectionOrder(arrayMove(editSectionOrder, oldIndex, newIndex));
-                    }
-                  }
-                }}
-              >
-                <SortableContext items={editSectionOrder} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                    {editSectionOrder.map((sectionId) => {
-                      const pass = editPasses.find((p) => p.id === sectionId);
-                      const breakItem = editBreaks.find((b) => b.id === sectionId);
-                      const isPass = !!pass;
-                      if (!pass && !breakItem) return null;
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {editSectionOrder.map((sectionId, idx) => {
+                  const pass = editPasses.find((p) => p.id === sectionId);
+                  const breakItem = editBreaks.find((b) => b.id === sectionId);
+                  const isPass = !!pass;
+                  if (!pass && !breakItem) return null;
 
-                      return (
-                        <ConfigSortableSectionItem
-                          key={sectionId}
-                          id={sectionId}
-                          isPass={isPass}
-                          pass={pass}
-                          breakItem={breakItem}
-                          onUpdatePass={(updated) => {
-                            setEditPasses(editPasses.map((p) => (p.id === updated.id ? updated : p)));
-                          }}
-                          onUpdateBreak={(updated) => {
-                            setEditBreaks(editBreaks.map((b) => (b.id === updated.id ? updated : b)));
-                          }}
-                          onRemovePass={() => {
-                            setEditPasses(editPasses.filter((p) => p.id !== sectionId));
-                            setEditSectionOrder(editSectionOrder.filter((id) => id !== sectionId));
-                          }}
-                          onRemoveBreak={() => {
-                            setEditBreaks(editBreaks.filter((b) => b.id !== sectionId));
-                            setEditSectionOrder(editSectionOrder.filter((id) => id !== sectionId));
-                          }}
-                          canRemovePass={editPasses.length > 1}
-                        />
-                      );
-                    })}
-                  </div>
-                </SortableContext>
-              </DndContext>
+                  return (
+                    <ConfigSectionRow
+                      key={sectionId}
+                      index={idx}
+                      total={editSectionOrder.length}
+                      id={sectionId}
+                      isPass={isPass}
+                      pass={pass}
+                      breakItem={breakItem}
+                      onMoveUp={() => {
+                        if (idx > 0) {
+                          const next = [...editSectionOrder];
+                          const [item] = next.splice(idx, 1);
+                          if (item) next.splice(idx - 1, 0, item);
+                          setEditSectionOrder(next);
+                        }
+                      }}
+                      onMoveDown={() => {
+                        if (idx < editSectionOrder.length - 1) {
+                          const next = [...editSectionOrder];
+                          const [item] = next.splice(idx, 1);
+                          if (item) next.splice(idx + 1, 0, item);
+                          setEditSectionOrder(next);
+                        }
+                      }}
+                      onUpdatePass={(updated) => {
+                        setEditPasses(editPasses.map((p) => (p.id === updated.id ? updated : p)));
+                      }}
+                      onUpdateBreak={(updated) => {
+                        setEditBreaks(editBreaks.map((b) => (b.id === updated.id ? updated : b)));
+                      }}
+                      onRemovePass={() => {
+                        setEditPasses(editPasses.filter((p) => p.id !== sectionId));
+                        setEditSectionOrder(editSectionOrder.filter((id) => id !== sectionId));
+                      }}
+                      onRemoveBreak={() => {
+                        setEditBreaks(editBreaks.filter((b) => b.id !== sectionId));
+                        setEditSectionOrder(editSectionOrder.filter((id) => id !== sectionId));
+                      }}
+                      canRemovePass={editPasses.length > 1}
+                    />
+                  );
+                })}
+              </div>
             </div>
 
             <button
