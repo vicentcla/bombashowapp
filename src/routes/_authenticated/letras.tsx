@@ -1,11 +1,10 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, Pencil, X, FileText, Drum, Megaphone } from "lucide-react";
-import { toast } from "sonner";
+import { Search, FileText, Drum, Megaphone } from "lucide-react";
 import { useLyrics, useArrangements, useStreetSongs, type Lyric } from "@/lib/queries";
 import { normalize, formatDuration, formatLongDuration } from "@/lib/format";
-import { useIsAdmin } from "@/hooks/useAuth";
 import { SortBar, type SortMode } from "@/components/SortBar";
+import { LyricViewerModal } from "@/components/LyricViewerModal";
 
 export const Route = createFileRoute("/_authenticated/letras")({
   head: () => ({
@@ -30,7 +29,11 @@ function Letras() {
   const [query, setQuery] = useState("");
   const [tag, setTag] = useState("");
   const [sort, setSort] = useState<SortMode>("alfabetico");
-  const [activeLyric, setActiveLyric] = useState<Lyric | null>(null);
+  const [activeSong, setActiveSong] = useState<{
+    title: string;
+    kind: "calle" | "arreglo";
+    lyric: Lyric | null;
+  } | null>(null);
 
   const lyrics = useLyrics();
   const arrangements = useArrangements();
@@ -237,13 +240,7 @@ function Letras() {
             return (
               <div
                 key={a.id}
-                onClick={() => {
-                  if (lyric) {
-                    setActiveLyric(lyric);
-                  } else {
-                    toast.info(`"${a.title}" aún no tiene letra registrada.`);
-                  }
-                }}
+                onClick={() => setActiveSong({ title: a.title, kind: "arreglo", lyric })}
                 className={`comic rounded-xl bg-card p-4 transition-colors cursor-pointer hover:bg-primary/5 ${
                   !lyric ? "opacity-75" : ""
                 }`}
@@ -290,13 +287,7 @@ function Letras() {
             return (
               <div
                 key={s.id}
-                onClick={() => {
-                  if (lyric) {
-                    setActiveLyric(lyric);
-                  } else {
-                    toast.info(`"${s.title}" aún no tiene letra registrada.`);
-                  }
-                }}
+                onClick={() => setActiveSong({ title: s.title, kind: "calle", lyric })}
                 className={`comic rounded-xl bg-card p-4 transition-colors cursor-pointer hover:bg-primary/5 ${
                   !lyric ? "opacity-75" : ""
                 }`}
@@ -330,66 +321,14 @@ function Letras() {
       )}
 
       {/* Modal de letra */}
-      {activeLyric && <LyricViewerModal lyric={activeLyric} onClose={() => setActiveLyric(null)} />}
-    </div>
-  );
-}
-
-function LyricViewerModal({ lyric, onClose }: { lyric: Lyric; onClose: () => void }) {
-  const { isAdmin } = useIsAdmin();
-  const navigate = useNavigate();
-
-  const handleModify = () => {
-    const tab = lyric.kind === "calle" ? "calle" : "arreglos";
-    const editLyricId: string | undefined =
-      (lyric.kind === "calle" ? lyric.street_song_id : lyric.arrangement_id) ?? undefined;
-
-    onClose();
-    navigate({
-      to: "/repertorio",
-      search: { tab, editLyricId },
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
-      <div className="comic flex max-h-[85vh] w-full max-w-lg flex-col rounded-xl bg-card p-5 shadow-2xl">
-        <div className="mb-4 flex items-start justify-between gap-3 border-b border-border pb-3">
-          <div>
-            <h2 className="text-3xl font-extrabold leading-tight text-primary">{lyric.title}</h2>
-            <span className="mt-1 inline-block text-xs font-bold uppercase text-muted-foreground">
-              {lyric.kind === "calle" ? "Canción de calle" : "Arreglo"}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar"
-            className="comic-sm rounded p-1 hover:bg-muted"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-
-        <div className="overflow-y-auto py-2">
-          <div
-            className="lyrics-body text-base leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: lyric.content }}
-          />
-        </div>
-
-        {isAdmin && (
-          <div className="mt-4 border-t border-border pt-3">
-            <button
-              type="button"
-              onClick={handleModify}
-              className="comic comic-press flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 font-extrabold uppercase text-primary-foreground"
-            >
-              <Pencil className="h-4 w-4" /> Modificar en Repertorio
-            </button>
-          </div>
-        )}
-      </div>
+      {activeSong && (
+        <LyricViewerModal
+          title={activeSong.title}
+          kind={activeSong.kind}
+          lyric={activeSong.lyric}
+          onClose={() => setActiveSong(null)}
+        />
+      )}
     </div>
   );
 }
