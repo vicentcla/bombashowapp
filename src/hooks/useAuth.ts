@@ -22,21 +22,49 @@ export function useAuth() {
   return { user, loading };
 }
 
-export function useIsAdmin() {
+export type AppRole = "miembro" | "admin" | "superadmin";
+export type ApprovalStatus = "pending" | "approved" | "rejected";
+
+/** Rol del usuario actual (superadmin > admin > miembro). */
+export function useRole() {
   const { user } = useAuth();
-  const { data, isLoading } = useQuery({
-    queryKey: ["is-admin", user?.id],
+  return useQuery({
+    queryKey: ["my-role", user?.id],
     enabled: !!user?.id,
-    queryFn: async () => {
+    queryFn: async (): Promise<AppRole> => {
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user!.id)
-        .eq("role", "admin")
-        .maybeSingle();
+        .eq("user_id", user!.id);
       if (error) throw error;
-      return !!data;
+      const roles = (data ?? []).map((r) => r.role);
+      if (roles.includes("superadmin")) return "superadmin";
+      if (roles.includes("admin")) return "admin";
+      return "miembro";
     },
   });
-  return { isAdmin: !!data, isLoading };
+}
+
+/** Estado de aprobación de la cuenta del usuario actual. */
+export function useProfileStatus() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["profile-status", user?.id],
+    enabled: !!user?.id,
+    queryFn: async (): Promise<ApprovalStatus> => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("status")
+        .eq("id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.status as ApprovalStatus | undefined) ?? "pending";
+    },
+  });
+}
+
+export function useIsAdmin() {
+  const roleQuery = useRole();
+  const isAdmin = roleQuery.data === "admin" || roleQuery.data === "superadmin";
+  return { isAdmin, isLoading: roleQuery.isLoading };
 }

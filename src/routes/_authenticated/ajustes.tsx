@@ -15,6 +15,10 @@ import {
   Lightbulb,
   UserCheck,
   UserPlus,
+  Crown,
+  UserX,
+  ShieldPlus,
+  ShieldMinus,
 } from "lucide-react";
 import {
   PercusionIcon,
@@ -24,7 +28,7 @@ import {
   SousaphoneIcon,
 } from "@/components/InstrumentIcons";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth, useIsAdmin } from "@/hooks/useAuth";
+import { useAuth, useIsAdmin, useRole, type AppRole } from "@/hooks/useAuth";
 import { useRoleRequests, useSetlists, useInvalidate } from "@/lib/queries";
 import {
   parseSetlistNotes,
@@ -53,9 +57,24 @@ const INSTRUMENT_ICONS: Record<string, React.ElementType> = {
   Sousaphone: SousaphoneIcon,
 };
 
+const ROLE_LABELS: Record<AppRole, string> = {
+  miembro: "Miembro",
+  admin: "Administrador",
+  superadmin: "Superadministrador",
+};
+
+type UserWithStatus = {
+  id: string;
+  display_name: string | null;
+  created_at: string;
+  status: "pending" | "approved" | "rejected";
+};
+
 function Ajustes() {
   const { user } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const { data: role } = useRole();
+  const isSuperAdmin = role === "superadmin";
   const requests = useRoleRequests();
   const setlists = useSetlists();
   const invalidate = useInvalidate();
@@ -102,9 +121,35 @@ function Ajustes() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, display_name, email, created_at");
+        .select("id, display_name, created_at, status");
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as UserWithStatus[];
+    },
+  });
+
+  // Correos de los usuarios (solo admins; el email no es seleccionable por columna)
+  const usersEmailQuery = useQuery({
+    queryKey: ["all_users_emails", (allUsersQuery.data ?? []).map((u) => u.id).join(",")],
+    enabled: isAdmin && !!allUsersQuery.data?.length,
+    queryFn: async () => {
+      const ids = allUsersQuery.data?.map((u) => u.id) ?? [];
+      const result: Record<string, string | null> = {};
+      for (const id of ids) {
+        const { data } = await supabase.rpc("get_profile_email", { _user_id: id });
+        result[id] = data ?? null;
+      }
+      return result;
+    },
+  });
+
+  // Roles de todos los usuarios
+  const allRolesQuery = useQuery({
+    queryKey: ["all_user_roles"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("user_roles").select("user_id, role");
+      if (error) throw error;
+      return (data ?? []) as { user_id: string; role: AppRole }[];
     },
   });
 
@@ -143,6 +188,16 @@ function Ajustes() {
   function nameOf(userId: string) {
     const p = allProfilesQuery.data?.find((x) => x.id === userId);
     return p?.display_name || userId;
+  }
+
+  function roleOf(userId: string): AppRole {
+    const rows = allRolesQuery.data ?? [];
+    const r = rows.find((x) => x.user_id === userId)?.role;
+    return r ?? "miembro";
+  }
+
+  function emailOf(userId: string) {
+    return usersEmailQuery.data?.[userId] ?? "";
   }
 
   async function handleSaveProfile(e: React.FormEvent) {
@@ -195,7 +250,7 @@ function Ajustes() {
       return;
     }
     invalidate("role_requests");
-    toast.success("Solicitud enviada a los administradores");
+    toast.success("Solicitud enviada al superadministrador");
   }
 
   async function decideRequest(requestId: string, userId: string, approve: boolean) {
@@ -227,6 +282,41 @@ function Ajustes() {
 
     invalidate("role_requests", "user_roles", "profiles");
     toast.success(approve ? "Rol de administrador concedido" : "Solicitud rechazada");
+  }
+
+  async function setUserStatus(userId: string, status: "approved" | "rejected") {
+    const { error } = await supabase.from("profiles").update({ status }).eq("id", userId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    invalidate("profiles", "all_users", "profile-status");
+    toast.success(status === "approved" ? "Acceso aprobado" : "Acceso rechazado");
+  }
+
+  async function setUserRole(userId: string, role: "admin" | "miembro") {
+    if (role === "admin") {
+      const { error } = await supabase
+        .from("user_roles")
+        .insert({ user_id: userId, role: "admin" });
+      if (error && !error.message.includes("duplicate")) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Rol de administrador concedido");
+    } else {
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .eq("role", "admin");
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Rol de administrador retirado");
+    }
+    invalidate("all_user_roles", "my-role", "user_roles");
   }
 
   async function decideProposal(
@@ -367,7 +457,7 @@ function Ajustes() {
             }`}
           >
             <Shield className="h-4 w-4" />
-            Solicitudes pendientes
+            Gestión
             {totalPending > 0 && (
               <span className="ml-1 rounded-full bg-destructive px-2 py-0.5 text-xs text-destructive-foreground">
                 {totalPending}
@@ -415,15 +505,17 @@ function Ajustes() {
               <label className="mb-1 block text-sm font-bold uppercase">Rol actual</label>
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-background p-3">
                 <div className="flex items-center gap-2">
-                  <Shield
-                    className={`h-5 w-5 ${isAdmin ? "text-primary" : "text-muted-foreground"}`}
-                  />
-                  <span className="font-extrabold">
-                    {isAdmin ? "Administrador" : "Usuario básico"}
-                  </span>
+                  {role === "superadmin" ? (
+                    <Crown className="h-5 w-5 text-primary" />
+                  ) : (
+                    <Shield
+                      className={`h-5 w-5 ${isAdmin ? "text-primary" : "text-muted-foreground"}`}
+                    />
+                  )}
+                  <span className="font-extrabold">{ROLE_LABELS[role ?? "miembro"]}</span>
                 </div>
 
-                {!isAdmin && (
+                {role === "miembro" && (
                   <div>
                     {myRequest?.status === "pending" ? (
                       <span className="flex items-center gap-1 text-xs font-extrabold text-amber-600 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20">
@@ -484,7 +576,7 @@ function Ajustes() {
         </form>
       )}
 
-      {/* Contenido de Pestaña: Solicitudes Pendientes (Solo Admin) */}
+      {/* Contenido de Pestaña: Gestión (Solo Admin) */}
       {activeTab === "solicitudes" && isAdmin && (
         <div className="comic rounded-xl bg-card p-5 space-y-4">
           <div className="flex items-center justify-between border-b pb-2">
@@ -509,7 +601,7 @@ function Ajustes() {
               }`}
             >
               <UserPlus className="h-3.5 w-3.5" />
-              Usuarios nuevos
+              Usuarios
             </button>
             <button
               onClick={() => setAdminSubTab("admin_requests")}
@@ -545,7 +637,7 @@ function Ajustes() {
             </button>
           </div>
 
-          {/* Sub-pestaña: Usuarios nuevos */}
+          {/* Sub-pestaña: Usuarios */}
           {adminSubTab === "usuarios" && (
             <div className="space-y-3">
               {!allUsersQuery.data || allUsersQuery.data.length === 0 ? (
@@ -554,25 +646,105 @@ function Ajustes() {
                   <p className="font-bold">No hay usuarios registrados todavía.</p>
                 </div>
               ) : (
-                allUsersQuery.data.map((u) => (
-                  <div
-                    key={u.id}
-                    className="comic-sm flex flex-wrap items-center justify-between gap-3 rounded-lg bg-background p-3 border"
-                  >
-                    <div>
-                      <p className="font-extrabold text-base">
-                        {u.display_name || u.email || u.id}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{u.email}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Registrado el {new Date(u.created_at).toLocaleDateString("es-ES")}
-                      </p>
+                allUsersQuery.data.map((u) => {
+                  const userRole = roleOf(u.id);
+                  const email = emailOf(u.id);
+                  return (
+                    <div
+                      key={u.id}
+                      className="comic-sm flex flex-wrap items-center justify-between gap-3 rounded-lg bg-background p-3 border"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-extrabold text-base">
+                          {u.display_name || email || u.id}
+                          {u.id === user?.id && (
+                            <span className="ml-1 text-xs font-bold text-muted-foreground">
+                              (tú)
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">{email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Registrado el {new Date(u.created_at).toLocaleDateString("es-ES")}
+                        </p>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {u.status === "pending" && (
+                            <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-amber-600 border border-amber-500/20">
+                              Pendiente de aprobación
+                            </span>
+                          )}
+                          {u.status === "rejected" && (
+                            <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-destructive border border-destructive/20">
+                              Rechazado
+                            </span>
+                          )}
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase ${
+                              userRole === "superadmin"
+                                ? "bg-primary/15 text-primary"
+                                : userRole === "admin"
+                                  ? "bg-secondary text-secondary-foreground"
+                                  : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {ROLE_LABELS[userRole]}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {u.id !== user?.id && isSuperAdmin && userRole !== "superadmin" && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setUserRole(u.id, userRole === "admin" ? "miembro" : "admin")
+                            }
+                            className="comic-sm comic-press flex items-center gap-1 rounded bg-secondary px-2.5 py-1.5 text-xs font-extrabold uppercase text-secondary-foreground"
+                            title={
+                              userRole === "admin" ? "Retirar administrador" : "Hacer administrador"
+                            }
+                          >
+                            {userRole === "admin" ? (
+                              <ShieldMinus className="h-3.5 w-3.5" />
+                            ) : (
+                              <ShieldPlus className="h-3.5 w-3.5" />
+                            )}
+                            {userRole === "admin" ? "Quitar admin" : "Hacer admin"}
+                          </button>
+                        )}
+                        {u.status === "pending" && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setUserStatus(u.id, "approved")}
+                              className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-2.5 py-1.5 text-xs font-extrabold uppercase text-primary-foreground"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              Aprobar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setUserStatus(u.id, "rejected")}
+                              className="comic-sm comic-press flex items-center gap-1 rounded bg-destructive px-2.5 py-1.5 text-xs font-extrabold uppercase text-destructive-foreground"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              Rechazar
+                            </button>
+                          </>
+                        )}
+                        {u.status === "rejected" && (
+                          <button
+                            type="button"
+                            onClick={() => setUserStatus(u.id, "approved")}
+                            className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-2.5 py-1.5 text-xs font-extrabold uppercase text-primary-foreground"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            Aprobar
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-xs font-bold bg-secondary rounded-md px-2.5 py-1">
-                      Miembro
-                    </span>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}
@@ -580,6 +752,11 @@ function Ajustes() {
           {/* Sub-pestaña: Peticiones de Admin */}
           {adminSubTab === "admin_requests" && (
             <div className="space-y-3">
+              {!isSuperAdmin && (
+                <p className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-xs font-bold text-amber-600">
+                  Solo el superadministrador puede conceder o retirar el rol de administrador.
+                </p>
+              )}
               {pendingAdminRequests.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Check className="h-10 w-10 mx-auto mb-2 text-primary/60" />
@@ -602,24 +779,26 @@ function Ajustes() {
                         })}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => decideRequest(r.id, r.user_id, true)}
-                        className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs font-extrabold uppercase text-primary-foreground"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                        Aceptar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => decideRequest(r.id, r.user_id, false)}
-                        className="comic-sm comic-press flex items-center gap-1 rounded bg-destructive px-3 py-1.5 text-xs font-extrabold uppercase text-destructive-foreground"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                        Rechazar
-                      </button>
-                    </div>
+                    {isSuperAdmin && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => decideRequest(r.id, r.user_id, true)}
+                          className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs font-extrabold uppercase text-primary-foreground"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          Aceptar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => decideRequest(r.id, r.user_id, false)}
+                          className="comic-sm comic-press flex items-center gap-1 rounded bg-destructive px-3 py-1.5 text-xs font-extrabold uppercase text-destructive-foreground"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Rechazar
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))
               )}

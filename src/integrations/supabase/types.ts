@@ -147,18 +147,21 @@ export type Database = {
           display_name: string | null;
           email: string | null;
           id: string;
+          status: string;
         };
         Insert: {
           created_at?: string;
           display_name?: string | null;
           email?: string | null;
           id: string;
+          status?: string;
         };
         Update: {
           created_at?: string;
           display_name?: string | null;
           email?: string | null;
           id?: string;
+          status?: string;
         };
         Relationships: [];
       };
@@ -335,10 +338,13 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      get_profile_email: {
+        Args: { _user_id: string };
+        Returns: string | null;
+      };
     };
     Enums: {
-      app_role: "admin" | "miembro";
+      app_role: "admin" | "miembro" | "superadmin";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -460,7 +466,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "miembro"],
+      app_role: ["admin", "miembro", "superadmin"],
     },
   },
 } as const;
