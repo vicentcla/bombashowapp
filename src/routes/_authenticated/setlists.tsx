@@ -76,9 +76,9 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
       const passes =
         Array.isArray(parsed.passes) && parsed.passes.length > 0
           ? parsed.passes.map((p: Record<string, unknown>, i: number) => ({
-              id: String(p.id || `p${i + 1}`),
-              name: String(p.name || `Pase ${i + 1}`),
-              target_minutes: Number(p.target_minutes) || 0,
+              id: String(p['id'] || `p${i + 1}`),
+              name: String(p['name'] || `Pase ${i + 1}`),
+              target_minutes: Number(p['target_minutes']) || 0,
             }))
           : [{ id: "p1", name: "Pase único", target_minutes }];
       const item_pass_map =

@@ -8,7 +8,7 @@ import { formatDuration } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/contadores")({
   validateSearch: (search: Record<string, unknown>) => ({
-    tab: search.tab === "arreglos" ? "arreglos" : ("calle" as "calle" | "arreglos"),
+    tab: search['tab'] === "arreglos" ? "arreglos" : ("calle" as "calle" | "arreglos"),
   }),
   head: () => ({
     meta: [
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/contadores")({
 function Contadores() {
   const search = Route.useSearch();
   const [activeTab, setActiveTab] = useState<"calle" | "arreglos">(
-    search.tab === "arreglos" ? "arreglos" : "calle"
+    search['tab'] === "arreglos" ? "arreglos" : "calle"
   );
 
   const handleTabChange = (newTab: "calle" | "arreglos") => {
