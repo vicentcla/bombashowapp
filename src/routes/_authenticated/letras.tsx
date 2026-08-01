@@ -1,9 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, Pencil, X } from "lucide-react";
-import { useLyrics, useArrangements, useStreetSongs, type Lyric, type Scope } from "@/lib/queries";
-import { normalize } from "@/lib/format";
+import { Search, Pencil, X, FileText, Drum, Megaphone } from "lucide-react";
+import {
+  useLyrics,
+  useArrangements,
+  useStreetSongs,
+  type Lyric,
+} from "@/lib/queries";
+import { normalize, formatDuration, formatLongDuration } from "@/lib/format";
 import { useIsAdmin } from "@/hooks/useAuth";
+import { SortBar, type SortMode } from "@/components/SortBar";
 
 export const Route = createFileRoute("/_authenticated/letras")({
   head: () => ({
@@ -24,92 +30,131 @@ export const Route = createFileRoute("/_authenticated/letras")({
 });
 
 function Letras() {
-  const [kind, setKind] = useState<Scope>("calle");
+  const [kind, setKind] = useState<"arreglos" | "calle">("calle");
   const [query, setQuery] = useState("");
   const [tag, setTag] = useState("");
+  const [sort, setSort] = useState<SortMode>("alfabetico");
   const [activeLyric, setActiveLyric] = useState<Lyric | null>(null);
 
   const lyrics = useLyrics();
   const arrangements = useArrangements();
   const streetSongs = useStreetSongs();
 
-  // Mapear cada letra con sus etiquetas según la canción o arreglo correspondiente
-  const lyricsWithTags = useMemo(() => {
-    const arrMap = new Map((arrangements.data ?? []).map((a) => [a.id, a.tags ?? []]));
-    const streetMap = new Map((streetSongs.data ?? []).map((s) => [s.id, s.tags ?? []]));
-    const streetTitleMap = new Map((streetSongs.data ?? []).map((s) => [s.title.toUpperCase().trim(), s.tags ?? []]));
+  // ─── Pestaña ARREGLOS ──────────────────────────────────────────────────────────
 
-    return (lyrics.data ?? []).map((l) => {
-      let lTags: string[] = [];
-      if (l.kind === "arreglo" && l.arrangement_id) {
-        lTags = arrMap.get(l.arrangement_id) ?? [];
-      } else if (l.kind === "calle") {
-        if (l.street_song_id) {
-          lTags = streetMap.get(l.street_song_id) ?? [];
-        } else {
-          lTags = streetTitleMap.get(l.title.toUpperCase().trim()) ?? [];
-        }
-      }
-      return { ...l, tags: lTags };
-    });
-  }, [lyrics.data, arrangements.data, streetSongs.data]);
-
-  // Lista de todas las etiquetas disponibles para la pestaña actual (calle o arreglo)
-  const allTags = useMemo(() => {
+  const allTagsArreglos = useMemo(() => {
     const set = new Set<string>();
-    if (kind === "arreglo") {
-      for (const a of arrangements.data ?? []) for (const t of a.tags ?? []) set.add(t);
-    } else {
-      for (const s of streetSongs.data ?? []) for (const t of s.tags ?? []) set.add(t);
-    }
-    return Array.from(set).sort();
-  }, [kind, arrangements.data, streetSongs.data]);
+    for (const a of arrangements.data ?? []) for (const t of a.tags ?? []) set.add(t);
+    return [...set].sort();
+  }, [arrangements.data]);
 
-  // Filtrar la lista de letras por tipo, búsqueda y etiqueta seleccionada
-  const list = useMemo(() => {
-    const q = normalize(query.trim());
-    return lyricsWithTags
-      .filter((l) => l.kind === kind)
-      .filter((l) => !tag || (l.tags ?? []).includes(tag))
-      .filter(
-        (l) =>
-          !q ||
-          normalize(l.title).includes(q) ||
-          normalize(l.plain_text).includes(q) ||
-          (l.tags ?? []).some((t) => normalize(t).includes(q))
-      )
-      .sort((a, b) => a.title.localeCompare(b.title, "es"));
-  }, [lyricsWithTags, kind, query, tag]);
+  const listArreglos = useMemo(() => {
+    let base = (arrangements.data ?? []).filter((a) => !tag || (a.tags ?? []).includes(tag));
+    if (query.trim()) {
+      const q = normalize(query.trim());
+      base = base.filter(
+        (a) =>
+          normalize(a.title).includes(q) ||
+          (a.tags ?? []).some((t) => normalize(t).includes(q))
+      );
+    }
+    const copy = [...base];
+    if (sort === "alfabetico") copy.sort((a, b) => a.title.localeCompare(b.title, "es"));
+    if (sort === "duracion") copy.sort((a, b) => b.duration_seconds - a.duration_seconds);
+    if (sort === "manual") copy.sort((a, b) => a.sort_order - b.sort_order);
+    return copy;
+  }, [arrangements.data, query, tag, sort]);
+
+  // ─── Pestaña CALLE ─────────────────────────────────────────────────────────────
+
+  const allTagsCalle = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of streetSongs.data ?? []) for (const t of s.tags ?? []) set.add(t);
+    return [...set].sort();
+  }, [streetSongs.data]);
+
+  const listCalle = useMemo(() => {
+    let base = (streetSongs.data ?? []).filter((s) => !tag || (s.tags ?? []).includes(tag));
+    if (query.trim()) {
+      const q = normalize(query.trim());
+      base = base.filter(
+        (s) =>
+          normalize(s.title).includes(q) ||
+          (s.tags ?? []).some((t) => normalize(t).includes(q))
+      );
+    }
+    const copy = [...base];
+    if (sort === "alfabetico") copy.sort((a, b) => a.title.localeCompare(b.title, "es"));
+    if (sort === "manual") copy.sort((a, b) => a.sort_order - b.sort_order);
+    return copy;
+  }, [streetSongs.data, query, tag, sort]);
+
+  // ─── Helpers ────────────────────────────────────────────────────────────────────
+
+  const allTags = kind === "arreglos" ? allTagsArreglos : allTagsCalle;
+
+  function getLyricForArrangement(arrId: string): Lyric | null {
+    return lyrics.data?.find((l) => l.arrangement_id === arrId) ?? null;
+  }
+
+  function getLyricForStreetSong(songId: string): Lyric | null {
+    return lyrics.data?.find((l) => l.street_song_id === songId) ?? null;
+  }
+
+  const totalArreglos = (arrangements.data ?? []).reduce((s, a) => s + a.duration_seconds, 0);
 
   return (
-    <div>
-      <h1 className="mb-4 text-4xl leading-none">Letras</h1>
-
-      <div className="comic-sm mb-3 flex overflow-hidden rounded-md">
-        {(
-          [
-            ["calle", "Calle"],
-            ["arreglo", "Arreglos"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => {
-              setKind(value);
-              setTag("");
-            }}
-            className={`flex-1 px-3 py-2 text-sm font-extrabold uppercase ${
-              kind === value ? "bg-primary text-primary-foreground" : "bg-card"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-4xl leading-none font-extrabold">Letras</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Consulta letras sincronizadas con Repertorio. Para editar ve a Repertorio.
+        </p>
       </div>
 
+      {/* Pestañas Arreglos / Calle */}
+      <div className="comic-sm flex overflow-hidden rounded-md bg-card p-1">
+        <button
+          type="button"
+          onClick={() => { setKind("arreglos"); setTag(""); setSort("alfabetico"); }}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
+            kind === "arreglos"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-muted/50"
+          }`}
+        >
+          <Drum className="h-4 w-4" /> Arreglos
+        </button>
+        <button
+          type="button"
+          onClick={() => { setKind("calle"); setTag(""); setSort("alfabetico"); }}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
+            kind === "calle"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-muted/50"
+          }`}
+        >
+          <Megaphone className="h-4 w-4" /> Calle
+        </button>
+      </div>
+
+      {/* Contador */}
+      <p className="text-sm font-bold text-muted-foreground">
+        {kind === "arreglos"
+          ? `${arrangements.data?.length ?? 0} arreglos · ${formatLongDuration(totalArreglos)} en total`
+          : `${streetSongs.data?.length ?? 0} canciones de calle`}
+      </p>
+
+      {/* SortBar */}
+      <SortBar
+        value={sort}
+        onChange={setSort}
+        options={kind === "arreglos" ? ["alfabetico", "duracion", "manual"] : ["alfabetico", "manual"]}
+      />
+
+      {/* Filtros por tag */}
       {allTags.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           <button
             type="button"
             onClick={() => setTag("")}
@@ -117,7 +162,7 @@ function Letras() {
               tag === "" ? "bg-primary text-primary-foreground" : "bg-card"
             }`}
           >
-            Todas ({lyricsWithTags.filter((l) => l.kind === kind).length})
+            Todas ({kind === "arreglos" ? (arrangements.data?.length ?? 0) : (streetSongs.data?.length ?? 0)})
           </button>
           {allTags.map((t) => (
             <button
@@ -134,52 +179,115 @@ function Letras() {
         </div>
       )}
 
-      <div className="comic-sm mb-3 flex items-center gap-2 rounded-md bg-card px-3">
+      {/* Buscador */}
+      <div className="comic-sm flex items-center gap-2 rounded-md bg-card px-3">
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por título, texto o etiqueta…"
+          placeholder="Buscar por título o etiqueta…"
           className="w-full bg-transparent py-2 text-base outline-none"
         />
       </div>
 
-      <p className="mb-3 text-xs font-bold uppercase text-muted-foreground">
-        Las letras se crean y editan desde Repertorio.
-      </p>
-
-      {list.length === 0 && (
-        <p className="comic rounded-xl bg-card p-4 text-muted-foreground">
-          No hay letras que coincidan con la búsqueda.
-        </p>
+      {/* Lista de ARREGLOS */}
+      {kind === "arreglos" && (
+        <div className="space-y-2">
+          {listArreglos.length === 0 && (
+            <p className="comic rounded-xl bg-card p-4 text-muted-foreground">
+              No hay arreglos que coincidan con la búsqueda.
+            </p>
+          )}
+          {listArreglos.map((a) => {
+            const lyric = getLyricForArrangement(a.id);
+            return (
+              <div
+                key={a.id}
+                onClick={() => lyric && setActiveLyric(lyric)}
+                className={`comic rounded-xl bg-card p-4 transition-colors ${
+                  lyric ? "cursor-pointer hover:bg-primary/5" : "opacity-60"
+                }`}
+                title={lyric ? "Ver letra" : "Sin letra"}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-xl font-extrabold leading-tight">{a.title}</p>
+                    <p className="mt-0.5 text-xs font-bold text-muted-foreground">
+                      {formatDuration(a.duration_seconds)}
+                      {lyric ? " · Con letra" : " · Sin letra"}
+                    </p>
+                    {!!a.tags?.length && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {a.tags.map((t) => (
+                          <span
+                            key={t}
+                            className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[10px] font-bold uppercase text-secondary-foreground"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {lyric && (
+                    <FileText className="mt-1 h-5 w-5 shrink-0 text-primary/70" />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
-      <div className="space-y-2">
-        {list.map((l) => (
-          <div key={l.id} className="comic rounded-xl bg-card p-4">
-            <button
-              type="button"
-              onClick={() => setActiveLyric(l)}
-              className="w-full text-left font-bold leading-tight hover:text-primary transition-colors"
-            >
-              <span className="text-xl block">{l.title}</span>
-              {!!l.tags?.length && (
-                <div className="mt-1.5 flex flex-wrap gap-1">
-                  {l.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[10px] font-bold uppercase text-secondary-foreground"
-                    >
-                      {t}
-                    </span>
-                  ))}
+      {/* Lista de CALLE */}
+      {kind === "calle" && (
+        <div className="space-y-2">
+          {listCalle.length === 0 && (
+            <p className="comic rounded-xl bg-card p-4 text-muted-foreground">
+              No hay canciones que coincidan con la búsqueda.
+            </p>
+          )}
+          {listCalle.map((s) => {
+            const lyric = getLyricForStreetSong(s.id);
+            return (
+              <div
+                key={s.id}
+                onClick={() => lyric && setActiveLyric(lyric)}
+                className={`comic rounded-xl bg-card p-4 transition-colors ${
+                  lyric ? "cursor-pointer hover:bg-primary/5" : "opacity-60"
+                }`}
+                title={lyric ? "Ver letra" : "Sin letra"}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-xl font-extrabold leading-tight">{s.title}</p>
+                    <p className="mt-0.5 text-xs font-bold text-muted-foreground">
+                      {lyric ? "Con letra" : "Sin letra"}
+                    </p>
+                    {!!s.tags?.length && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {s.tags.map((t) => (
+                          <span
+                            key={t}
+                            className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[10px] font-bold uppercase text-secondary-foreground"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {lyric && (
+                    <FileText className="mt-1 h-5 w-5 shrink-0 text-primary/70" />
+                  )}
                 </div>
-              )}
-            </button>
-          </div>
-        ))}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
+      {/* Modal de letra */}
       {activeLyric && (
         <LyricViewerModal lyric={activeLyric} onClose={() => setActiveLyric(null)} />
       )}
@@ -243,7 +351,7 @@ function LyricViewerModal({ lyric, onClose }: { lyric: Lyric; onClose: () => voi
               onClick={handleModify}
               className="comic comic-press flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 font-extrabold uppercase text-primary-foreground"
             >
-              <Pencil className="h-4 w-4" /> Modificar
+              <Pencil className="h-4 w-4" /> Modificar en Repertorio
             </button>
           </div>
         )}
