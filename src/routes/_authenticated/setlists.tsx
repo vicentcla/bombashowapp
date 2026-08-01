@@ -177,6 +177,8 @@ function SetlistsPage() {
   const setlists = useSetlists();
   const invalidate = useInvalidate();
   const [selected, setSelected] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
   // Sensors para drag and drop en modal de creación
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
