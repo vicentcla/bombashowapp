@@ -26,7 +26,8 @@ export function formatMinutesToHours(totalMinutes: number): string {
 
 export function formatTimeComparison(addedSeconds: number, targetMinutes: number) {
   const targetSeconds = targetMinutes * 60;
-  const percentage = targetSeconds > 0 ? Math.min(100, Math.round((addedSeconds / targetSeconds) * 100)) : 0;
+  const percentage =
+    targetSeconds > 0 ? Math.min(100, Math.round((addedSeconds / targetSeconds) * 100)) : 0;
   const diffSeconds = addedSeconds - targetSeconds;
 
   let status: "pending" | "exact" | "exceeded" = "pending";

@@ -1,5 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
-import { X, Upload, FileSpreadsheet, CheckSquare, Square, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  X,
+  Upload,
+  FileSpreadsheet,
+  CheckSquare,
+  Square,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { formatLyricsWithSubtitles, htmlToPlainText } from "@/lib/format";
@@ -94,7 +102,8 @@ function parseStreetSongsText(text: string): ImportStreetItem[] {
     // Formato de lista simple (una línea por canción o separadas por / o |)
     for (const line of rawLines) {
       const trimmed = line.trim();
-      if (!trimmed || trimmed.toLowerCase().includes("título") || trimmed.startsWith("| ---")) continue;
+      if (!trimmed || trimmed.toLowerCase().includes("título") || trimmed.startsWith("| ---"))
+        continue;
 
       let parts: string[];
       if (trimmed.includes("|") || trimmed.includes("/")) {
@@ -120,12 +129,18 @@ function parseStreetSongsText(text: string): ImportStreetItem[] {
       if (parts[2]) {
         const qm = parts[2].match(/^["“]?([^"”]+)["”]?$/);
         if (qm) {
-          tags = (qm[1] ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+          tags = (qm[1] ?? "")
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
         }
       } else if (lyric) {
         const qm = lyric.match(/^["“]([^"”]+)["”]$/);
         if (qm) {
-          tags = (qm[1] ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+          tags = (qm[1] ?? "")
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
           lyric = undefined;
         }
       }
@@ -156,7 +171,7 @@ export function ImportCalleDialog({
   // Canciones elegibles (las que NO existen en la base de datos)
   const eligibleItems = useMemo(
     () => rawItems.filter((item) => !existingTitles.has(item.title.toUpperCase().trim())),
-    [rawItems, existingTitles]
+    [rawItems, existingTitles],
   );
 
   // Al cambiar la lista procesada, seleccionar por defecto todos los no duplicados
@@ -198,7 +213,7 @@ export function ImportCalleDialog({
 
   const finalItemsToImport = useMemo(
     () => eligibleItems.filter((item) => selectedTitles.has(item.title)),
-    [eligibleItems, selectedTitles]
+    [eligibleItems, selectedTitles],
   );
 
   async function handleImport() {
@@ -218,7 +233,7 @@ export function ImportCalleDialog({
 
       let { data: insertedSongs, error: songErr } = await supabase
         .from("street_songs")
-        .insert(payloadSongs as any)
+        .insert(payloadSongs)
         .select();
 
       // Fallback por si la columna 'tags' no se ha migrado aún en el esquema remoto de Supabase
@@ -227,10 +242,7 @@ export function ImportCalleDialog({
           title: item.title,
           sort_order: existingTitles.size + idx + 1,
         }));
-        const fallbackRes = await supabase
-          .from("street_songs")
-          .insert(fallbackSongs)
-          .select();
+        const fallbackRes = await supabase.from("street_songs").insert(fallbackSongs).select();
         insertedSongs = fallbackRes.data;
         songErr = fallbackRes.error;
       }
@@ -241,12 +253,12 @@ export function ImportCalleDialog({
       const lyricsToInsert = (insertedSongs || [])
         .map((song) => {
           const matched = finalItemsToImport.find(
-            (i) => i.title.toUpperCase().trim() === song.title.toUpperCase().trim()
+            (i) => i.title.toUpperCase().trim() === song.title.toUpperCase().trim(),
           );
           if (matched?.lyric) {
             const htmlContent = formatLyricsWithSubtitles(matched.lyric);
             return {
-              kind: "calle",
+              kind: "calle" as const,
               title: song.title,
               content: htmlContent,
               plain_text: htmlToPlainText(htmlContent),
@@ -255,10 +267,10 @@ export function ImportCalleDialog({
           }
           return null;
         })
-        .filter(Boolean);
+        .filter((x): x is NonNullable<typeof x> => Boolean(x));
 
       if (lyricsToInsert.length > 0) {
-        await supabase.from("lyrics").insert(lyricsToInsert as any);
+        await supabase.from("lyrics").insert(lyricsToInsert);
       }
 
       toast.success(`¡Se han añadido ${finalItemsToImport.length} canciones de calle!`);
@@ -289,7 +301,10 @@ export function ImportCalleDialog({
             Escribe o pega tus canciones con letra y etiquetas:
           </label>
           <p className="text-[11px] text-muted-foreground font-medium leading-normal">
-            Escribe <strong># Nombre</strong> para el título. Usa <strong>- SUBTÍTULO</strong> para secciones en negrita. Usa <strong>"Starter, Trios"</strong> (entre comillas) para añadir etiquetas. Separa varias canciones con <strong>---</strong> o con otro <strong>#</strong>.
+            Escribe <strong># Nombre</strong> para el título. Usa <strong>- SUBTÍTULO</strong> para
+            secciones en negrita. Usa <strong>"Starter, Trios"</strong> (entre comillas) para añadir
+            etiquetas. Separa varias canciones con <strong>---</strong> o con otro{" "}
+            <strong>#</strong>.
           </p>
           <textarea
             rows={8}
@@ -343,8 +358,8 @@ export function ImportCalleDialog({
                       exists
                         ? "opacity-40 bg-muted cursor-not-allowed border-transparent"
                         : isSelected
-                        ? "bg-primary/10 border-primary/30"
-                        : "bg-card hover:bg-accent/40 border-transparent"
+                          ? "bg-primary/10 border-primary/30"
+                          : "bg-card hover:bg-accent/40 border-transparent"
                     }`}
                   >
                     <div className="flex items-start justify-between">
@@ -362,7 +377,9 @@ export function ImportCalleDialog({
                           className="h-4 w-4 mt-0.5 rounded accent-primary cursor-pointer disabled:cursor-not-allowed"
                         />
                         <div className="min-w-0">
-                          <span className="font-bold truncate text-sm block leading-tight">{item.title}</span>
+                          <span className="font-bold truncate text-sm block leading-tight">
+                            {item.title}
+                          </span>
                           {!!item.tags?.length && (
                             <div className="mt-1 flex flex-wrap gap-1">
                               {item.tags.map((t) => (
@@ -385,8 +402,14 @@ export function ImportCalleDialog({
                             onClick={() => togglePreview(item.title)}
                             className="flex items-center gap-1 text-[10px] bg-accent px-2 py-0.5 rounded font-extrabold text-accent-foreground hover:opacity-80"
                           >
-                            <span>Con letra ({item.lyric.split("\n").filter(Boolean).length} líneas)</span>
-                            {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                            <span>
+                              Con letra ({item.lyric.split("\n").filter(Boolean).length} líneas)
+                            </span>
+                            {isExpanded ? (
+                              <ChevronUp className="h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3" />
+                            )}
                           </button>
                         )}
                         {exists && (
@@ -414,7 +437,8 @@ export function ImportCalleDialog({
         {/* Resumen e importación */}
         <div className="pt-3 border-t flex items-center justify-between gap-3">
           <span className="text-xs font-bold text-muted-foreground">
-            {finalItemsToImport.length} {finalItemsToImport.length === 1 ? "seleccionada" : "seleccionadas"}
+            {finalItemsToImport.length}{" "}
+            {finalItemsToImport.length === 1 ? "seleccionada" : "seleccionadas"}
           </span>
           <button
             onClick={handleImport}

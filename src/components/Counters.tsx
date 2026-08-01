@@ -1,13 +1,7 @@
 import { useMemo, useState } from "react";
 import { Minus, Plus, RotateCcw, BarChart3, X } from "lucide-react";
 import { toast } from "sonner";
-import {
-  useAddPlay,
-  usePlayEvents,
-  usePeriods,
-  useResetCounters,
-  type Scope,
-} from "@/lib/queries";
+import { useAddPlay, usePlayEvents, usePeriods, useResetCounters, type Scope } from "@/lib/queries";
 import { normalize } from "@/lib/format";
 import { SortableList, SortableItem } from "@/components/SortableList";
 
@@ -106,13 +100,14 @@ export function Counters({
 
       {onReorder ? (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-          <SortableList
-            items={filtered}
-            onReorder={onReorder}
-            strategy="grid"
-          >
+          <SortableList items={filtered} onReorder={onReorder} strategy="grid">
             {(item) => (
-              <SortableItem key={item.id} id={item.id} handleOnly className="comic-sm flex flex-col rounded-lg bg-card p-2">
+              <SortableItem
+                key={item.id}
+                id={item.id}
+                handleOnly
+                className="comic-sm flex flex-col rounded-lg bg-card p-2"
+              >
                 <CounterCard item={item} counts={counts} onChange={change} showGrip />
               </SortableItem>
             )}
@@ -128,9 +123,7 @@ export function Counters({
         </div>
       )}
 
-      {showStats && (
-        <StatsDialog scope={scope} items={items} onClose={() => setShowStats(false)} />
-      )}
+      {showStats && <StatsDialog scope={scope} items={items} onClose={() => setShowStats(false)} />}
     </div>
   );
 }

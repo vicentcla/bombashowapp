@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -23,6 +23,7 @@ import {
   LayoutTemplate,
   Undo2,
   Lightbulb,
+  Save,
 } from "lucide-react";
 import {
   DndContext,
@@ -71,7 +72,8 @@ export const Route = createFileRoute("/_authenticated/setlists")({
       { title: "Setlists — La Bomba Show" },
       {
         name: "description",
-        content: "Organiza el repertorio en pases con duración objetivo y seguimiento en tiempo real.",
+        content:
+          "Organiza el repertorio en pases con duración objetivo y seguimiento en tiempo real.",
       },
     ],
   }),
@@ -98,14 +100,23 @@ export type SetlistProposal = {
   id: string;
   setlist_id: string;
   setlist_name: string;
-  arrangement_id: string;
-  arrangement_title: string;
-  pass_id: string;
-  pass_name: string;
+  arrangement_id: string; // solo para kind="single_song"
+  arrangement_title: string; // solo para kind="single_song"
+  pass_id: string; // solo para kind="single_song"
+  pass_name: string; // solo para kind="single_song"
   user_id: string;
   user_name: string;
   created_at: string;
   status: "pending" | "approved" | "rejected";
+  kind?: "single_song" | "bulk_edit"; // default "single_song" para compatibilidad
+  // Solo para kind="bulk_edit"
+  bulk_items?: {
+    arrangement_id: string;
+    pass_id: string;
+    position: number;
+    title: string;
+    duration_seconds: number;
+  }[];
 };
 
 export type SetlistNotesConfig = {
@@ -130,30 +141,44 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
     };
   }
   try {
-    const parsed = JSON.parse(notes);
+    const parsed = JSON.parse(notes) as {
+      target_minutes?: number;
+      passes?: unknown[];
+      item_pass_map?: Record<string, unknown>;
+      breaks?: unknown[];
+      section_order?: unknown[];
+      proposals?: unknown[];
+      notes_text?: unknown;
+      archived?: unknown;
+    };
     if (parsed && typeof parsed === "object") {
       const target_minutes = Number(parsed.target_minutes) || 0;
       const passes =
         Array.isArray(parsed.passes) && parsed.passes.length > 0
-          ? parsed.passes.map((p: Record<string, unknown>, i: number) => ({
-              id: String(p['id'] || `p${i + 1}`),
-              name: String(p['name'] || `Pase ${i + 1}`),
-              target_minutes: Number(p['target_minutes']) || 0,
-            }))
+          ? parsed.passes.map((p, i) => {
+              const rec = p as Record<string, unknown> | null;
+              return {
+                id: String(rec?.["id"] || `p${i + 1}`),
+                name: String(rec?.["name"] || `Pase ${i + 1}`),
+                target_minutes: Number(rec?.["target_minutes"]) || 0,
+              };
+            })
           : [{ id: "p1", name: "Pase único", target_minutes }];
       const item_pass_map =
         typeof parsed.item_pass_map === "object" && parsed.item_pass_map
           ? (parsed.item_pass_map as Record<string, string>)
           : {};
       // Breaks: parse without pass_id (top-level sections)
-      const breaks: BreakItem[] =
-        Array.isArray(parsed.breaks)
-          ? parsed.breaks.map((b: Record<string, unknown>) => ({
-              id: String(b['id'] || `b_${Math.random()}`),
-              minutes: Number(b['minutes']) || 15,
-              title: typeof b['title'] === "string" ? b['title'] : "Descanso",
-            }))
-          : [];
+      const breaks: BreakItem[] = Array.isArray(parsed.breaks)
+        ? parsed.breaks.map((b) => {
+            const rec = b as Record<string, unknown> | null;
+            return {
+              id: String(rec?.["id"] || `b_${Math.random()}`),
+              minutes: Number(rec?.["minutes"]) || 15,
+              title: typeof rec?.["title"] === "string" ? rec["title"] : "Descanso",
+            };
+          })
+        : [];
       // section_order: if stored, use it; else derive from passes (backward compat)
       const rawOrder: string[] =
         Array.isArray(parsed.section_order) && parsed.section_order.length > 0
@@ -203,6 +228,69 @@ export function serializeSetlistNotes(config: SetlistNotesConfig): string {
   return JSON.stringify(config);
 }
 
+// ─── Modo propuesta (copia virtual para no-admins) ──────────────────────────────
+
+// Un item virtual representa una canción del setlist que solo existe en el buffer
+// de propuesta del cliente hasta que un admin la aprueba.
+export type VirtualItem = {
+  id: string;
+  arrangement_id: string;
+  position: number;
+  pass_id: string;
+  arrangements: Arrangement | null;
+};
+
+// Forma común de item para el renderizado (real desde la BD o virtual).
+export type DisplayItem = {
+  id: string;
+  arrangement_id: string;
+  position: number;
+  arrangements: Arrangement | null;
+};
+
+/** Recalcula posiciones globales 1..n siguiendo el orden de section_order por pase. */
+export function renumberVirtualItems(
+  items: VirtualItem[],
+  passMap: Record<string, string>,
+  sectionOrder: string[],
+  fallbackPass: string,
+  passOverrides?: Record<string, string[]>,
+): VirtualItem[] {
+  const byPass = new Map<string, VirtualItem[]>();
+  for (const it of items) {
+    const pass = passMap[it.id] || fallbackPass;
+    const arr = byPass.get(pass) ?? [];
+    arr.push(it);
+    byPass.set(pass, arr);
+  }
+  const consumed = new Set<string>();
+  let n = 1;
+  const out: VirtualItem[] = [];
+  const emit = (it: VirtualItem) => {
+    out.push({ ...it, position: n++ });
+  };
+  for (const sectionId of sectionOrder) {
+    const overridden = passOverrides?.[sectionId];
+    if (overridden) {
+      for (const id of overridden) {
+        const it = items.find((i) => i.id === id);
+        if (it) emit(it);
+      }
+      consumed.add(sectionId);
+      const rest = (byPass.get(sectionId) ?? []).filter((i) => !overridden.includes(i.id));
+      for (const it of rest) emit(it);
+    } else {
+      consumed.add(sectionId);
+      for (const it of byPass.get(sectionId) ?? []) emit(it);
+    }
+  }
+  for (const [passId, arr] of byPass) {
+    if (consumed.has(passId)) continue;
+    for (const it of arr) emit(it);
+  }
+  return out;
+}
+
 // ─── Componente Principal SetlistsPage ──────────────────────────────────────────
 
 function SetlistsPage() {
@@ -219,7 +307,7 @@ function SetlistsPage() {
   // Sensors para drag and drop en modal de creación
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
   );
 
   // Formulario nuevo setlist
@@ -363,7 +451,7 @@ function SetlistsPage() {
       return { ...b, id: newId };
     });
     const newOrder = (sourceConfig.section_order ?? sourceConfig.passes.map((p) => p.id)).map(
-      (id) => passIdMap[id] ?? breakIdMap[id] ?? id
+      (id) => passIdMap[id] ?? breakIdMap[id] ?? id,
     );
 
     // 2. Obtener todas las canciones (items) del setlist de origen
@@ -451,7 +539,13 @@ function SetlistsPage() {
     if (sData) {
       const backup: DeletedSetlistBackup = {
         setlist: sData,
-        items: (iData as { id: string; setlist_id: string; arrangement_id: string; position: number }[]) ?? [],
+        items:
+          (iData as {
+            id: string;
+            setlist_id: string;
+            arrangement_id: string;
+            position: number;
+          }[]) ?? [],
       };
       setLastDeletedSetlist(backup);
 
@@ -505,7 +599,10 @@ function SetlistsPage() {
     toast.success(`Setlist "${target.setlist.name}" restaurado`);
   }
 
-  async function toggleArchive(setlist: { id: string; notes: string | null }, currentConfig: SetlistNotesConfig) {
+  async function toggleArchive(
+    setlist: { id: string; notes: string | null },
+    currentConfig: SetlistNotesConfig,
+  ) {
     const newArchived = !currentConfig.archived;
     const updatedConfig: SetlistNotesConfig = { ...currentConfig, archived: newArchived };
     const { error } = await supabase
@@ -524,8 +621,11 @@ function SetlistsPage() {
     return (
       <SetlistDetail
         setlistId={selected}
-        onBack={() => { setSelected(null); setSelectedToConfig(false); }}
-        initialTab={selectedToConfig ? "config" : undefined}
+        onBack={() => {
+          setSelected(null);
+          setSelectedToConfig(false);
+        }}
+        {...(selectedToConfig ? { initialTab: "config" } : {})}
       />
     );
   }
@@ -535,7 +635,9 @@ function SetlistsPage() {
     const cfg = parseSetlistNotes(s.notes);
     return showArchived ? cfg.archived === true : !cfg.archived;
   });
-  const archivedCount = allSetlists.filter((s) => parseSetlistNotes(s.notes).archived === true).length;
+  const archivedCount = allSetlists.filter(
+    (s) => parseSetlistNotes(s.notes).archived === true,
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -576,9 +678,11 @@ function SetlistsPage() {
             <Archive className="h-3.5 w-3.5" />
             Archivados
             {archivedCount > 0 && (
-              <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${
-                showArchived ? "bg-white/20" : "bg-primary text-primary-foreground"
-              }`}>
+              <span
+                className={`ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${
+                  showArchived ? "bg-white/20" : "bg-primary text-primary-foreground"
+                }`}
+              >
                 {archivedCount}
               </span>
             )}
@@ -588,7 +692,10 @@ function SetlistsPage() {
           <div className="relative">
             <div className="flex">
               <button
-                onClick={() => { setShowNewMenu(false); setCreating(true); }}
+                onClick={() => {
+                  setShowNewMenu(false);
+                  setCreating(true);
+                }}
                 className="comic comic-press flex items-center gap-2 rounded-l-lg bg-primary px-4 py-2.5 text-sm font-extrabold uppercase text-primary-foreground"
               >
                 <Plus className="h-4 w-4" /> Nuevo
@@ -608,7 +715,10 @@ function SetlistsPage() {
                 <div className="fixed inset-0 z-40" onClick={() => setShowNewMenu(false)} />
                 <div className="absolute right-0 top-full z-50 mt-1.5 w-52 rounded-xl bg-card comic shadow-lg border border-ink/10 overflow-hidden">
                   <button
-                    onClick={() => { setShowNewMenu(false); setCreating(true); }}
+                    onClick={() => {
+                      setShowNewMenu(false);
+                      setCreating(true);
+                    }}
                     className="flex w-full items-center gap-2.5 px-4 py-3 text-sm font-extrabold uppercase hover:bg-accent transition-colors text-left"
                   >
                     <Plus className="h-4 w-4 text-primary" />
@@ -622,11 +732,14 @@ function SetlistsPage() {
                     Plantilla 2 pases
                   </button>
                   <button
-                    onClick={() => { setShowNewMenu(false); setShowCopyFrom(true); setCopyFromSearch(""); }}
+                    onClick={() => {
+                      setShowNewMenu(false);
+                      setShowCopyFrom(true);
+                      setCopyFromSearch("");
+                    }}
                     className="flex w-full items-center gap-2.5 px-4 py-3 text-sm font-extrabold uppercase hover:bg-accent transition-colors text-left border-t border-ink/10"
                   >
-                    <Archive className="h-4 w-4 text-primary" />
-                    A partir de...
+                    <Archive className="h-4 w-4 text-primary" />A partir de...
                   </button>
                 </div>
               </>
@@ -704,7 +817,8 @@ function SetlistsPage() {
             </div>
 
             <p className="text-xs text-muted-foreground font-medium">
-              Selecciona un setlist para copiar su estructura (pases, descansos y duración). Las canciones no se copian y el nombre quedará vacío.
+              Selecciona un setlist para copiar su estructura (pases, descansos y duración). Las
+              canciones no se copian y el nombre quedará vacío.
             </p>
 
             {/* Buscador */}
@@ -732,9 +846,16 @@ function SetlistsPage() {
               const q = copyFromSearch.toLowerCase().trim();
               const filtered = q ? all.filter((s) => s.name.toLowerCase().includes(q)) : all;
               const activeItems = filtered.filter((s) => !parseSetlistNotes(s.notes).archived);
-              const archivedItems = filtered.filter((s) => parseSetlistNotes(s.notes).archived === true);
+              const archivedItems = filtered.filter(
+                (s) => parseSetlistNotes(s.notes).archived === true,
+              );
 
-              const renderItem = (s: { id: string; name: string; event_date: string | null; notes: string | null }) => {
+              const renderItem = (s: {
+                id: string;
+                name: string;
+                event_date: string | null;
+                notes: string | null;
+              }) => {
                 const cfg = parseSetlistNotes(s.notes);
                 return (
                   <button
@@ -747,9 +868,11 @@ function SetlistsPage() {
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       {cfg.passes.length} {cfg.passes.length === 1 ? "pase" : "pases"}
-                      {(cfg.breaks?.length ?? 0) > 0 && ` · ${cfg.breaks!.length} descanso${cfg.breaks!.length > 1 ? "s" : ""}`}
+                      {(cfg.breaks?.length ?? 0) > 0 &&
+                        ` · ${cfg.breaks!.length} descanso${cfg.breaks!.length > 1 ? "s" : ""}`}
                       {cfg.target_minutes > 0 && ` · ${cfg.target_minutes} min objetivo`}
-                      {s.event_date && ` · ${new Date(s.event_date).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}`}
+                      {s.event_date &&
+                        ` · ${new Date(s.event_date).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}`}
                     </p>
                   </button>
                 );
@@ -758,7 +881,9 @@ function SetlistsPage() {
               return (
                 <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
                   {activeItems.length === 0 && archivedItems.length === 0 && (
-                    <p className="text-center text-sm text-muted-foreground py-8">No hay setlists que coincidan.</p>
+                    <p className="text-center text-sm text-muted-foreground py-8">
+                      No hay setlists que coincidan.
+                    </p>
                   )}
 
                   {activeItems.length > 0 && (
@@ -797,7 +922,9 @@ function SetlistsPage() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-bold uppercase">Nombre del evento / show</label>
+              <label className="mb-1 block text-xs font-bold uppercase">
+                Nombre del evento / show
+              </label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -880,7 +1007,8 @@ function SetlistsPage() {
               </div>
 
               <p className="text-[11px] text-muted-foreground font-bold">
-                Usa los botones <span className="font-mono">▲</span> y <span className="font-mono">▼</span> para ordenar la secuencia.
+                Usa los botones <span className="font-mono">▲</span> y{" "}
+                <span className="font-mono">▼</span> para ordenar la secuencia.
               </p>
 
               <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -897,8 +1025,8 @@ function SetlistsPage() {
                       total={createSectionOrder.length}
                       id={sectionId}
                       isPass={isPass}
-                      pass={pass}
-                      breakItem={breakItem}
+                      {...(pass ? { pass } : {})}
+                      {...(breakItem ? { breakItem } : {})}
                       onMoveUp={() => {
                         if (idx > 0) {
                           const next = [...createSectionOrder];
@@ -916,10 +1044,14 @@ function SetlistsPage() {
                         }
                       }}
                       onUpdatePass={(updated) => {
-                        setCreatePasses(createPasses.map((p) => (p.id === updated.id ? updated : p)));
+                        setCreatePasses(
+                          createPasses.map((p) => (p.id === updated.id ? updated : p)),
+                        );
                       }}
                       onUpdateBreak={(updated) => {
-                        setCreateBreaks(createBreaks.map((b) => (b.id === updated.id ? updated : b)));
+                        setCreateBreaks(
+                          createBreaks.map((b) => (b.id === updated.id ? updated : b)),
+                        );
                       }}
                       onRemovePass={() => {
                         setCreatePasses(createPasses.filter((p) => p.id !== sectionId));
@@ -999,7 +1131,11 @@ function SetlistCard({
               className="comic-sm comic-press rounded-md bg-amber-500/10 p-2 text-amber-600 hover:bg-amber-500 hover:text-white transition-colors"
               title={config.archived ? "Restaurar setlist" : "Archivar setlist"}
             >
-              {config.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+              {config.archived ? (
+                <ArchiveRestore className="h-4 w-4" />
+              ) : (
+                <Archive className="h-4 w-4" />
+              )}
             </button>
             {/* Botón Eliminar */}
             <button
@@ -1203,28 +1339,26 @@ function AddSongsToPassModal({
 
   const filtered = useMemo(() => {
     let list = arrangements.filter(
-      (a) => !tag || (a.tags ?? []).some((t) => normalize(t) === normalize(tag))
+      (a) => !tag || (a.tags ?? []).some((t) => normalize(t) === normalize(tag)),
     );
     if (search.trim()) {
       const q = normalize(search.trim());
       list = list.filter(
         (a) =>
-          normalize(a.title).includes(q) ||
-          (a.tags ?? []).some((t) => normalize(t).includes(q)),
+          normalize(a.title).includes(q) || (a.tags ?? []).some((t) => normalize(t).includes(q)),
       );
     }
     return list;
   }, [arrangements, search, tag]);
 
   function toggleSelect(id: string) {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
-    );
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
   }
 
   function toggleSelectAll() {
     const filteredIds = filtered.map((a) => a.id);
-    const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedIds.includes(id));
+    const allSelected =
+      filteredIds.length > 0 && filteredIds.every((id) => selectedIds.includes(id));
     if (allSelected) {
       setSelectedIds((prev) => prev.filter((id) => !filteredIds.includes(id)));
     } else {
@@ -1295,11 +1429,7 @@ function AddSongsToPassModal({
 
         {/* Selección múltiple rápida */}
         <div className="flex items-center justify-between text-xs font-bold px-1">
-          <button
-            type="button"
-            onClick={toggleSelectAll}
-            className="text-primary hover:underline"
-          >
+          <button type="button" onClick={toggleSelectAll} className="text-primary hover:underline">
             {filtered.length > 0 && filtered.every((a) => selectedIds.includes(a.id))
               ? "Deseleccionar todas"
               : "Seleccionar todas las filtradas"}
@@ -1396,7 +1526,7 @@ function AddBreakModal({
   }, [passes, sectionOrder]);
 
   const [afterSectionId, setAfterSectionId] = useState(
-    availablePasses.length > 0 ? availablePasses[0]!.id : ""
+    availablePasses.length > 0 ? availablePasses[0]!.id : "",
   );
 
   const presets = [5, 10, 15, 20, 30, 45];
@@ -1427,7 +1557,9 @@ function AddBreakModal({
         {availablePasses.length === 0 ? (
           <div className="comic-sm rounded-lg bg-amber-500/10 border border-amber-500/30 p-4 text-amber-900 dark:text-amber-200 text-xs font-extrabold text-center space-y-2">
             <p>Todos los pases ya tienen un descanso a continuación.</p>
-            <p className="text-[11px] font-bold opacity-80">No se pueden colocar dos descansos juntos.</p>
+            <p className="text-[11px] font-bold opacity-80">
+              No se pueden colocar dos descansos juntos.
+            </p>
           </div>
         ) : (
           <>
@@ -1473,7 +1605,9 @@ function AddBreakModal({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-bold uppercase font-extrabold">Título / Etiqueta</label>
+              <label className="mb-1 block text-xs font-bold uppercase font-extrabold">
+                Título / Etiqueta
+              </label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -1514,6 +1648,7 @@ function ConfigSectionRow({
   index: number;
   total: number;
   isPass: boolean;
+  id: string;
   pass?: PassConfig;
   breakItem?: BreakItem;
   onMoveUp: () => void;
@@ -1527,9 +1662,7 @@ function ConfigSectionRow({
   return (
     <div
       className={`comic-sm flex items-center gap-2 rounded-lg p-2.5 bg-background border transition-all ${
-        isPass
-          ? "border-primary/40 shadow-sm"
-          : "border-amber-500/40 bg-amber-500/5 shadow-sm"
+        isPass ? "border-primary/40 shadow-sm" : "border-amber-500/40 bg-amber-500/5 shadow-sm"
       }`}
     >
       {/* Botones de posición Arriba / Abajo */}
@@ -1557,7 +1690,9 @@ function ConfigSectionRow({
       {/* Badge tipo */}
       <span
         className={`comic-sm rounded px-2 py-0.5 text-[10px] font-extrabold uppercase shrink-0 ${
-          isPass ? "bg-primary text-primary-foreground" : "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+          isPass
+            ? "bg-primary text-primary-foreground"
+            : "bg-amber-500/20 text-amber-700 dark:text-amber-300"
         }`}
       >
         {isPass ? "Pase" : "Descanso"}
@@ -1652,12 +1787,14 @@ function SetlistDetail({
   const setlist = setlists.data?.find((s) => s.id === setlistId);
   const config = useMemo(() => parseSetlistNotes(setlist?.notes ?? null), [setlist?.notes]);
 
-  const [showProposeModal, setShowProposeModal] = useState(false);
+  // Modal state para añadir canciones o descansos a un pase específico
+  const [addingSongsPass, setAddingSongsPass] = useState<{ id: string; name: string } | null>(null);
+  const [showBreakModal, setShowBreakModal] = useState(false);
 
+  // Confirmación de borrado de pase
+  const [confirmDeletePassId, setConfirmDeletePassId] = useState<string | null>(null);
   // Tab activo de pases ("all" o el id del pase)
   const [activePassId, setActivePassId] = useState<string>("all");
-  const [searchSong, setSearchSong] = useState("");
-  const [selectedSongId, setSelectedSongId] = useState("");
   const [editingConfig, setEditingConfig] = useState(initialTab === "config");
   const [isEditingItems, setIsEditingItems] = useState(false);
   // Para el lyric modal en modo lectura
@@ -1665,12 +1802,31 @@ function SetlistDetail({
   // Para drag overlay (ID del item que se está arrastrando)
   const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
 
-  // Modal state para añadir canciones o descansos a un pase específico
-  const [addingSongsPass, setAddingSongsPass] = useState<{ id: string; name: string } | null>(null);
-  const [showBreakModal, setShowBreakModal] = useState(false);
+  // Modo propuesta para no-admins: bufferiza cambios sin guardar en DB
+  const [isProposalMode, setIsProposalMode] = useState(false);
+  const [proposalItems, setProposalItems] = useState<VirtualItem[]>([]);
+  const [proposalPassMap, setProposalPassMap] = useState<Record<string, string>>({});
+  const proposalStartRef = useRef<{ items: VirtualItem[]; passMap: Record<string, string> } | null>(
+    null,
+  );
 
-  // Confirmación de borrado de pase
-  const [confirmDeletePassId, setConfirmDeletePassId] = useState<string | null>(null);
+  const fallbackPass = config.passes[0]?.id || "p1";
+  const sectionOrder = config.section_order ?? config.passes.map((p) => p.id);
+
+  // Items activos a mostrar: reales (admin/lectura) o virtuales (propuesta)
+  const activeItems: DisplayItem[] = useMemo(
+    () =>
+      isProposalMode
+        ? proposalItems.map((vi) => ({
+            id: vi.id,
+            arrangement_id: vi.arrangement_id,
+            position: vi.position,
+            arrangements: vi.arrangements ?? null,
+          }))
+        : (items.data ?? []),
+    [isProposalMode, proposalItems, items.data],
+  );
+  const activePassMap = isProposalMode ? proposalPassMap : config.item_pass_map || {};
 
   // Formulario de edición de configuración
   const [editName, setEditName] = useState(setlist?.name || "");
@@ -1682,7 +1838,7 @@ function SetlistDetail({
     config.section_order ?? [
       ...config.passes.map((p) => p.id),
       ...(config.breaks ?? []).map((b) => b.id),
-    ]
+    ],
   );
 
   // Sincronizar el formulario cuando el setlist/config se carga o actualiza desde Supabase
@@ -1697,12 +1853,12 @@ function SetlistDetail({
         config.section_order ?? [
           ...config.passes.map((p) => p.id),
           ...(config.breaks ?? []).map((b) => b.id),
-        ]
+        ],
       );
     }
   }, [setlist, config]);
 
-  // Mapeo de canción -> pase
+  // Mapeo de canción -> pase (del DB)
   const itemPassMap = config.item_pass_map || {};
 
   // Sensores DnD para cross-container
@@ -1719,18 +1875,22 @@ function SetlistDetail({
 
   // Total acumulado general (canciones + descansos)
   const totalSecondsSongs = useMemo(
-    () => (items.data ?? []).reduce((acc, i) => acc + (i.arrangements?.duration_seconds ?? 0), 0),
-    [items.data],
+    () => activeItems.reduce((acc, i) => acc + (i.arrangements?.duration_seconds ?? 0), 0),
+    [activeItems],
   );
   const totalSecondsBreaks = useMemo(
     () => (config.breaks ?? []).reduce((acc, b) => acc + b.minutes * 60, 0),
     [config.breaks],
   );
 
-  const overallComp = formatTimeComparison(totalSecondsSongs + totalSecondsBreaks, config.target_minutes);
+  const overallComp = formatTimeComparison(
+    totalSecondsSongs + totalSecondsBreaks,
+    config.target_minutes,
+  );
 
   // Eliminar un pase y todas sus canciones asignadas
   async function handleDeletePass(passId: string) {
+    if (isProposalMode) return; // los cambios de estructura no van por propuesta
     const updatedPasses = config.passes.filter((p) => p.id !== passId);
     if (updatedPasses.length === 0) return; // siempre debe quedar al menos uno
 
@@ -1780,7 +1940,7 @@ function SetlistDetail({
     toast.success(
       itemsToDelete.length > 0
         ? `Pase eliminado junto a sus ${itemsToDelete.length} canciones`
-        : "Pase eliminado"
+        : "Pase eliminado",
     );
   }
 
@@ -1831,6 +1991,35 @@ function SetlistDetail({
   async function handleAddMultipleSongsToPass(passId: string, songIds: string[]) {
     if (!songIds.length) return;
 
+    if (isProposalMode) {
+      // En modo propuesta: añadir a lista virtual
+      const newVirtual: VirtualItem[] = songIds.map((arrId, idx) => {
+        const arr = (arrangements.data ?? []).find((a) => a.id === arrId);
+        const tempId = `virtual_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
+        return {
+          id: tempId,
+          arrangement_id: arrId,
+          position: 0,
+          pass_id: passId,
+          arrangements: arr ?? null,
+        };
+      });
+      const nextMap = { ...proposalPassMap };
+      newVirtual.forEach((vi) => {
+        nextMap[vi.id] = passId;
+      });
+      setProposalPassMap(nextMap);
+      setProposalItems((prev) =>
+        renumberVirtualItems([...prev, ...newVirtual], nextMap, sectionOrder, fallbackPass),
+      );
+      toast.success(
+        songIds.length === 1
+          ? "1 canción añadida a la propuesta"
+          : `${songIds.length} canciones añadidas a la propuesta`,
+      );
+      return;
+    }
+
     const startPos = (items.data?.length ?? 0) + 1;
     const newItemsPayload = songIds.map((arrId, index) => ({
       setlist_id: setlistId,
@@ -1862,12 +2051,15 @@ function SetlistDetail({
 
     invalidate("setlist_items", "setlists");
     toast.success(
-      songIds.length === 1 ? "1 arreglo añadido al pase" : `${songIds.length} arreglos añadidos al pase`,
+      songIds.length === 1
+        ? "1 arreglo añadido al pase"
+        : `${songIds.length} arreglos añadidos al pase`,
     );
   }
 
   // Añadir un nuevo pase al final del timeline
   async function handleAddPass() {
+    if (isProposalMode) return;
     const newPassNumber = config.passes.length + 1;
     const newPass: PassConfig = {
       id: `p${Date.now()}`,
@@ -1898,6 +2090,7 @@ function SetlistDetail({
 
   // Añadir descanso (insertado DESPUÉS de un pase específico en el timeline)
   async function handleAddBreak(minutes: number, afterSectionId: string, title?: string) {
+    if (isProposalMode) return;
     const currentOrder = config.section_order ?? config.passes.map((p) => p.id);
     const insertIdx = currentOrder.indexOf(afterSectionId);
 
@@ -1944,6 +2137,7 @@ function SetlistDetail({
   }
 
   async function handleUpdateBreak(breakId: string, deltaMinutes: number) {
+    if (isProposalMode) return;
     const currentBreaks = config.breaks || [];
     const updatedBreaks = currentBreaks.map((b) => {
       if (b.id === breakId) {
@@ -1966,6 +2160,7 @@ function SetlistDetail({
   }
 
   async function handleRemoveBreak(breakId: string) {
+    if (isProposalMode) return;
     const currentBreaks = config.breaks || [];
     const currentOrder = config.section_order ?? config.passes.map((p) => p.id);
     const updatedConfig: SetlistNotesConfig = {
@@ -2003,6 +2198,21 @@ function SetlistDetail({
 
   // Eliminar tema del setlist (con opción Deshacer)
   async function handleRemoveItem(itemId: string) {
+    if (isProposalMode) {
+      const nextMap = { ...proposalPassMap };
+      delete nextMap[itemId];
+      setProposalPassMap(nextMap);
+      setProposalItems((prev) =>
+        renumberVirtualItems(
+          prev.filter((i) => i.id !== itemId),
+          nextMap,
+          sectionOrder,
+          fallbackPass,
+        ),
+      );
+      return;
+    }
+
     const itemToDelete = items.data?.find((i) => i.id === itemId);
     const passId = itemPassMap[itemId];
 
@@ -2058,6 +2268,16 @@ function SetlistDetail({
 
   // Reordenar dentro de un pase
   async function handleReorderPassItems(reorderedItems: { id: string }[]) {
+    if (isProposalMode) {
+      const first = reorderedItems[0];
+      const passId = first ? proposalPassMap[first.id] || fallbackPass : fallbackPass;
+      setProposalItems((prev) =>
+        renumberVirtualItems(prev, proposalPassMap, sectionOrder, fallbackPass, {
+          [passId]: reorderedItems.map((r) => r.id),
+        }),
+      );
+      return;
+    }
     await Promise.all(
       reorderedItems.map((item, index) => {
         return supabase
@@ -2068,6 +2288,86 @@ function SetlistDetail({
     );
 
     invalidate("setlist_items");
+  }
+
+  // Cambiar item de pase
+  async function handleMoveItemToPassLocal(itemId: string, newPassId: string) {
+    if (isProposalMode) {
+      const nextMap = { ...proposalPassMap, [itemId]: newPassId };
+      setProposalPassMap(nextMap);
+      setProposalItems((prev) => renumberVirtualItems(prev, nextMap, sectionOrder, fallbackPass));
+      return;
+    }
+    await handleMoveItemToPass(itemId, newPassId);
+  }
+
+  // Enviar propuesta de cambio (solo no-admins)
+  async function handleSubmitProposal() {
+    if (!setlist || !user) return;
+
+    const userMeta = user.user_metadata;
+    const userName =
+      userMeta?.["display_name"] ||
+      userMeta?.["full_name"] ||
+      user?.email?.split("@")[0] ||
+      "Miembro";
+
+    const bulkItems = proposalItems.map((vi) => ({
+      arrangement_id: vi.arrangement_id,
+      pass_id: proposalPassMap[vi.id] || config.passes[0]?.id || "",
+      position: vi.position,
+      title: vi.arrangements?.title || "",
+      duration_seconds: vi.arrangements?.duration_seconds || 0,
+    }));
+
+    // Si no hay diferencias frente al estado inicial, no tiene sentido proponer
+    const signature = (items: VirtualItem[], map: Record<string, string>) =>
+      items.map((i) => `${i.arrangement_id}:${map[i.id] ?? ""}:${i.position}`).join("|");
+    const start = proposalStartRef.current;
+    if (
+      start &&
+      signature(proposalItems, proposalPassMap) === signature(start.items, start.passMap)
+    ) {
+      toast.error("No hay cambios que proponer");
+      return;
+    }
+
+    const newProp: SetlistProposal = {
+      id: `prop_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      setlist_id: setlist.id,
+      setlist_name: setlist.name,
+      arrangement_id: "",
+      arrangement_title: `${bulkItems.length} ${bulkItems.length === 1 ? "canción" : "canciones"}`,
+      pass_id: "",
+      pass_name: "",
+      user_id: user.id,
+      user_name: userName,
+      created_at: new Date().toISOString(),
+      status: "pending",
+      kind: "bulk_edit",
+      bulk_items: bulkItems,
+    };
+
+    const updatedConfig: SetlistNotesConfig = {
+      ...config,
+      proposals: [...(config.proposals ?? []), newProp],
+    };
+
+    const { error } = await supabase
+      .from("setlists")
+      .update({ notes: serializeSetlistNotes(updatedConfig) })
+      .eq("id", setlist.id);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    invalidate("setlists");
+    setIsProposalMode(false);
+    setIsEditingItems(false);
+    proposalStartRef.current = null;
+    toast.success("Propuesta de cambio enviada a los administradores ✓");
   }
 
   // Handlers de cross-container DnD
@@ -2085,20 +2385,22 @@ function SetlistDetail({
 
     // Determinar si over es un pase (contenedor) o un item
     const isOverAPass = config.passes.some((p) => p.id === overId);
-    const targetPassId = isOverAPass
-      ? overId
-      : (itemPassMap[overId] || config.passes[0]?.id || "p1");
+    const targetPassId = isOverAPass ? overId : activePassMap[overId] || fallbackPass;
 
-    const currentPassId = itemPassMap[activeId] || config.passes[0]?.id || "p1";
+    const currentPassId = activePassMap[activeId] || fallbackPass;
 
     if (targetPassId !== currentPassId) {
       // Mover a otro pase
-      await handleMoveItemToPass(activeId, targetPassId);
+      if (isProposalMode) {
+        await handleMoveItemToPassLocal(activeId, targetPassId);
+      } else {
+        await handleMoveItemToPass(activeId, targetPassId);
+      }
     } else {
       // Reordenar dentro del mismo pase
       if (activeId !== overId && !isOverAPass) {
-        const passItems = (items.data ?? []).filter(
-          (i) => (itemPassMap[i.id] || config.passes[0]?.id) === currentPassId,
+        const passItems = activeItems.filter(
+          (i) => (activePassMap[i.id] || fallbackPass) === currentPassId,
         );
         const oldIndex = passItems.findIndex((i) => i.id === activeId);
         const newIndex = passItems.findIndex((i) => i.id === overId);
@@ -2108,16 +2410,6 @@ function SetlistDetail({
       }
     }
   }
-
-  // Filtrado de arreglos disponibles para añadir
-  const availableArrangements = useMemo(() => {
-    const q = searchSong.toLowerCase().trim();
-    const all = arrangements.data ?? [];
-    if (!q) return all;
-    return all.filter(
-      (a) => a.title.toLowerCase().includes(q) || (a.tags ?? []).some((t) => t.toLowerCase().includes(q)),
-    );
-  }, [arrangements.data, searchSong]);
 
   return (
     <div className="space-y-6">
@@ -2134,56 +2426,6 @@ function SetlistDetail({
           onClose={() => setAddingSongsPass(null)}
           onAdd={async (songIds) => {
             await handleAddMultipleSongsToPass(addingSongsPass.id, songIds);
-          }}
-        />
-      )}
-
-      {/* Modal para proponer canción */}
-      {showProposeModal && setlist && (
-        <ProposeSongModal
-          setlistName={setlist.name}
-          passes={config.passes}
-          arrangements={arrangements.data ?? []}
-          onClose={() => setShowProposeModal(false)}
-          onPropose={async (arrangementId, passId) => {
-            const arr = (arrangements.data ?? []).find((a) => a.id === arrangementId);
-            const pass = config.passes.find((p) => p.id === passId);
-            if (!arr || !pass || !setlist) return;
-
-            const userMeta = user?.user_metadata;
-            const userName =
-              userMeta?.['display_name'] ||
-              userMeta?.['full_name'] ||
-              user?.email?.split("@")[0] ||
-              "Miembro";
-
-            const newProp: SetlistProposal = {
-              id: `prop_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-              setlist_id: setlist.id,
-              setlist_name: setlist.name,
-              arrangement_id: arr.id,
-              arrangement_title: arr.title,
-              pass_id: pass.id,
-              pass_name: pass.name,
-              user_id: user?.id || "anonymous",
-              user_name: userName,
-              created_at: new Date().toISOString(),
-              status: "pending",
-            };
-
-            const updatedConfig: SetlistNotesConfig = {
-              ...config,
-              proposals: [...(config.proposals ?? []), newProp],
-            };
-
-            const { error } = await supabase
-              .from("setlists")
-              .update({ notes: serializeSetlistNotes(updatedConfig) })
-              .eq("id", setlist.id);
-
-            if (error) throw error;
-            invalidate("setlists");
-            toast.success(`Propuesta de "${arr.title}" enviada a los administradores`);
           }}
         />
       )}
@@ -2210,51 +2452,92 @@ function SetlistDetail({
         </button>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowProposeModal(true)}
-            className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 px-3 py-1.5 text-xs font-extrabold uppercase hover:bg-amber-500/20 transition-colors"
-          >
-            <Lightbulb className="h-3.5 w-3.5 text-amber-500" /> Proponer tema
-          </button>
+          {/* Admin: Editar/Guardar | No-admin: Proponer Cambio/Enviar propuesta */}
+          {isAdmin ? (
+            // ADMIN: cambios directos
+            <button
+              onClick={() => setIsEditingItems((prev) => !prev)}
+              className={`comic-sm comic-press flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-extrabold uppercase transition-colors ${
+                isEditingItems
+                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                  : "bg-primary text-primary-foreground"
+              }`}
+            >
+              {isEditingItems ? (
+                <>
+                  <Save className="h-3.5 w-3.5" /> Guardar
+                </>
+              ) : (
+                <>
+                  <Pencil className="h-3.5 w-3.5" /> Editar canciones
+                </>
+              )}
+            </button>
+          ) : isProposalMode ? (
+            // NO-ADMIN en modo propuesta: cancel + enviar
+            <>
+              <button
+                onClick={() => {
+                  setIsProposalMode(false);
+                  setIsEditingItems(false);
+                }}
+                className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-card px-3 py-1.5 text-xs font-extrabold uppercase hover:bg-accent"
+              >
+                <X className="h-3.5 w-3.5" /> Cancelar
+              </button>
+              <button
+                onClick={handleSubmitProposal}
+                className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-amber-500 text-white px-3 py-1.5 text-xs font-extrabold uppercase hover:bg-amber-600"
+              >
+                <Lightbulb className="h-3.5 w-3.5" /> Enviar propuesta
+              </button>
+            </>
+          ) : (
+            // NO-ADMIN en modo lectura: botón Proponer Cambio
+            <button
+              onClick={() => {
+                // Inicializar items virtuales desde el estado actual de la BD
+                const currentVirtual: VirtualItem[] = (items.data ?? []).map((item) => ({
+                  id: item.id,
+                  arrangement_id: item.arrangement_id,
+                  position: item.position,
+                  pass_id: itemPassMap[item.id] || fallbackPass,
+                  arrangements: item.arrangements,
+                }));
+                setProposalItems(currentVirtual);
+                setProposalPassMap({ ...itemPassMap });
+                proposalStartRef.current = { items: currentVirtual, passMap: { ...itemPassMap } };
+                setIsProposalMode(true);
+                setIsEditingItems(true);
+              }}
+              className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 px-3 py-1.5 text-xs font-extrabold uppercase hover:bg-amber-500/20 transition-colors"
+            >
+              <Lightbulb className="h-3.5 w-3.5" /> Proponer cambio
+            </button>
+          )}
 
-          <button
-            onClick={() => setIsEditingItems((prev) => !prev)}
-            className={`comic-sm comic-press flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-extrabold uppercase transition-colors ${
-              isEditingItems
-                ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                : "bg-primary text-primary-foreground"
-            }`}
-          >
-            {isEditingItems ? (
-              <>
-                <CheckCircle2 className="h-3.5 w-3.5" /> Ver lectura limpia
-              </>
-            ) : (
-              <>
-                <Pencil className="h-3.5 w-3.5" /> Editar canciones
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={() => {
-              setEditName(setlist?.name || "");
-              setEditDate(setlist?.event_date || "");
-              setEditTargetMinutes(config.target_minutes);
-              setEditPasses(config.passes);
-              setEditBreaks(config.breaks ?? []);
-              setEditSectionOrder(
-                config.section_order ?? [
-                  ...config.passes.map((p) => p.id),
-                  ...(config.breaks ?? []).map((b) => b.id),
-                ]
-              );
-              setEditingConfig(true);
-            }}
-            className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-extrabold uppercase text-secondary-foreground"
-          >
-            <Settings className="h-3.5 w-3.5" /> Configurar Setlist
-          </button>
+          {/* Configurar Setlist: solo admin (los no-admin proponen cambios) */}
+          {isAdmin && (
+            <button
+              onClick={() => {
+                setEditName(setlist?.name || "");
+                setEditDate(setlist?.event_date || "");
+                setEditTargetMinutes(config.target_minutes);
+                setEditPasses(config.passes);
+                setEditBreaks(config.breaks ?? []);
+                setEditSectionOrder(
+                  config.section_order ?? [
+                    ...config.passes.map((p) => p.id),
+                    ...(config.breaks ?? []).map((b) => b.id),
+                  ],
+                );
+                setEditingConfig(true);
+              }}
+              className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-extrabold uppercase text-secondary-foreground"
+            >
+              <Settings className="h-3.5 w-3.5" /> Configurar Setlist
+            </button>
+          )}
         </div>
       </div>
 
@@ -2277,7 +2560,7 @@ function SetlistDetail({
 
           <div className="flex items-center gap-2">
             <span className="comic-sm rounded bg-primary px-3 py-1 text-xs font-extrabold uppercase text-primary-foreground">
-              {items.data?.length ?? 0} arreglos
+              {activeItems.length} arreglos
             </span>
           </div>
         </div>
@@ -2293,7 +2576,8 @@ function SetlistDetail({
             </p>
             {totalSecondsBreaks > 0 && (
               <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-0.5">
-                {formatLongDuration(totalSecondsSongs)} canciones · {formatLongDuration(totalSecondsBreaks)} descansos
+                {formatLongDuration(totalSecondsSongs)} canciones ·{" "}
+                {formatLongDuration(totalSecondsBreaks)} descansos
               </p>
             )}
           </div>
@@ -2321,9 +2605,15 @@ function SetlistDetail({
               {/* Segmento de canciones */}
               <div
                 className={`absolute left-0 top-0 h-full transition-all duration-500 ${
-                  overallComp.status === "exceeded" ? "bg-amber-500" : overallComp.percentage >= 100 ? "bg-emerald-500" : "bg-primary"
+                  overallComp.status === "exceeded"
+                    ? "bg-amber-500"
+                    : overallComp.percentage >= 100
+                      ? "bg-emerald-500"
+                      : "bg-primary"
                 }`}
-                style={{ width: `${Math.min(100, Math.round((totalSecondsSongs / (config.target_minutes * 60)) * 100))}%` }}
+                style={{
+                  width: `${Math.min(100, Math.round((totalSecondsSongs / (config.target_minutes * 60)) * 100))}%`,
+                }}
               />
               {/* Segmento de descansos */}
               {totalSecondsBreaks > 0 && (
@@ -2332,8 +2622,12 @@ function SetlistDetail({
                   style={{
                     left: `${Math.min(100, Math.round((totalSecondsSongs / (config.target_minutes * 60)) * 100))}%`,
                     width: `${Math.min(
-                      100 - Math.min(100, Math.round((totalSecondsSongs / (config.target_minutes * 60)) * 100)),
-                      Math.round((totalSecondsBreaks / (config.target_minutes * 60)) * 100)
+                      100 -
+                        Math.min(
+                          100,
+                          Math.round((totalSecondsSongs / (config.target_minutes * 60)) * 100),
+                        ),
+                      Math.round((totalSecondsBreaks / (config.target_minutes * 60)) * 100),
                     )}%`,
                   }}
                 />
@@ -2341,8 +2635,12 @@ function SetlistDetail({
             </div>
             {totalSecondsBreaks > 0 && (
               <div className="flex items-center gap-3 text-[10px] font-bold">
-                <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-primary" /> Canciones</span>
-                <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-amber-400/70" /> Descansos</span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-primary" /> Canciones
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-amber-400/70" /> Descansos
+                </span>
               </div>
             )}
           </div>
@@ -2363,10 +2661,13 @@ function SetlistDetail({
             Todos ({config.passes.length})
           </button>
           {config.passes.map((p) => {
-            const passItems = (items.data ?? []).filter(
-              (i) => (itemPassMap[i.id] || config.passes[0]?.id) === p.id,
+            const passItems = activeItems.filter(
+              (i) => (activePassMap[i.id] || fallbackPass) === p.id,
             );
-            const passSeconds = passItems.reduce((s, i) => s + (i.arrangements?.duration_seconds ?? 0), 0);
+            const passSeconds = passItems.reduce(
+              (s, i) => s + (i.arrangements?.duration_seconds ?? 0),
+              0,
+            );
 
             return (
               <button
@@ -2386,7 +2687,7 @@ function SetlistDetail({
       )}
 
       {/* Barra de acciones de estructura del setlist (entre tabs y tarjetas de pase) */}
-      {isEditingItems && (
+      {isAdmin && isEditingItems && (
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -2433,7 +2734,7 @@ function SetlistDetail({
               const breakItem = (config.breaks ?? []).find((b) => b.id === sectionId);
               if (breakItem) {
                 // Render break bar as top-level section
-                return isEditingItems ? (
+                return isEditingItems && isAdmin ? (
                   <div
                     key={breakItem.id}
                     className="comic flex items-center justify-between gap-3 rounded-xl bg-amber-500/10 border-2 border-amber-500/30 p-3 text-amber-900 dark:text-amber-200"
@@ -2489,8 +2790,8 @@ function SetlistDetail({
               const pass = config.passes.find((p) => p.id === sectionId);
               if (!pass) return null;
 
-              const passItems = (items.data ?? []).filter((i) => {
-                const assignedPass = itemPassMap[i.id] || config.passes[0]?.id || "p1";
+              const passItems = activeItems.filter((i) => {
+                const assignedPass = activePassMap[i.id] || fallbackPass;
                 return assignedPass === pass.id;
               });
 
@@ -2499,10 +2800,7 @@ function SetlistDetail({
                 0,
               );
 
-              const passComp = formatTimeComparison(
-                passSongSeconds,
-                pass.target_minutes,
-              );
+              const passComp = formatTimeComparison(passSongSeconds, pass.target_minutes);
 
               return (
                 <div key={pass.id} className="comic rounded-xl bg-card p-5 space-y-4">
@@ -2511,8 +2809,7 @@ function SetlistDetail({
                     <div>
                       <h3 className="text-2xl font-extrabold leading-none">{pass.name}</h3>
                       <p className="mt-1 text-xs font-bold text-muted-foreground">
-                        {passItems.length} temas ·{" "}
-                        {passComp.addedText}
+                        {passItems.length} temas · {passComp.addedText}
                         {pass.target_minutes > 0 ? ` de ${passComp.targetText} objetivo` : ""}
                       </p>
                     </div>
@@ -2527,7 +2824,7 @@ function SetlistDetail({
                           >
                             <Plus className="h-3.5 w-3.5" /> Añadir canciones
                           </button>
-                          {config.passes.length > 1 && (
+                          {isAdmin && config.passes.length > 1 && (
                             <button
                               type="button"
                               onClick={() => setConfirmDeletePassId(pass.id)}
@@ -2599,7 +2896,9 @@ function SetlistDetail({
                               className="comic grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-background p-3 my-2"
                             >
                               <div className="min-w-0">
-                                <p className="text-xs font-extrabold text-primary mb-0.5">#{index + 1}</p>
+                                <p className="text-xs font-extrabold text-primary mb-0.5">
+                                  #{index + 1}
+                                </p>
                                 <p className="truncate text-base font-extrabold leading-tight">
                                   {item.arrangements?.title || "Cargando..."}
                                 </p>
@@ -2662,9 +2961,7 @@ function SetlistDetail({
                               <span className="text-sm font-extrabold text-muted-foreground font-mono">
                                 {formatDuration(item.arrangements?.duration_seconds ?? 0)}
                               </span>
-                              {lyric && (
-                                <BookOpen className="h-4 w-4 text-primary/60" />
-                              )}
+                              {lyric && <BookOpen className="h-4 w-4 text-primary/60" />}
                             </div>
                           </div>
                         );
@@ -2678,21 +2975,22 @@ function SetlistDetail({
 
         {/* Overlay visual mientras se arrastra */}
         <DragOverlay>
-          {draggingItemId && (() => {
-            const draggedItem = (items.data ?? []).find((i) => i.id === draggingItemId);
-            if (!draggedItem) return null;
-            return (
-              <div className="comic flex items-center gap-3 rounded-xl bg-primary text-primary-foreground p-3 shadow-2xl opacity-90">
-                <GripVertical className="h-5 w-5 shrink-0" />
-                <span className="font-extrabold text-base">
-                  {draggedItem.arrangements?.title || "Canción"}
-                </span>
-                <span className="ml-auto text-xs font-bold opacity-75">
-                  {formatDuration(draggedItem.arrangements?.duration_seconds ?? 0)}
-                </span>
-              </div>
-            );
-          })()}
+          {draggingItemId &&
+            (() => {
+              const draggedItem = activeItems.find((i) => i.id === draggingItemId);
+              if (!draggedItem) return null;
+              return (
+                <div className="comic flex items-center gap-3 rounded-xl bg-primary text-primary-foreground p-3 shadow-2xl opacity-90">
+                  <GripVertical className="h-5 w-5 shrink-0" />
+                  <span className="font-extrabold text-base">
+                    {draggedItem.arrangements?.title || "Canción"}
+                  </span>
+                  <span className="ml-auto text-xs font-bold opacity-75">
+                    {formatDuration(draggedItem.arrangements?.duration_seconds ?? 0)}
+                  </span>
+                </div>
+              );
+            })()}
         </DragOverlay>
       </DndContext>
 
@@ -2789,7 +3087,8 @@ function SetlistDetail({
               </div>
 
               <p className="text-[11px] text-muted-foreground font-bold">
-                Usa los botones <span className="font-mono">▲</span> y <span className="font-mono">▼</span> para ordenar la secuencia.
+                Usa los botones <span className="font-mono">▲</span> y{" "}
+                <span className="font-mono">▼</span> para ordenar la secuencia.
               </p>
 
               <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -2806,8 +3105,8 @@ function SetlistDetail({
                       total={editSectionOrder.length}
                       id={sectionId}
                       isPass={isPass}
-                      pass={pass}
-                      breakItem={breakItem}
+                      {...(pass ? { pass } : {})}
+                      {...(breakItem ? { breakItem } : {})}
                       onMoveUp={() => {
                         if (idx > 0) {
                           const next = [...editSectionOrder];
@@ -2856,169 +3155,42 @@ function SetlistDetail({
       )}
 
       {/* Popup de confirmación de borrado de pase */}
-      {confirmDeletePassId && (() => {
-        const passToDelete = config.passes.find((p) => p.id === confirmDeletePassId);
-        return (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/70 p-4">
-            <div className="comic w-full max-w-xs rounded-xl bg-card p-6 space-y-4 shadow-2xl">
-              <div className="flex flex-col items-center gap-2 text-center">
-                <div className="rounded-full bg-destructive/10 p-3">
-                  <Trash2 className="h-7 w-7 text-destructive" />
+      {confirmDeletePassId &&
+        (() => {
+          const passToDelete = config.passes.find((p) => p.id === confirmDeletePassId);
+          return (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/70 p-4">
+              <div className="comic w-full max-w-xs rounded-xl bg-card p-6 space-y-4 shadow-2xl">
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <div className="rounded-full bg-destructive/10 p-3">
+                    <Trash2 className="h-7 w-7 text-destructive" />
+                  </div>
+                  <h2 className="text-xl font-extrabold leading-tight">
+                    ¿Eliminar {passToDelete?.name ?? "este pase"}?
+                  </h2>
+                  <p className="text-xs font-bold text-muted-foreground">
+                    Se eliminarán el pase y todas las canciones asignadas a él. Esta acción no se
+                    puede deshacer.
+                  </p>
                 </div>
-                <h2 className="text-xl font-extrabold leading-tight">
-                  ¿Eliminar {passToDelete?.name ?? "este pase"}?
-                </h2>
-                <p className="text-xs font-bold text-muted-foreground">
-                  Se eliminarán el pase y todas las canciones asignadas a él. Esta acción no se puede deshacer.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setConfirmDeletePassId(null)}
-                  className="comic-sm flex-1 rounded-lg bg-accent py-2 text-sm font-extrabold uppercase hover:bg-muted"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => handleDeletePass(confirmDeletePassId)}
-                  className="comic comic-press flex-1 rounded-lg bg-destructive py-2 text-sm font-extrabold uppercase text-destructive-foreground"
-                >
-                  Eliminar
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-    </div>
-  );
-}
-
-// ─── Modal para proponer canción a un setlist ────────────────────────────────────
-
-function ProposeSongModal({
-  setlistName,
-  passes,
-  arrangements,
-  onClose,
-  onPropose,
-}: {
-  setlistName: string;
-  passes: PassConfig[];
-  arrangements: Arrangement[];
-  onClose: () => void;
-  onPropose: (arrangementId: string, passId: string) => Promise<void>;
-}) {
-  const [selectedArrangementId, setSelectedArrangementId] = useState(arrangements[0]?.id || "");
-  const [selectedPassId, setSelectedPassId] = useState(passes[0]?.id || "");
-  const [search, setSearch] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  const filteredArrangements = useMemo(() => {
-    if (!search.trim()) return arrangements;
-    const q = normalize(search.trim());
-    return arrangements.filter(
-      (a) => normalize(a.title).includes(q) || (a.tags ?? []).some((t) => normalize(t).includes(q))
-    );
-  }, [arrangements, search]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedArrangementId || !selectedPassId) {
-      toast.error("Selecciona una canción y un pase");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await onPropose(selectedArrangementId, selectedPassId);
-      onClose();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al enviar la propuesta");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
-      <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4 mt-6">
-        <div className="flex items-center justify-between border-b pb-2">
-          <div className="flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-amber-500" />
-            <h2 className="text-xl font-extrabold leading-none">Proponer canción</h2>
-          </div>
-          <button onClick={onClose} aria-label="Cerrar">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <p className="text-xs text-muted-foreground font-medium">
-          Propón una canción para incluir en el setlist "{setlistName}". Los administradores revisarán y aprobarán tu propuesta.
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Selección de pase */}
-          <div>
-            <label className="mb-1 block text-xs font-bold uppercase">Pase de destino</label>
-            <select
-              value={selectedPassId}
-              onChange={(e) => setSelectedPassId(e.target.value)}
-              className="comic-sm w-full rounded-md bg-background px-3 py-2 text-sm font-bold outline-none border border-ink/10"
-            >
-              {passes.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Selección de canción con buscador */}
-          <div>
-            <label className="mb-1 block text-xs font-bold uppercase">Selecciona canción / arreglo</label>
-            <div className="flex items-center gap-2 rounded-lg bg-background px-3 py-2 border border-ink/10 mb-2">
-              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por título o etiqueta..."
-                className="w-full bg-transparent text-xs font-medium outline-none"
-              />
-            </div>
-
-            <div className="max-h-48 overflow-y-auto space-y-1 pr-1 border rounded-lg p-1.5 bg-background">
-              {filteredArrangements.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">No se encontraron temas</p>
-              ) : (
-                filteredArrangements.map((a) => (
+                <div className="flex gap-2">
                   <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => setSelectedArrangementId(a.id)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-extrabold flex items-center justify-between transition-colors ${
-                      selectedArrangementId === a.id
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
-                    }`}
+                    onClick={() => setConfirmDeletePassId(null)}
+                    className="comic-sm flex-1 rounded-lg bg-accent py-2 text-sm font-extrabold uppercase hover:bg-muted"
                   >
-                    <span>{a.title}</span>
-                    <span className="text-[10px] opacity-80">{formatDuration(a.duration_seconds)}</span>
+                    Cancelar
                   </button>
-                ))
-              )}
+                  <button
+                    onClick={() => handleDeletePass(confirmDeletePassId)}
+                    className="comic comic-press flex-1 rounded-lg bg-destructive py-2 text-sm font-extrabold uppercase text-destructive-foreground"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting || !selectedArrangementId}
-            className="comic comic-press flex items-center justify-center gap-2 w-full rounded-lg bg-primary py-3 text-sm font-extrabold uppercase text-primary-foreground disabled:opacity-50"
-          >
-            <Lightbulb className="h-4 w-4" />
-            {submitting ? "Enviando..." : "Enviar propuesta"}
-          </button>
-        </form>
-      </div>
+          );
+        })()}
     </div>
   );
 }

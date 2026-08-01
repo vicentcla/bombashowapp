@@ -8,19 +8,21 @@ import { formatDuration, normalize } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/contadores")({
   validateSearch: (search: Record<string, unknown>) => ({
-    tab: search['tab'] === "arreglos" ? "arreglos" : ("calle" as "calle" | "arreglos"),
+    tab: search["tab"] === "arreglos" ? "arreglos" : ("calle" as "calle" | "arreglos"),
   }),
   head: () => ({
     meta: [
       { title: "Contadores — La Bomba Show" },
       {
         name: "description",
-        content: "Cuenta las veces que se toca cada canción de calle y cada arreglo durante las fiestas.",
+        content:
+          "Cuenta las veces que se toca cada canción de calle y cada arreglo durante las fiestas.",
       },
       { property: "og:title", content: "Contadores — La Bomba Show" },
       {
         property: "og:description",
-        content: "Cuenta las veces que se toca cada canción de calle y cada arreglo durante las fiestas.",
+        content:
+          "Cuenta las veces que se toca cada canción de calle y cada arreglo durante las fiestas.",
       },
     ],
   }),
@@ -30,7 +32,7 @@ export const Route = createFileRoute("/_authenticated/contadores")({
 function Contadores() {
   const search = Route.useSearch();
   const [activeTab, setActiveTab] = useState<"calle" | "arreglos">(
-    search['tab'] === "arreglos" ? "arreglos" : "calle"
+    search["tab"] === "arreglos" ? "arreglos" : "calle",
   );
 
   const handleTabChange = (newTab: "calle" | "arreglos") => {
@@ -106,7 +108,7 @@ function ContadoresCalle() {
 
   const list = useMemo(() => {
     const base = (songs.data ?? []).filter(
-      (s) => !tag || (s.tags ?? []).some((t) => normalize(t) === normalize(tag))
+      (s) => !tag || (s.tags ?? []).some((t) => normalize(t) === normalize(tag)),
     );
     const sorted = [...base];
     if (sort === "alfabetico") sorted.sort((a, b) => a.title.localeCompare(b.title, "es"));
@@ -198,7 +200,7 @@ function ContadoresArreglos() {
 
   const list = useMemo(() => {
     const base = (arrangements.data ?? []).filter(
-      (a) => !tag || (a.tags ?? []).some((t) => normalize(t) === normalize(tag))
+      (a) => !tag || (a.tags ?? []).some((t) => normalize(t) === normalize(tag)),
     );
     const sorted = [...base];
     if (sort === "alfabetico") sorted.sort((a, b) => a.title.localeCompare(b.title, "es"));

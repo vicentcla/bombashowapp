@@ -94,7 +94,9 @@ export function TagInput({
         </button>
       </div>
       <p className="text-[11px] text-muted-foreground font-medium">
-        Pulsa <kbd className="font-mono bg-muted px-1 rounded text-[10px]">Intro</kbd> o <kbd className="font-mono bg-muted px-1 rounded text-[10px]">,</kbd> para guardar la etiqueta e ingresar otra.
+        Pulsa <kbd className="font-mono bg-muted px-1 rounded text-[10px]">Intro</kbd> o{" "}
+        <kbd className="font-mono bg-muted px-1 rounded text-[10px]">,</kbd> para guardar la
+        etiqueta e ingresar otra.
       </p>
     </div>
   );

@@ -57,7 +57,7 @@ export function TrombonIcon({ className, ...props }: IconProps) {
       {/* Bell bend */}
       <path d="M9 20 Q6 20 6 17" />
       {/* Bell flare */}
-      <path d="M6 17 Q6 11 9 11" strokeWidth="1.5"/>
+      <path d="M6 17 Q6 11 9 11" strokeWidth="1.5" />
       {/* Slide inner tube */}
       <line x1="16" y1="8" x2="16" y2="17" strokeWidth="1.5" strokeDasharray="2 1" />
     </svg>
@@ -86,7 +86,7 @@ export function TrompetaIcon({ className, ...props }: IconProps) {
       <rect x="13" y="10" width="2" height="4" rx="0.5" />
       <rect x="16" y="10" width="2" height="4" rx="0.5" />
       {/* Tubing loop top */}
-      <path d="M10 10 Q10 6 14 6 Q18 6 18 10" strokeWidth="1.5"/>
+      <path d="M10 10 Q10 6 14 6 Q18 6 18 10" strokeWidth="1.5" />
       {/* Bell taper */}
       <path d="M18 12 Q20 12 21 11" />
       <path d="M18 12 Q20 12 22 14" />
@@ -114,7 +114,7 @@ export function SaxoIcon({ className, ...props }: IconProps) {
       <path d="M11 6 Q16 7 17 11 Q18 16 15 19" />
       {/* Bell */}
       <path d="M15 19 Q12 22 9 21 Q7 20 8 18" />
-      <path d="M8 18 Q9 16 11 16 Q13 17 12 19" strokeWidth="1.5"/>
+      <path d="M8 18 Q9 16 11 16 Q13 17 12 19" strokeWidth="1.5" />
       {/* Keys (small circles) */}
       <circle cx="14" cy="10" r="1" fill="currentColor" stroke="none" />
       <circle cx="15" cy="13" r="1" fill="currentColor" stroke="none" />
@@ -147,7 +147,7 @@ export function SousaphoneIcon({ className, ...props }: IconProps) {
       <line x1="2" y1="2" x2="4" y2="4" />
       {/* Bell (large opening at bottom right) */}
       <path d="M17 17 Q20 19 21 22" strokeWidth="2.5" />
-      <path d="M19 21 Q22 20 22 23" strokeWidth="1.5"/>
+      <path d="M19 21 Q22 20 22 23" strokeWidth="1.5" />
     </svg>
   );
 }

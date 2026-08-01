@@ -3,9 +3,7 @@ import { useEffect } from "react";
 
 export const Route = createFileRoute("/_authenticated/miembros")({
   head: () => ({
-    meta: [
-      { title: "Ajustes — La Bomba Show" },
-    ],
+    meta: [{ title: "Ajustes — La Bomba Show" }],
   }),
   component: MiembrosRedirect,
 });

@@ -20,9 +20,7 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Página no encontrada</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Esta página no existe o se ha movido.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">Esta página no existe o se ha movido.</p>
         <div className="mt-6">
           <Link
             to="/"
@@ -82,8 +80,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "La Bomba Show — App de la xaranga" },
       {
         name: "description",
-        content:
-          "Letras, repertorio, setlists y contadores de canciones de La Bomba Show Xaranga.",
+        content: "Letras, repertorio, setlists y contadores de canciones de La Bomba Show Xaranga.",
       },
       { property: "og:title", content: "La Bomba Show — App de la xaranga" },
       {
@@ -94,9 +91,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "theme-color", content: "#1BA0DF" },
       { name: "twitter:title", content: "La Bomba Show — App de la xaranga" },
-      { name: "twitter:description", content: "Letras, repertorio, setlists y contadores de canciones de La Bomba Show Xaranga." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4b8b0f80-9f54-4ff9-a294-38d0d7fa0be2/id-preview-0f0873f3--60005ef4-fa07-4d4e-8132-531a977c1439.lovable.app-1785548554392.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4b8b0f80-9f54-4ff9-a294-38d0d7fa0be2/id-preview-0f0873f3--60005ef4-fa07-4d4e-8132-531a977c1439.lovable.app-1785548554392.png" },
+      {
+        name: "twitter:description",
+        content: "Letras, repertorio, setlists y contadores de canciones de La Bomba Show Xaranga.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4b8b0f80-9f54-4ff9-a294-38d0d7fa0be2/id-preview-0f0873f3--60005ef4-fa07-4d4e-8132-531a977c1439.lovable.app-1785548554392.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4b8b0f80-9f54-4ff9-a294-38d0d7fa0be2/id-preview-0f0873f3--60005ef4-fa07-4d4e-8132-531a977c1439.lovable.app-1785548554392.png",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

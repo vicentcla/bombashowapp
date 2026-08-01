@@ -87,7 +87,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               key={to}
               to={to}
               activeProps={{ className: "bg-primary text-primary-foreground" }}
-              inactiveProps={{ className: "bg-secondary text-secondary-foreground hover:bg-accent" }}
+              inactiveProps={{
+                className: "bg-secondary text-secondary-foreground hover:bg-accent",
+              }}
               className="comic-sm comic-press flex items-center gap-2 rounded-md px-3.5 py-1.5 text-sm font-bold uppercase transition-colors"
             >
               <Icon className="h-4 w-4" />

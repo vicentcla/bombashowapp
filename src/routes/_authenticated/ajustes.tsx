@@ -2,7 +2,20 @@ import { createFileRoute } from "@tanstack/react-router";
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { User, Shield, Music, Check, X, Clock, Settings, Mail, Save, Lightbulb, UserCheck, UserPlus } from "lucide-react";
+import {
+  User,
+  Shield,
+  Music,
+  Check,
+  X,
+  Clock,
+  Settings,
+  Mail,
+  Save,
+  Lightbulb,
+  UserCheck,
+  UserPlus,
+} from "lucide-react";
 import {
   PercusionIcon,
   TrombonIcon,
@@ -13,7 +26,11 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { useRoleRequests, useSetlists, useInvalidate } from "@/lib/queries";
-import { parseSetlistNotes, serializeSetlistNotes, type SetlistProposal } from "@/routes/_authenticated/setlists";
+import {
+  parseSetlistNotes,
+  serializeSetlistNotes,
+  type SetlistProposal,
+} from "@/routes/_authenticated/setlists";
 
 export const Route = createFileRoute("/_authenticated/ajustes")({
   head: () => ({
@@ -29,11 +46,11 @@ const INSTRUMENTS = ["Percusión", "Trombón", "Trompeta", "Saxo", "Sousaphone"]
 type Instrument = (typeof INSTRUMENTS)[number];
 
 const INSTRUMENT_ICONS: Record<string, React.ElementType> = {
-  "Percusión": PercusionIcon,
-  "Trombón": TrombonIcon,
-  "Trompeta": TrompetaIcon,
-  "Saxo": SaxoIcon,
-  "Sousaphone": SousaphoneIcon,
+  Percusión: PercusionIcon,
+  Trombón: TrombonIcon,
+  Trompeta: TrompetaIcon,
+  Saxo: SaxoIcon,
+  Sousaphone: SousaphoneIcon,
 };
 
 function Ajustes() {
@@ -44,7 +61,9 @@ function Ajustes() {
   const invalidate = useInvalidate();
 
   const [activeTab, setActiveTab] = useState<"perfil" | "solicitudes">("perfil");
-  const [adminSubTab, setAdminSubTab] = useState<"usuarios" | "admin_requests" | "setlist_proposals">("usuarios");
+  const [adminSubTab, setAdminSubTab] = useState<
+    "usuarios" | "admin_requests" | "setlist_proposals"
+  >("usuarios");
 
   // Perfil state
   const [displayName, setDisplayName] = useState("");
@@ -70,9 +89,7 @@ function Ajustes() {
   const allProfilesQuery = useQuery({
     queryKey: ["profiles"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, display_name");
+      const { data, error } = await supabase.from("profiles").select("id, display_name");
       if (error) throw error;
       return data;
     },
@@ -94,11 +111,13 @@ function Ajustes() {
   // Cargar datos iniciales del usuario
   useEffect(() => {
     if (user) {
-      const metaName = user.user_metadata?.['display_name'] || user.user_metadata?.['full_name'] || "";
-      const metaInstrument = user.user_metadata?.['instrument'] || "";
+      const metaName =
+        user.user_metadata?.["display_name"] || user.user_metadata?.["full_name"] || "";
+      const metaInstrument = user.user_metadata?.["instrument"] || "";
 
-      const dbName = profileQuery.data?.['display_name'] || "";
-      const dbInstrument = (profileQuery.data as Record<string, unknown> | null)?.['instrument'] as string || "";
+      const dbName = profileQuery.data?.["display_name"] || "";
+      const dbInstrument =
+        ((profileQuery.data as Record<string, unknown> | null)?.["instrument"] as string) || "";
 
       setDisplayName(dbName || metaName || user.email?.split("@")[0] || "");
       setInstrument(dbInstrument || metaInstrument || "");
@@ -146,7 +165,7 @@ function Ajustes() {
       };
 
       try {
-        profileData['instrument'] = instrument;
+        profileData["instrument"] = instrument;
       } catch {
         // Ignorar si no aplica
       }
@@ -210,7 +229,10 @@ function Ajustes() {
     toast.success(approve ? "Rol de administrador concedido" : "Solicitud rechazada");
   }
 
-  async function decideProposal(proposal: SetlistProposal & { setlistId: string }, approve: boolean) {
+  async function decideProposal(
+    proposal: SetlistProposal & { setlistId: string },
+    approve: boolean,
+  ) {
     const sl = (setlists.data ?? []).find((s) => s.id === proposal.setlistId);
     if (!sl) return;
 
@@ -218,29 +240,70 @@ function Ajustes() {
     const updatedProposals = (config.proposals ?? []).map((p) =>
       p.id === proposal.id
         ? { ...p, status: approve ? ("approved" as const) : ("rejected" as const) }
-        : p
+        : p,
     );
 
     if (approve) {
-      // Añadir la canción al setlist si se aprueba
-      const { data: newItem } = await supabase
-        .from("setlist_items")
-        .insert({
-          setlist_id: sl.id,
-          arrangement_id: proposal.arrangement_id,
-          position: 9999,
-        })
-        .select("id")
-        .single();
+      if (proposal.kind === "bulk_edit" && proposal.bulk_items) {
+        // Propuesta completa: reemplaza los temas del setlist por los de la propuesta
+        await supabase.from("setlist_items").delete().eq("setlist_id", sl.id);
 
-      if (newItem) {
-        const newPassMap = { ...config.item_pass_map, [newItem.id]: proposal.pass_id };
+        const fallbackPass = config.passes[0]?.id || "p1";
+        const { data: inserted, error: insertError } = await supabase
+          .from("setlist_items")
+          .insert(
+            proposal.bulk_items.map((bi) => ({
+              setlist_id: sl.id,
+              arrangement_id: bi.arrangement_id,
+              position: bi.position,
+            })),
+          )
+          .select("id");
+
+        if (insertError) {
+          toast.error(insertError.message);
+          return;
+        }
+
+        const newPassMap: Record<string, string> = {};
+        (inserted ?? []).forEach((row, i) => {
+          const bi = proposal.bulk_items?.[i];
+          if (bi) newPassMap[row.id] = bi.pass_id || fallbackPass;
+        });
+
         const finalConfig = { ...config, proposals: updatedProposals, item_pass_map: newPassMap };
         const { error } = await supabase
           .from("setlists")
           .update({ notes: serializeSetlistNotes(finalConfig) })
           .eq("id", sl.id);
-        if (error) { toast.error(error.message); return; }
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+      } else {
+        // Propuesta simple: añadir una canción al setlist
+        const { data: newItem } = await supabase
+          .from("setlist_items")
+          .insert({
+            setlist_id: sl.id,
+            arrangement_id: proposal.arrangement_id,
+            position: 9999,
+          })
+          .select("id")
+          .single();
+
+        if (newItem) {
+          const newPassMap = { ...config.item_pass_map, [newItem.id]: proposal.pass_id };
+          const finalConfig = { ...config, proposals: updatedProposals, item_pass_map: newPassMap };
+          const { error } = await supabase
+            .from("setlists")
+            .update({ notes: serializeSetlistNotes(finalConfig) })
+            .eq("id", sl.id);
+          if (error) {
+            toast.error(error.message);
+            return;
+          }
+        }
       }
     } else {
       const finalConfig = { ...config, proposals: updatedProposals };
@@ -248,14 +311,19 @@ function Ajustes() {
         .from("setlists")
         .update({ notes: serializeSetlistNotes(finalConfig) })
         .eq("id", sl.id);
-      if (error) { toast.error(error.message); return; }
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
     }
 
     invalidate("setlists", "setlist_items");
     toast.success(
       approve
-        ? `"${proposal.arrangement_title}" añadido al setlist "${proposal.setlist_name}"`
-        : `Propuesta de "${proposal.arrangement_title}" rechazada`
+        ? proposal.kind === "bulk_edit"
+          ? `Cambios aplicados al setlist "${proposal.setlist_name}"`
+          : `"${proposal.arrangement_title}" añadido al setlist "${proposal.setlist_name}"`
+        : `Propuesta de "${proposal.arrangement_title}" rechazada`,
     );
   }
 
@@ -317,9 +385,7 @@ function Ajustes() {
 
             {/* Nombre de Usuario */}
             <div>
-              <label className="mb-1 block text-sm font-bold uppercase">
-                Nombre de usuario
-              </label>
+              <label className="mb-1 block text-sm font-bold uppercase">Nombre de usuario</label>
               <div className="comic-sm flex items-center rounded-md bg-background px-3 py-2">
                 <User className="mr-2 h-4 w-4 text-muted-foreground" />
                 <input
@@ -335,9 +401,7 @@ function Ajustes() {
 
             {/* Correo Electrónico (Solo Lectura) */}
             <div>
-              <label className="mb-1 block text-sm font-bold uppercase">
-                Correo electrónico
-              </label>
+              <label className="mb-1 block text-sm font-bold uppercase">Correo electrónico</label>
               <div className="comic-sm flex items-center rounded-md bg-muted px-3 py-2 text-muted-foreground">
                 <Mail className="mr-2 h-4 w-4" />
                 <span className="font-semibold text-base">{user?.email}</span>
@@ -346,15 +410,11 @@ function Ajustes() {
 
             {/* Rol Actual */}
             <div>
-              <label className="mb-1 block text-sm font-bold uppercase">
-                Rol actual
-              </label>
+              <label className="mb-1 block text-sm font-bold uppercase">Rol actual</label>
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-background p-3">
                 <div className="flex items-center gap-2">
                   <Shield
-                    className={`h-5 w-5 ${
-                      isAdmin ? "text-primary" : "text-muted-foreground"
-                    }`}
+                    className={`h-5 w-5 ${isAdmin ? "text-primary" : "text-muted-foreground"}`}
                   />
                   <span className="font-extrabold">
                     {isAdmin ? "Administrador" : "Usuario básico"}
@@ -383,9 +443,7 @@ function Ajustes() {
 
             {/* Selección de Instrumento */}
             <div>
-              <label className="mb-1 block text-sm font-bold uppercase">
-                Instrumento
-              </label>
+              <label className="mb-1 block text-sm font-bold uppercase">Instrumento</label>
               <div className="comic-sm flex items-center rounded-md bg-background px-3 py-2">
                 {(() => {
                   const InstrIcon = INSTRUMENT_ICONS[instrument] ?? Music;
@@ -500,13 +558,17 @@ function Ajustes() {
                     className="comic-sm flex flex-wrap items-center justify-between gap-3 rounded-lg bg-background p-3 border"
                   >
                     <div>
-                      <p className="font-extrabold text-base">{u.display_name || u.email || u.id}</p>
+                      <p className="font-extrabold text-base">
+                        {u.display_name || u.email || u.id}
+                      </p>
                       <p className="text-xs text-muted-foreground">{u.email}</p>
                       <p className="text-xs text-muted-foreground">
                         Registrado el {new Date(u.created_at).toLocaleDateString("es-ES")}
                       </p>
                     </div>
-                    <span className="text-xs font-bold bg-secondary rounded-md px-2.5 py-1">Miembro</span>
+                    <span className="text-xs font-bold bg-secondary rounded-md px-2.5 py-1">
+                      Miembro
+                    </span>
                   </div>
                 ))
               )}
@@ -586,11 +648,16 @@ function Ajustes() {
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Para el setlist <span className="font-bold">{prop.setlist_name}</span>
-                        {" · "} Pase: <span className="font-bold">{prop.pass_name}</span>
+                        {prop.kind !== "bulk_edit" && (
+                          <>
+                            {" · "} Pase: <span className="font-bold">{prop.pass_name}</span>
+                          </>
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Propuesto por <span className="font-bold">{prop.user_name}</span>
-                        {" · "}{new Date(prop.created_at).toLocaleDateString("es-ES")}
+                        {" · "}
+                        {new Date(prop.created_at).toLocaleDateString("es-ES")}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
@@ -600,7 +667,7 @@ function Ajustes() {
                         className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs font-extrabold uppercase text-primary-foreground"
                       >
                         <Check className="h-3.5 w-3.5" />
-                        Añadir
+                        {prop.kind === "bulk_edit" ? "Aplicar" : "Añadir"}
                       </button>
                       <button
                         type="button"

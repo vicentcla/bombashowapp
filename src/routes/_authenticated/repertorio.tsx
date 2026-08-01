@@ -1,6 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, X, Pencil, FileText, Drum, Megaphone, Search, FileSpreadsheet, Undo2 } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  X,
+  Pencil,
+  FileText,
+  Drum,
+  Megaphone,
+  Search,
+  FileSpreadsheet,
+  Undo2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LyricDialog } from "@/components/LyricDialog";
@@ -15,6 +26,7 @@ import {
   useInvalidate,
   useReorder,
   type Arrangement,
+  type Lyric,
   type StreetSong,
 } from "@/lib/queries";
 import { formatDuration, formatLongDuration, normalize } from "@/lib/format";
@@ -22,8 +34,8 @@ import { TagInput } from "@/components/TagInput";
 
 export const Route = createFileRoute("/_authenticated/repertorio")({
   validateSearch: (search: Record<string, unknown>) => ({
-    tab: search['tab'] === "calle" ? "calle" : ("arreglos" as "arreglos" | "calle"),
-    editLyricId: typeof search['editLyricId'] === "string" ? search['editLyricId'] : undefined,
+    tab: search["tab"] === "calle" ? "calle" : ("arreglos" as "arreglos" | "calle"),
+    editLyricId: typeof search["editLyricId"] === "string" ? search["editLyricId"] : undefined,
   }),
   head: () => ({
     meta: [
@@ -45,7 +57,7 @@ export const Route = createFileRoute("/_authenticated/repertorio")({
 function Repertorio() {
   const search = Route.useSearch();
   const [activeTab, setActiveTab] = useState<"arreglos" | "calle">(
-    search['tab'] === "calle" ? "calle" : "arreglos"
+    search["tab"] === "calle" ? "calle" : "arreglos",
   );
 
   const handleTabChange = (newTab: "arreglos" | "calle") => {
@@ -93,9 +105,15 @@ function Repertorio() {
       </div>
 
       {activeTab === "arreglos" ? (
-        <RepertorioArreglos initialEditLyricId={search['editLyricId']} />
+        search["editLyricId"] ? (
+          <RepertorioArreglos initialEditLyricId={search["editLyricId"]} />
+        ) : (
+          <RepertorioArreglos />
+        )
+      ) : search["editLyricId"] ? (
+        <RepertorioCalle initialEditLyricId={search["editLyricId"]} />
       ) : (
-        <RepertorioCalle initialEditLyricId={search['editLyricId']} />
+        <RepertorioCalle />
       )}
     </div>
   );
@@ -136,7 +154,7 @@ function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: strin
 
   const list = useMemo(() => {
     const sorted = (arrangements.data ?? []).filter(
-      (a) => !tag || (a.tags ?? []).some((t) => normalize(t) === normalize(tag))
+      (a) => !tag || (a.tags ?? []).some((t) => normalize(t) === normalize(tag)),
     );
     const copy = [...sorted];
     if (sort === "alfabetico") copy.sort((a, b) => a.title.localeCompare(b.title, "es"));
@@ -163,7 +181,10 @@ function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: strin
       .eq("arrangement_id", arrangement.id)
       .maybeSingle();
 
-    const backup = { arrangement, lyric: lyricData };
+    const backup: { arrangement: Arrangement; lyric?: Lyric | null } = {
+      arrangement,
+      lyric: (lyricData ?? null) as Lyric | null,
+    };
     setLastDeletedArrangement(backup);
 
     const { error } = await supabase.from("arrangements").delete().eq("id", arrangement.id);
@@ -182,7 +203,9 @@ function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: strin
     });
   }
 
-  async function restoreArrangement(backup?: { arrangement: Arrangement; lyric?: Lyric | null } | null) {
+  async function restoreArrangement(
+    backup?: { arrangement: Arrangement; lyric?: Lyric | null } | null,
+  ) {
     const target = backup || lastDeletedArrangement;
     if (!target) return;
 
@@ -373,7 +396,7 @@ function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: strin
                   <Pencil className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => remove(a.id)}
+                  onClick={() => remove(a)}
                   aria-label={`Eliminar ${a.title}`}
                   className="comic-sm comic-press rounded bg-destructive p-2 text-destructive-foreground"
                 >
@@ -456,12 +479,13 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
 
   const list = useMemo(() => {
     let base = (songs.data ?? []).filter(
-      (s) => !tag || (s.tags ?? []).some((t) => normalize(t) === normalize(tag))
+      (s) => !tag || (s.tags ?? []).some((t) => normalize(t) === normalize(tag)),
     );
     if (search.trim()) {
       const q = normalize(search.trim());
       base = base.filter(
-        (s) => normalize(s.title).includes(q) || (s.tags ?? []).some((t) => normalize(t).includes(q))
+        (s) =>
+          normalize(s.title).includes(q) || (s.tags ?? []).some((t) => normalize(t).includes(q)),
       );
     }
     const copy = [...base];
@@ -488,7 +512,10 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
       .eq("street_song_id", song.id)
       .maybeSingle();
 
-    const backup = { song, lyric: lyricData };
+    const backup: { song: StreetSong; lyric?: Lyric | null } = {
+      song,
+      lyric: (lyricData ?? null) as Lyric | null,
+    };
     setLastDeletedStreetSong(backup);
 
     const { error } = await supabase.from("street_songs").delete().eq("id", song.id);
@@ -514,7 +541,7 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
     const { error } = await supabase.from("street_songs").insert({
       id: target.song.id,
       title: target.song.title,
-      tags: target.song.tags,
+      ...(target.song.tags ? { tags: target.song.tags } : {}),
       sort_order: target.song.sort_order,
     });
 
@@ -623,7 +650,9 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
                 <div className="min-w-0">
                   <p className="truncate text-xl leading-tight">{s.title}</p>
                   <p className="text-xs font-bold text-muted-foreground">
-                    {lyrics.data?.some((l) => l.street_song_id === s.id) ? "Con letra" : "Sin letra"}
+                    {lyrics.data?.some((l) => l.street_song_id === s.id)
+                      ? "Con letra"
+                      : "Sin letra"}
                   </p>
                   {!!s.tags?.length && (
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -738,9 +767,7 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
         <ImportCalleDialog
           onClose={() => setShowImport(false)}
           onImported={() => invalidate("street_songs", "lyrics")}
-          existingTitles={
-            new Set((songs.data ?? []).map((s) => s.title.toUpperCase().trim()))
-          }
+          existingTitles={new Set((songs.data ?? []).map((s) => s.title.toUpperCase().trim()))}
         />
       )}
 
@@ -824,7 +851,11 @@ function StreetSongDialog({
 
         <div className="mb-4 block text-sm font-bold uppercase">
           <span className="mb-1 block">Etiquetas</span>
-          <TagInput tags={tags} onChange={setTags} placeholder="Añadir etiqueta (ej. Pop + Intro)" />
+          <TagInput
+            tags={tags}
+            onChange={setTags}
+            placeholder="Añadir etiqueta (ej. Pop + Intro)"
+          />
         </div>
 
         <button
@@ -928,7 +959,11 @@ function ArrangementDialog({
 
         <div className="mb-4 block text-sm font-bold uppercase">
           <span className="mb-1 block">Etiquetas</span>
-          <TagInput tags={tags} onChange={setTags} placeholder="Añadir etiqueta (ej. pasodoble + Intro)" />
+          <TagInput
+            tags={tags}
+            onChange={setTags}
+            placeholder="Añadir etiqueta (ej. pasodoble + Intro)"
+          />
         </div>
 
         <button

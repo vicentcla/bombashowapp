@@ -2,12 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, Pencil, X, FileText, Drum, Megaphone } from "lucide-react";
 import { toast } from "sonner";
-import {
-  useLyrics,
-  useArrangements,
-  useStreetSongs,
-  type Lyric,
-} from "@/lib/queries";
+import { useLyrics, useArrangements, useStreetSongs, type Lyric } from "@/lib/queries";
 import { normalize, formatDuration, formatLongDuration } from "@/lib/format";
 import { useIsAdmin } from "@/hooks/useAuth";
 import { SortBar, type SortMode } from "@/components/SortBar";
@@ -55,8 +50,7 @@ function Letras() {
       const q = normalize(query.trim());
       base = base.filter(
         (a) =>
-          normalize(a.title).includes(q) ||
-          (a.tags ?? []).some((t) => normalize(t).includes(q))
+          normalize(a.title).includes(q) || (a.tags ?? []).some((t) => normalize(t).includes(q)),
       );
     }
     const copy = [...base];
@@ -80,8 +74,7 @@ function Letras() {
       const q = normalize(query.trim());
       base = base.filter(
         (s) =>
-          normalize(s.title).includes(q) ||
-          (s.tags ?? []).some((t) => normalize(t).includes(q))
+          normalize(s.title).includes(q) || (s.tags ?? []).some((t) => normalize(t).includes(q)),
       );
     }
     const copy = [...base];
@@ -101,7 +94,10 @@ function Letras() {
     const norm = normalize(arrTitle);
     return (
       lyrics.data.find(
-        (l) => l.kind === "arreglo" && (normalize(l.title) === norm || l.title.toUpperCase().trim() === arrTitle.toUpperCase().trim())
+        (l) =>
+          l.kind === "arreglo" &&
+          (normalize(l.title) === norm ||
+            l.title.toUpperCase().trim() === arrTitle.toUpperCase().trim()),
       ) ??
       lyrics.data.find((l) => normalize(l.title) === norm) ??
       null
@@ -115,7 +111,10 @@ function Letras() {
     const norm = normalize(songTitle);
     return (
       lyrics.data.find(
-        (l) => l.kind === "calle" && (normalize(l.title) === norm || l.title.toUpperCase().trim() === songTitle.toUpperCase().trim())
+        (l) =>
+          l.kind === "calle" &&
+          (normalize(l.title) === norm ||
+            l.title.toUpperCase().trim() === songTitle.toUpperCase().trim()),
       ) ??
       lyrics.data.find((l) => normalize(l.title) === norm) ??
       null
@@ -137,7 +136,11 @@ function Letras() {
       <div className="comic-sm flex overflow-hidden rounded-md bg-card p-1">
         <button
           type="button"
-          onClick={() => { setKind("arreglos"); setTag(""); setSort("alfabetico"); }}
+          onClick={() => {
+            setKind("arreglos");
+            setTag("");
+            setSort("alfabetico");
+          }}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
             kind === "arreglos"
               ? "bg-primary text-primary-foreground shadow-sm"
@@ -148,7 +151,11 @@ function Letras() {
         </button>
         <button
           type="button"
-          onClick={() => { setKind("calle"); setTag(""); setSort("alfabetico"); }}
+          onClick={() => {
+            setKind("calle");
+            setTag("");
+            setSort("alfabetico");
+          }}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
             kind === "calle"
               ? "bg-primary text-primary-foreground shadow-sm"
@@ -170,7 +177,9 @@ function Letras() {
       <SortBar
         value={sort}
         onChange={setSort}
-        options={kind === "arreglos" ? ["alfabetico", "duracion", "manual"] : ["alfabetico", "manual"]}
+        options={
+          kind === "arreglos" ? ["alfabetico", "duracion", "manual"] : ["alfabetico", "manual"]
+        }
       />
 
       {/* Filtros por tag */}
@@ -183,7 +192,11 @@ function Letras() {
               tag === "" ? "bg-primary text-primary-foreground" : "bg-card"
             }`}
           >
-            Todas ({kind === "arreglos" ? (arrangements.data?.length ?? 0) : (streetSongs.data?.length ?? 0)})
+            Todas (
+            {kind === "arreglos"
+              ? (arrangements.data?.length ?? 0)
+              : (streetSongs.data?.length ?? 0)}
+            )
           </button>
           {allTags.map((t) => (
             <button
@@ -256,9 +269,7 @@ function Letras() {
                       </div>
                     )}
                   </div>
-                  {lyric && (
-                    <FileText className="mt-1 h-5 w-5 shrink-0 text-primary/70" />
-                  )}
+                  {lyric && <FileText className="mt-1 h-5 w-5 shrink-0 text-primary/70" />}
                 </div>
               </div>
             );
@@ -310,9 +321,7 @@ function Letras() {
                       </div>
                     )}
                   </div>
-                  {lyric && (
-                    <FileText className="mt-1 h-5 w-5 shrink-0 text-primary/70" />
-                  )}
+                  {lyric && <FileText className="mt-1 h-5 w-5 shrink-0 text-primary/70" />}
                 </div>
               </div>
             );
@@ -321,9 +330,7 @@ function Letras() {
       )}
 
       {/* Modal de letra */}
-      {activeLyric && (
-        <LyricViewerModal lyric={activeLyric} onClose={() => setActiveLyric(null)} />
-      )}
+      {activeLyric && <LyricViewerModal lyric={activeLyric} onClose={() => setActiveLyric(null)} />}
     </div>
   );
 }
@@ -334,20 +341,14 @@ function LyricViewerModal({ lyric, onClose }: { lyric: Lyric; onClose: () => voi
 
   const handleModify = () => {
     const tab = lyric.kind === "calle" ? "calle" : "arreglos";
-    const editLyricId = lyric.kind === "calle" ? lyric.street_song_id : lyric.arrangement_id;
+    const editLyricId: string | undefined =
+      (lyric.kind === "calle" ? lyric.street_song_id : lyric.arrangement_id) ?? undefined;
 
     onClose();
-    if (editLyricId) {
-      navigate({
-        to: "/repertorio",
-        search: { tab, editLyricId },
-      });
-    } else {
-      navigate({
-        to: "/repertorio",
-        search: { tab },
-      });
-    }
+    navigate({
+      to: "/repertorio",
+      search: { tab, editLyricId },
+    });
   };
 
   return (

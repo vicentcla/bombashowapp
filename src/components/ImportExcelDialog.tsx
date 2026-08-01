@@ -93,7 +93,10 @@ function parseDurationText(str: string): number {
 }
 
 function parsePastedTable(text: string): ImportItem[] {
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   const items: ImportItem[] = [];
 
   for (const line of lines) {
@@ -102,10 +105,13 @@ function parsePastedTable(text: string): ImportItem[] {
     let parts: string[];
     if (line.includes("|") || line.includes("/")) {
       const normalizedLine = line.replace(/\//g, "|");
-      parts = normalizedLine.split("|").map((p) => p.trim()).filter((p, idx, arr) => {
-        if ((idx === 0 || idx === arr.length - 1) && p === "") return false;
-        return true;
-      });
+      parts = normalizedLine
+        .split("|")
+        .map((p) => p.trim())
+        .filter((p, idx, arr) => {
+          if ((idx === 0 || idx === arr.length - 1) && p === "") return false;
+          return true;
+        });
     } else {
       parts = line.split("\t").map((p) => p.trim());
     }
@@ -147,13 +153,13 @@ export function ImportExcelDialog({
 
   const rawItems = useMemo(
     () => (mode === "preset" ? PRESET_DATA : parsePastedTable(pastedText)),
-    [mode, pastedText]
+    [mode, pastedText],
   );
 
   // Elementos elegibles (los que NO existen en la base de datos)
   const eligibleItems = useMemo(
     () => rawItems.filter((item) => !existingTitles.has(item.title.toUpperCase().trim())),
-    [rawItems, existingTitles]
+    [rawItems, existingTitles],
   );
 
   // Al cambiar la lista elegible, por defecto seleccionamos todos los no duplicados
@@ -187,7 +193,7 @@ export function ImportExcelDialog({
   // Lista final a importar: elegibles y que estén seleccionados por el usuario
   const finalItemsToImport = useMemo(
     () => eligibleItems.filter((item) => selectedTitles.has(item.title)),
-    [eligibleItems, selectedTitles]
+    [eligibleItems, selectedTitles],
   );
 
   async function handleImport() {
@@ -257,7 +263,8 @@ export function ImportExcelDialog({
               Pega aquí las filas de Excel o CSV:
             </label>
             <p className="text-[11px] text-muted-foreground font-medium leading-normal">
-              Copia directamente las celdas de tu Excel (o crea una tabla con | o / como separador). Columnas: <strong>| Título | Duración (en MM:SS) | Al puesto (Opcional).</strong>
+              Copia directamente las celdas de tu Excel (o crea una tabla con | o / como separador).
+              Columnas: <strong>| Título | Duración (en MM:SS) | Al puesto (Opcional).</strong>
             </p>
             <textarea
               rows={4}
@@ -317,8 +324,8 @@ export function ImportExcelDialog({
                       exists
                         ? "opacity-40 bg-muted cursor-not-allowed"
                         : isSelected
-                        ? "bg-primary/10 border border-primary/30"
-                        : "bg-card hover:bg-accent/40"
+                          ? "bg-primary/10 border border-primary/30"
+                          : "bg-card hover:bg-accent/40"
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -350,7 +357,8 @@ export function ImportExcelDialog({
         {/* Resumen e importación */}
         <div className="pt-3 border-t flex items-center justify-between gap-3">
           <span className="text-xs font-bold text-muted-foreground">
-            {finalItemsToImport.length} {finalItemsToImport.length === 1 ? "seleccionada" : "seleccionadas"}
+            {finalItemsToImport.length}{" "}
+            {finalItemsToImport.length === 1 ? "seleccionada" : "seleccionadas"}
           </span>
           <button
             onClick={handleImport}
