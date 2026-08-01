@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, X, Pencil, FileText, Drum, Megaphone, Search } from "lucide-react";
+import { Plus, Trash2, X, Pencil, FileText, Drum, Megaphone, Search, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LyricDialog } from "@/components/LyricDialog";
+import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { SortBar, type SortMode } from "@/components/SortBar";
 import { SortableList, SortableItem } from "@/components/SortableList";
 import {
@@ -103,6 +104,7 @@ function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: strin
   const invalidate = useInvalidate();
   const reorder = useReorder("arrangements");
   const [editing, setEditing] = useState<Partial<Arrangement> | null>(null);
+  const [showImport, setShowImport] = useState(false);
   const [lyricFor, setLyricFor] = useState<Arrangement | null>(null);
   const [sort, setSort] = useState<SortMode>("alfabetico");
   const [tag, setTag] = useState("");
@@ -153,12 +155,20 @@ function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: strin
         <p className="mr-auto text-sm font-bold text-muted-foreground">
           {arrangements.data?.length ?? 0} arreglos · {formatLongDuration(total)} en total
         </p>
-        <button
-          onClick={() => setEditing({})}
-          className="comic comic-press flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-extrabold uppercase text-primary-foreground"
-        >
-          <Plus className="h-4 w-4" /> Nuevo arreglo
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="comic comic-press flex items-center gap-1.5 rounded-md bg-secondary px-3 py-2 text-sm font-extrabold uppercase text-secondary-foreground"
+          >
+            <FileSpreadsheet className="h-4 w-4" /> Importar Excel
+          </button>
+          <button
+            onClick={() => setEditing({})}
+            className="comic comic-press flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-extrabold uppercase text-primary-foreground"
+          >
+            <Plus className="h-4 w-4" /> Nuevo arreglo
+          </button>
+        </div>
       </div>
 
       <SortBar value={sort} onChange={setSort} options={["alfabetico", "duracion", "manual"]} />
@@ -304,6 +314,16 @@ function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: strin
           defaultTitle={lyricFor.title}
           existing={(lyrics.data ?? []).find((l) => l.arrangement_id === lyricFor.id) ?? null}
           onClose={() => setLyricFor(null)}
+        />
+      )}
+
+      {showImport && (
+        <ImportExcelDialog
+          onClose={() => setShowImport(false)}
+          onImported={() => invalidate("arrangements")}
+          existingTitles={
+            new Set((arrangements.data ?? []).map((a) => a.title.toUpperCase().trim()))
+          }
         />
       )}
 
