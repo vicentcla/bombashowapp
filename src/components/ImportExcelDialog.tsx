@@ -244,16 +244,19 @@ export function ImportExcelDialog({
         </div>
 
         {mode === "paste" && (
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold uppercase block">
               Pega aquí las filas de Excel o CSV:
             </label>
+            <p className="text-[11px] text-muted-foreground font-medium">
+              Copia directamente las celdas de tu Excel (o tabla con <code className="bg-muted px-1 rounded">|</code>). Columnas: <strong>Título | Duración (MM:SS) | Al puesto</strong>
+            </p>
             <textarea
               rows={4}
               value={pastedText}
               onChange={(e) => setPastedText(e.target.value)}
-              placeholder="Pega la tabla copiada..."
-              className="comic-sm w-full rounded-md bg-background p-3 text-xs outline-none font-mono"
+              placeholder={`Ejemplo de filas copiadas de Excel:\n80'S DANCE\t04:30:00\tSÍ\nESTOPA\t04:30:00\t+ O -\nCLAVADO EN UN BAR\t03:00:00\tSÍ`}
+              className="comic-sm w-full rounded-md bg-background p-2.5 text-xs outline-none font-mono placeholder:text-muted-foreground/60"
             />
           </div>
         )}
