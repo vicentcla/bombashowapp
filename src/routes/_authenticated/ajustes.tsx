@@ -591,46 +591,46 @@ function Ajustes() {
           </div>
 
           {/* Sub-pestañas */}
-          <div className="flex gap-1 rounded-lg bg-muted p-1">
+          <div className="flex gap-1.5 overflow-x-auto rounded-lg bg-muted p-1.5">
             <button
               onClick={() => setAdminSubTab("usuarios")}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-extrabold uppercase transition-colors ${
+              className={`flex min-w-fit flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2.5 text-sm font-extrabold uppercase transition-colors ${
                 adminSubTab === "usuarios"
                   ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <UserPlus className="h-3.5 w-3.5" />
+              <UserPlus className="h-4 w-4" />
               Usuarios
             </button>
             <button
               onClick={() => setAdminSubTab("admin_requests")}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-extrabold uppercase transition-colors ${
+              className={`flex min-w-fit flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2.5 text-sm font-extrabold uppercase transition-colors ${
                 adminSubTab === "admin_requests"
                   ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <UserCheck className="h-3.5 w-3.5" />
+              <UserCheck className="h-4 w-4" />
               Peticiones de Admin
               {pendingAdminRequests.length > 0 && (
-                <span className="rounded-full bg-destructive text-destructive-foreground px-1.5 py-0.5 text-[10px] font-bold">
+                <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] font-bold text-destructive-foreground">
                   {pendingAdminRequests.length}
                 </span>
               )}
             </button>
             <button
               onClick={() => setAdminSubTab("setlist_proposals")}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-extrabold uppercase transition-colors ${
+              className={`flex min-w-fit flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2.5 text-sm font-extrabold uppercase transition-colors ${
                 adminSubTab === "setlist_proposals"
                   ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Lightbulb className="h-3.5 w-3.5" />
+              <Lightbulb className="h-4 w-4" />
               Modificación Setlist
               {allPendingProposals.length > 0 && (
-                <span className="rounded-full bg-amber-500 text-white px-1.5 py-0.5 text-[10px] font-bold">
+                <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-white">
                   {allPendingProposals.length}
                 </span>
               )}
@@ -652,7 +652,7 @@ function Ajustes() {
                   return (
                     <div
                       key={u.id}
-                      className="comic-sm flex flex-wrap items-center justify-between gap-3 rounded-lg bg-background p-3 border"
+                      className="comic-sm flex flex-wrap items-center justify-between gap-3 rounded-lg bg-background p-3"
                     >
                       <div className="min-w-0">
                         <p className="font-extrabold text-base">
@@ -663,8 +663,8 @@ function Ajustes() {
                             </span>
                           )}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">{email}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="truncate text-sm text-muted-foreground">{email}</p>
+                        <p className="text-sm text-muted-foreground">
                           Registrado el {new Date(u.created_at).toLocaleDateString("es-ES")}
                         </p>
                         <div className="mt-1 flex flex-wrap gap-1">
@@ -698,15 +698,15 @@ function Ajustes() {
                             onClick={() =>
                               setUserRole(u.id, userRole === "admin" ? "miembro" : "admin")
                             }
-                            className="comic-sm comic-press flex items-center gap-1 rounded bg-secondary px-2.5 py-1.5 text-xs font-extrabold uppercase text-secondary-foreground"
+                            className="comic-sm comic-press flex items-center gap-1 rounded bg-secondary px-3 py-1.5 text-sm font-extrabold uppercase text-secondary-foreground"
                             title={
                               userRole === "admin" ? "Retirar administrador" : "Hacer administrador"
                             }
                           >
                             {userRole === "admin" ? (
-                              <ShieldMinus className="h-3.5 w-3.5" />
+                              <ShieldMinus className="h-4 w-4" />
                             ) : (
-                              <ShieldPlus className="h-3.5 w-3.5" />
+                              <ShieldPlus className="h-4 w-4" />
                             )}
                             {userRole === "admin" ? "Quitar admin" : "Hacer admin"}
                           </button>
@@ -716,17 +716,17 @@ function Ajustes() {
                             <button
                               type="button"
                               onClick={() => setUserStatus(u.id, "approved")}
-                              className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-2.5 py-1.5 text-xs font-extrabold uppercase text-primary-foreground"
+                              className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm font-extrabold uppercase text-primary-foreground"
                             >
-                              <Check className="h-3.5 w-3.5" />
+                              <Check className="h-4 w-4" />
                               Aprobar
                             </button>
                             <button
                               type="button"
                               onClick={() => setUserStatus(u.id, "rejected")}
-                              className="comic-sm comic-press flex items-center gap-1 rounded bg-destructive px-2.5 py-1.5 text-xs font-extrabold uppercase text-destructive-foreground"
+                              className="comic-sm comic-press flex items-center gap-1 rounded bg-destructive px-3 py-1.5 text-sm font-extrabold uppercase text-destructive-foreground"
                             >
-                              <X className="h-3.5 w-3.5" />
+                              <X className="h-4 w-4" />
                               Rechazar
                             </button>
                           </>
@@ -735,9 +735,9 @@ function Ajustes() {
                           <button
                             type="button"
                             onClick={() => setUserStatus(u.id, "approved")}
-                            className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-2.5 py-1.5 text-xs font-extrabold uppercase text-primary-foreground"
+                            className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm font-extrabold uppercase text-primary-foreground"
                           >
-                            <Check className="h-3.5 w-3.5" />
+                            <Check className="h-4 w-4" />
                             Aprobar
                           </button>
                         )}
@@ -753,7 +753,7 @@ function Ajustes() {
           {adminSubTab === "admin_requests" && (
             <div className="space-y-3">
               {!isSuperAdmin && (
-                <p className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-xs font-bold text-amber-600">
+                <p className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-sm font-bold text-amber-600">
                   Solo el superadministrador puede conceder o retirar el rol de administrador.
                 </p>
               )}
@@ -761,17 +761,17 @@ function Ajustes() {
                 <div className="text-center py-8 text-muted-foreground">
                   <Check className="h-10 w-10 mx-auto mb-2 text-primary/60" />
                   <p className="font-bold">No hay solicitudes de administrador pendientes.</p>
-                  <p className="text-xs mt-1">Todas las peticiones han sido atendidas.</p>
+                  <p className="text-sm mt-1">Todas las peticiones han sido atendidas.</p>
                 </div>
               ) : (
                 pendingAdminRequests.map((r) => (
                   <div
                     key={r.id}
-                    className="comic-sm flex flex-wrap items-center justify-between gap-3 rounded-lg bg-background p-3 border"
+                    className="comic-sm flex flex-wrap items-center justify-between gap-3 rounded-lg bg-background p-3"
                   >
                     <div>
                       <p className="font-extrabold text-base">{nameOf(r.user_id)}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         Solicitado el {new Date(r.created_at).toLocaleDateString("es-ES")} a las{" "}
                         {new Date(r.created_at).toLocaleTimeString("es-ES", {
                           hour: "2-digit",
@@ -784,17 +784,17 @@ function Ajustes() {
                         <button
                           type="button"
                           onClick={() => decideRequest(r.id, r.user_id, true)}
-                          className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs font-extrabold uppercase text-primary-foreground"
+                          className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm font-extrabold uppercase text-primary-foreground"
                         >
-                          <Check className="h-3.5 w-3.5" />
+                          <Check className="h-4 w-4" />
                           Aceptar
                         </button>
                         <button
                           type="button"
                           onClick={() => decideRequest(r.id, r.user_id, false)}
-                          className="comic-sm comic-press flex items-center gap-1 rounded bg-destructive px-3 py-1.5 text-xs font-extrabold uppercase text-destructive-foreground"
+                          className="comic-sm comic-press flex items-center gap-1 rounded bg-destructive px-3 py-1.5 text-sm font-extrabold uppercase text-destructive-foreground"
                         >
-                          <X className="h-3.5 w-3.5" />
+                          <X className="h-4 w-4" />
                           Rechazar
                         </button>
                       </div>
@@ -812,22 +812,22 @@ function Ajustes() {
                 <div className="text-center py-8 text-muted-foreground">
                   <Lightbulb className="h-10 w-10 mx-auto mb-2 text-amber-400/60" />
                   <p className="font-bold">No hay propuestas de canciones pendientes.</p>
-                  <p className="text-xs mt-1">Todas las sugerencias han sido atendidas.</p>
+                  <p className="text-sm mt-1">Todas las sugerencias han sido atendidas.</p>
                 </div>
               ) : (
                 allPendingProposals.map((prop) => (
                   <div
                     key={prop.id}
-                    className="comic-sm flex flex-wrap items-start justify-between gap-3 rounded-lg bg-background p-3 border border-amber-500/20"
+                    className="comic-sm flex flex-wrap items-start justify-between gap-3 rounded-lg bg-background p-3"
                   >
                     <div className="min-w-0 space-y-0.5">
                       <div className="flex items-center gap-1.5">
-                        <Lightbulb className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                        <p className="font-extrabold text-base leading-tight truncate">
+                        <Lightbulb className="h-4 w-4 text-amber-500 shrink-0" />
+                        <p className="truncate text-base font-extrabold leading-tight">
                           {prop.arrangement_title}
                         </p>
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         Para el setlist <span className="font-bold">{prop.setlist_name}</span>
                         {prop.kind !== "bulk_edit" && (
                           <>
@@ -835,7 +835,7 @@ function Ajustes() {
                           </>
                         )}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         Propuesto por <span className="font-bold">{prop.user_name}</span>
                         {" · "}
                         {new Date(prop.created_at).toLocaleDateString("es-ES")}
@@ -845,17 +845,17 @@ function Ajustes() {
                       <button
                         type="button"
                         onClick={() => decideProposal(prop, true)}
-                        className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-xs font-extrabold uppercase text-primary-foreground"
+                        className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm font-extrabold uppercase text-primary-foreground"
                       >
-                        <Check className="h-3.5 w-3.5" />
+                        <Check className="h-4 w-4" />
                         {prop.kind === "bulk_edit" ? "Aplicar" : "Añadir"}
                       </button>
                       <button
                         type="button"
                         onClick={() => decideProposal(prop, false)}
-                        className="comic-sm comic-press flex items-center gap-1 rounded bg-destructive px-3 py-1.5 text-xs font-extrabold uppercase text-destructive-foreground"
+                        className="comic-sm comic-press flex items-center gap-1 rounded bg-destructive px-3 py-1.5 text-sm font-extrabold uppercase text-destructive-foreground"
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <X className="h-4 w-4" />
                         Rechazar
                       </button>
                     </div>
