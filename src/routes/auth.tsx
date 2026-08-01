@@ -35,11 +35,16 @@ function AuthPage() {
   const [forgotSent, setForgotSent] = useState(false);
 
   useEffect(() => {
+    const url = new URL(window.location.href);
+    const isRecovery =
+      url.searchParams.get("type") === "recovery" || url.hash.includes("type=recovery");
+
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setRecovery(true);
     });
+    if (isRecovery) setRecovery(true);
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session && !window.location.hash.includes("type=recovery")) {
+      if (data.session && !isRecovery) {
         navigate({ to: "/inicio", replace: true });
       }
     });
