@@ -256,7 +256,7 @@ export function ImportExcelDialog({
               Pega aquí las filas de Excel o CSV:
             </label>
             <p className="text-[11px] text-muted-foreground font-medium leading-normal">
-              Copia directamente las celdas de tu Excel (o crea una tabla con | como separador). Columnas: <strong>| Título | Duración ( en MM:SS) | Al puesto (Opcional).</strong>
+              Copia directamente las celdas de tu Excel (o crea una tabla con | como separador). Columnas: <strong>| Título | Duración (en MM:SS) | Al puesto (Opcional).</strong>
             </p>
             <textarea
               rows={4}
