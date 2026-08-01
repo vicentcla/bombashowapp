@@ -17,6 +17,10 @@ import {
   Sparkles,
   BookOpen,
   Coffee,
+  Archive,
+  ArchiveRestore,
+  ChevronDown,
+  LayoutTemplate,
 } from "lucide-react";
 import {
   DndContext,
@@ -94,6 +98,7 @@ export type SetlistNotesConfig = {
   breaks?: BreakItem[];
   section_order?: string[]; // ordered IDs: pass IDs and break IDs interleaved
   notes_text?: string;
+  archived?: boolean;
 };
 
 export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
@@ -153,6 +158,7 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
         breaks,
         section_order: rawOrder,
         notes_text: typeof parsed.notes_text === "string" ? parsed.notes_text : "",
+        archived: parsed.archived === true,
       };
     }
   } catch {
@@ -165,6 +171,7 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
     breaks: [],
     section_order: ["p1"],
     notes_text: notes,
+    archived: false,
   };
 }
 
@@ -179,6 +186,8 @@ function SetlistsPage() {
   const invalidate = useInvalidate();
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [showNewMenu, setShowNewMenu] = useState(false);
 
   // Sensors para drag and drop en modal de creación
   const sensors = useSensors(
@@ -220,6 +229,7 @@ function SetlistsPage() {
       breaks: createBreaks,
       section_order: cleanedOrder,
       item_pass_map: {},
+      archived: false,
     };
 
     const { data, error } = await supabase
@@ -251,6 +261,42 @@ function SetlistsPage() {
     toast.success("Setlist creado correctamente");
   }
 
+  // Crear desde plantilla (2 pases sin configuración)
+  async function createFromTemplate() {
+    setShowNewMenu(false);
+    const ts = Date.now();
+    const config: SetlistNotesConfig = {
+      target_minutes: 90,
+      passes: [
+        { id: `p1_${ts}`, name: "Pase 1", target_minutes: 45 },
+        { id: `p2_${ts}`, name: "Pase 2", target_minutes: 45 },
+      ],
+      breaks: [],
+      section_order: [`p1_${ts}`, `p2_${ts}`],
+      item_pass_map: {},
+      archived: false,
+    };
+
+    const { data, error } = await supabase
+      .from("setlists")
+      .insert({
+        name: "Plantilla 2 pases",
+        event_date: null,
+        notes: serializeSetlistNotes(config),
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    invalidate("setlists");
+    setSelected(data.id);
+    toast.success("Plantilla de 2 pases creada");
+  }
+
   async function removeSetlist(id: string, setlistName: string) {
     if (!confirm(`¿Eliminar el setlist "${setlistName}"?`)) return;
     const { error } = await supabase.from("setlists").delete().eq("id", id);
@@ -263,9 +309,31 @@ function SetlistsPage() {
     toast.success("Setlist eliminado");
   }
 
+  async function toggleArchive(setlist: { id: string; notes: string | null }, currentConfig: SetlistNotesConfig) {
+    const newArchived = !currentConfig.archived;
+    const updatedConfig: SetlistNotesConfig = { ...currentConfig, archived: newArchived };
+    const { error } = await supabase
+      .from("setlists")
+      .update({ notes: serializeSetlistNotes(updatedConfig) })
+      .eq("id", setlist.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    invalidate("setlists");
+    toast.success(newArchived ? "Setlist archivado" : "Setlist restaurado");
+  }
+
   if (selected) {
     return <SetlistDetail setlistId={selected} onBack={() => setSelected(null)} />;
   }
+
+  const allSetlists = setlists.data ?? [];
+  const visibleSetlists = allSetlists.filter((s) => {
+    const cfg = parseSetlistNotes(s.notes);
+    return showArchived ? cfg.archived === true : !cfg.archived;
+  });
+  const archivedCount = allSetlists.filter((s) => parseSetlistNotes(s.notes).archived === true).length;
 
   return (
     <div className="space-y-6">
@@ -282,32 +350,115 @@ function SetlistsPage() {
           </div>
         </div>
 
-        <button
-          onClick={() => setCreating(true)}
-          className="comic comic-press flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-extrabold uppercase text-primary-foreground"
-        >
-          <Plus className="h-4 w-4" /> Nuevo setlist
-        </button>
+        {/* Controles de cabecera: tab Archivados + botón Nuevo con desplegable */}
+        <div className="flex items-center gap-2">
+          {/* Tab Archivados */}
+          <button
+            onClick={() => setShowArchived((v) => !v)}
+            className={`comic-sm comic-press flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-extrabold uppercase transition-colors ${
+              showArchived
+                ? "bg-amber-500 text-white"
+                : "bg-secondary text-secondary-foreground hover:bg-accent"
+            }`}
+          >
+            <Archive className="h-3.5 w-3.5" />
+            Archivados
+            {archivedCount > 0 && (
+              <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${
+                showArchived ? "bg-white/20" : "bg-primary text-primary-foreground"
+              }`}>
+                {archivedCount}
+              </span>
+            )}
+          </button>
+
+          {/* Botón Nuevo con desplegable */}
+          <div className="relative">
+            <div className="flex">
+              <button
+                onClick={() => { setShowNewMenu(false); setCreating(true); }}
+                className="comic comic-press flex items-center gap-2 rounded-l-lg bg-primary px-4 py-2.5 text-sm font-extrabold uppercase text-primary-foreground"
+              >
+                <Plus className="h-4 w-4" /> Nuevo
+              </button>
+              <button
+                onClick={() => setShowNewMenu((v) => !v)}
+                className="comic comic-press flex items-center rounded-r-lg border-l border-primary-foreground/20 bg-primary px-2 py-2.5 text-primary-foreground"
+                aria-label="Más opciones"
+              >
+                <ChevronDown className="h-4 w-4" />
+              </button>
+            </div>
+
+            {showNewMenu && (
+              <>
+                {/* Overlay para cerrar */}
+                <div className="fixed inset-0 z-40" onClick={() => setShowNewMenu(false)} />
+                <div className="absolute right-0 top-full z-50 mt-1.5 w-52 rounded-xl bg-card comic shadow-lg border border-ink/10 overflow-hidden">
+                  <button
+                    onClick={() => { setShowNewMenu(false); setCreating(true); }}
+                    className="flex w-full items-center gap-2.5 px-4 py-3 text-sm font-extrabold uppercase hover:bg-accent transition-colors text-left"
+                  >
+                    <Plus className="h-4 w-4 text-primary" />
+                    Nuevo Setlist
+                  </button>
+                  <button
+                    onClick={createFromTemplate}
+                    className="flex w-full items-center gap-2.5 px-4 py-3 text-sm font-extrabold uppercase hover:bg-accent transition-colors text-left border-t border-ink/10"
+                  >
+                    <LayoutTemplate className="h-4 w-4 text-primary" />
+                    Plantilla 2 pases
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
-      {setlists.data?.length === 0 && (
-        <div className="comic rounded-xl bg-card p-8 text-center">
-          <Sparkles className="mx-auto mb-3 h-10 w-10 text-primary/60" />
-          <p className="text-lg font-bold">Todavía no has creado ningún setlist.</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Crea tu primer repertorio configurando la duración total y sus pases.
-          </p>
+      {/* Tab indicator */}
+      {showArchived && (
+        <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2">
+          <Archive className="h-4 w-4 text-amber-600" />
+          <span className="text-xs font-extrabold text-amber-700 dark:text-amber-300">
+            Mostrando setlists archivados
+          </span>
           <button
-            onClick={() => setCreating(true)}
-            className="comic comic-press mt-4 rounded-md bg-primary px-4 py-2 font-extrabold uppercase text-primary-foreground"
+            onClick={() => setShowArchived(false)}
+            className="ml-auto text-[11px] font-extrabold text-amber-700 dark:text-amber-300 underline"
           >
-            Crear mi primer setlist
+            Ver activos
           </button>
         </div>
       )}
 
+      {visibleSetlists.length === 0 && (
+        <div className="comic rounded-xl bg-card p-8 text-center">
+          {showArchived ? (
+            <>
+              <Archive className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
+              <p className="text-lg font-bold">No tienes setlists archivados.</p>
+            </>
+          ) : (
+            <>
+              <Sparkles className="mx-auto mb-3 h-10 w-10 text-primary/60" />
+              <p className="text-lg font-bold">Todavía no has creado ningún setlist.</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Crea tu primer repertorio configurando la duración total y sus pases.
+              </p>
+              <button
+                onClick={() => setCreating(true)}
+                className="comic comic-press mt-4 rounded-md bg-primary px-4 py-2 font-extrabold uppercase text-primary-foreground"
+              >
+                Crear mi primer setlist
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {(setlists.data ?? []).map((s) => {
+        {visibleSetlists.map((s) => {
           const config = parseSetlistNotes(s.notes);
           return (
             <SetlistCard
@@ -316,6 +467,7 @@ function SetlistsPage() {
               config={config}
               onSelect={() => setSelected(s.id)}
               onDelete={() => removeSetlist(s.id, s.name)}
+              onArchive={() => toggleArchive(s, config)}
             />
           );
         })}
@@ -492,11 +644,13 @@ function SetlistCard({
   config,
   onSelect,
   onDelete,
+  onArchive,
 }: {
   setlist: { id: string; name: string; event_date: string | null };
   config: SetlistNotesConfig;
   onSelect: () => void;
   onDelete: () => void;
+  onArchive: () => void;
 }) {
   const items = useSetlistItems(setlist.id);
   const totalSeconds = (items.data ?? []).reduce(
@@ -525,13 +679,25 @@ function SetlistCard({
               </p>
             )}
           </button>
-          <button
-            onClick={onDelete}
-            aria-label="Eliminar setlist"
-            className="comic-sm comic-press rounded-md bg-destructive/10 p-2 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Botón Archivar / Restaurar */}
+            <button
+              onClick={onArchive}
+              aria-label={config.archived ? "Restaurar setlist" : "Archivar setlist"}
+              className="comic-sm comic-press rounded-md bg-amber-500/10 p-2 text-amber-600 hover:bg-amber-500 hover:text-white transition-colors"
+              title={config.archived ? "Restaurar setlist" : "Archivar setlist"}
+            >
+              {config.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+            </button>
+            {/* Botón Eliminar */}
+            <button
+              onClick={onDelete}
+              aria-label="Eliminar setlist"
+              className="comic-sm comic-press rounded-md bg-destructive/10 p-2 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Badges de info */}
