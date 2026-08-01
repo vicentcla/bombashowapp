@@ -13,7 +13,6 @@ import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { GroupLinksMenu } from "@/components/GroupLinksMenu";
 const LOGO_SRC = "/logo-titulo-2.png";
 
 const NAV = [
@@ -122,9 +121,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </div>
       </nav>
-
-      {/* Botón fijo de accesos del grupo (Drive, Instagram…) */}
-      <GroupLinksMenu />
     </div>
   );
 }

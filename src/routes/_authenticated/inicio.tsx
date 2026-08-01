@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FileText, Clock, ListMusic, Library } from "lucide-react";
+import { useState } from "react";
+import { FileText, Clock, ListMusic, Library, FolderOpen, Camera, ChevronDown } from "lucide-react";
 const ANIVERSARIO_SRC = "/logo-x-final-3.png";
 import { useArrangements, useStreetSongs, useSetlists, useLyrics } from "@/lib/queries";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/_authenticated/inicio")({
 });
 
 function Inicio() {
+  const [linksOpen, setLinksOpen] = useState(false);
   const arrangements = useArrangements();
   const street = useStreetSongs();
   const setlists = useSetlists();
@@ -76,6 +78,47 @@ function Inicio() {
             <span className="text-sm font-bold text-muted-foreground">{count}</span>
           </Link>
         ))}
+      </div>
+
+      {/* Accesos del grupo (desplegable) */}
+      <div className="comic mt-6 overflow-hidden rounded-xl bg-card">
+        <button
+          type="button"
+          onClick={() => setLinksOpen((v) => !v)}
+          aria-expanded={linksOpen}
+          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+        >
+          <span className="text-sm font-extrabold uppercase text-muted-foreground">
+            Accesos del grupo
+          </span>
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+              linksOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+        {linksOpen && (
+          <div className="grid grid-cols-1 gap-3 border-t border-border p-4 sm:grid-cols-2">
+            <a
+              href="https://drive.google.com/drive/folders/1SJs1eIj7suxJL_eD9W0_m5rCBdva5jUi?usp=share_link"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="comic comic-press flex items-center gap-2.5 rounded-lg bg-secondary px-4 py-3 text-secondary-foreground"
+            >
+              <FolderOpen className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-extrabold uppercase">Google Drive</span>
+            </a>
+            <a
+              href="https://www.instagram.com/showlabomba?igsh=MTIweG1tM2luN3Jjbw=="
+              target="_blank"
+              rel="noopener noreferrer"
+              className="comic comic-press flex items-center gap-2.5 rounded-lg bg-secondary px-4 py-3 text-secondary-foreground"
+            >
+              <Camera className="h-5 w-5 shrink-0" />
+              <span className="text-sm font-extrabold uppercase">instagram</span>
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );
