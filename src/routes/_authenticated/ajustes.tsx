@@ -55,7 +55,7 @@ function Ajustes() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id, display_name, created_at")
         .eq("id", user!.id)
         .maybeSingle();
       if (error) throw error;
@@ -69,7 +69,7 @@ function Ajustes() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, display_name, email");
+        .select("id, display_name");
       if (error) throw error;
       return data;
     },
@@ -94,7 +94,7 @@ function Ajustes() {
 
   function nameOf(userId: string) {
     const p = allProfilesQuery.data?.find((x) => x.id === userId);
-    return p?.display_name || p?.email || userId;
+    return p?.display_name || userId;
   }
 
   async function handleSaveProfile(e: React.FormEvent) {
