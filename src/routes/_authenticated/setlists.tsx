@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -394,6 +394,8 @@ function SetlistsPage() {
           const oldPassId = sourceConfig.item_pass_map[item.id];
           if (oldPassId && passIdMap[oldPassId]) {
             newItemPassMap[newItem.id] = passIdMap[oldPassId];
+          } else if (newPasses[0]?.id) {
+            newItemPassMap[newItem.id] = newPasses[0].id;
           }
         }
       }
@@ -532,10 +534,10 @@ function SetlistsPage() {
           {lastDeletedSetlist && (
             <button
               onClick={() => restoreSetlist()}
-              className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300 px-3 py-2 text-xs font-extrabold uppercase hover:bg-amber-500/30 transition-colors"
+              className="comic-sm flex items-center gap-1 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground px-2.5 py-1 text-[11px] font-bold transition-colors border border-border/50"
               title="Restaurar el último setlist eliminado"
             >
-              <Undo2 className="h-3.5 w-3.5" /> Deshacer eliminación
+              <Undo2 className="h-3 w-3" /> Deshacer
             </button>
           )}
 
@@ -1655,6 +1657,23 @@ function SetlistDetail({
       ...(config.breaks ?? []).map((b) => b.id),
     ]
   );
+
+  // Sincronizar el formulario cuando el setlist/config se carga o actualiza desde Supabase
+  useEffect(() => {
+    if (setlist) {
+      setEditName(setlist.name || "");
+      setEditDate(setlist.event_date || "");
+      setEditTargetMinutes(config.target_minutes);
+      setEditPasses(config.passes);
+      setEditBreaks(config.breaks ?? []);
+      setEditSectionOrder(
+        config.section_order ?? [
+          ...config.passes.map((p) => p.id),
+          ...(config.breaks ?? []).map((b) => b.id),
+        ]
+      );
+    }
+  }, [setlist, config]);
 
   // Mapeo de canción -> pase
   const itemPassMap = config.item_pass_map || {};

@@ -228,9 +228,10 @@ function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: strin
           {lastDeletedArrangement && (
             <button
               onClick={() => restoreArrangement()}
-              className="comic comic-press flex items-center gap-1.5 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300 px-3 py-2 text-sm font-extrabold uppercase hover:bg-amber-500/30 transition-colors"
+              className="comic-sm flex items-center gap-1 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground px-2.5 py-1 text-[11px] font-bold transition-colors border border-border/50"
+              title="Restaurar el último arreglo eliminado"
             >
-              <Undo2 className="h-4 w-4" /> Deshacer
+              <Undo2 className="h-3 w-3" /> Deshacer
             </button>
           )}
           <button
@@ -549,9 +550,10 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
           {lastDeletedStreetSong && (
             <button
               onClick={() => restoreStreetSong()}
-              className="comic comic-press flex items-center gap-1.5 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300 px-3 py-2 text-sm font-extrabold uppercase hover:bg-amber-500/30 transition-colors"
+              className="comic-sm flex items-center gap-1 rounded-md bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground px-2.5 py-1 text-[11px] font-bold transition-colors border border-border/50"
+              title="Restaurar la última canción eliminada"
             >
-              <Undo2 className="h-4 w-4" /> Deshacer
+              <Undo2 className="h-3 w-3" /> Deshacer
             </button>
           )}
           <button
