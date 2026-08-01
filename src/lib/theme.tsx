@@ -4,6 +4,12 @@ export type ThemeMode = "auto" | "light" | "dark";
 
 const STORAGE_KEY = "lbs-theme";
 
+// Color de la barra de estado de iOS (meta theme-color): igual al fondo de la cabecera.
+const STATUS_BAR_COLORS: Record<"light" | "dark", string> = {
+  light: "#ffffff",
+  dark: "#141b26",
+};
+
 type ThemeContextValue = {
   mode: ThemeMode;
   resolved: "light" | "dark";
@@ -23,6 +29,8 @@ function apply(mode: ThemeMode): "light" | "dark" {
   if (typeof document !== "undefined") {
     document.documentElement.classList.toggle("dark", resolved === "dark");
     document.documentElement.style.colorScheme = resolved;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", STATUS_BAR_COLORS[resolved]);
   }
   return resolved;
 }
@@ -61,4 +69,4 @@ export function useTheme() {
 }
 
 // Se inyecta en el <head> para aplicar el tema antes del primer pintado.
-export const themeInitScript = `(function(){try{var m=localStorage.getItem('${STORAGE_KEY}')||'auto';var d=m==='dark'||(m==='auto'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light';}catch(e){}})();`;
+export const themeInitScript = `(function(){try{var m=localStorage.getItem('${STORAGE_KEY}')||'auto';var d=m==='dark'||(m==='auto'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);document.documentElement.style.colorScheme=d?'dark':'light';var t=document.querySelector('meta[name="theme-color"]');if(t)t.setAttribute('content',d?'#141b26':'#ffffff');}catch(e){}})();`;

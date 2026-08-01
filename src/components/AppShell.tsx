@@ -26,9 +26,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-6">
+    <div className="min-h-screen bg-background pb-28 md:pb-6">
       {/* Cabecera: fluye con la página en móvil, sticky en escritorio */}
-      <header className="border-b-[3px] border-ink bg-card/95 backdrop-blur-md md:sticky md:top-0 md:z-40">
+      <header className="border-b-[3px] border-ink bg-card/95 pt-[env(safe-area-inset-top)] backdrop-blur-md md:sticky md:top-0 md:z-40">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-3 py-2 sm:px-4">
           <Link to="/inicio" className="shrink-0 min-w-0">
             <img
@@ -81,19 +81,19 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Contenido principal */}
       <main className="mx-auto max-w-5xl px-3 py-4 sm:px-4 md:py-6">{children}</main>
 
-      {/* Barra de navegación inferior móvil — sin reborde en iconos */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t-[3px] border-ink bg-card/95 backdrop-blur-md shadow-2xl md:hidden">
-        <div className="grid grid-cols-5 items-center px-1 py-1">
+      {/* Barra de navegación inferior móvil — ventana flotante */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),0.625rem)] md:hidden">
+        <div className="comic-sm mx-auto flex max-w-md items-center gap-0.5 rounded-2xl bg-card/95 px-1.5 py-1 backdrop-blur-md">
           {NAV.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
-              activeProps={{ className: "text-primary" }}
+              activeProps={{ className: "bg-primary text-primary-foreground" }}
               inactiveProps={{ className: "text-muted-foreground hover:text-foreground" }}
-              className="flex flex-col items-center justify-center gap-0.5 py-2 px-1 transition-all duration-200 active:scale-95"
+              className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 transition-colors active:scale-95"
             >
-              <Icon className="h-5 w-5 shrink-0" />
-              <span className="leading-none text-[10px] font-extrabold uppercase tracking-tight">
+              <Icon className="h-[18px] w-[18px] shrink-0" />
+              <span className="w-full truncate text-center text-[9px] font-extrabold uppercase leading-none tracking-tight">
                 {label}
               </span>
             </Link>
