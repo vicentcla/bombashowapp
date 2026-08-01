@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { FileText, Clock, ListMusic, Library } from "lucide-react";
-import aniversarioAsset from "@/assets/aniversario.png.asset.json";
+const ANIVERSARIO_SRC = "/logo-x-final-3.jpg";
 import { useArrangements, useStreetSongs, useSetlists, useLyrics } from "@/lib/queries";
 
 export const Route = createFileRoute("/_authenticated/inicio")({
@@ -40,7 +40,7 @@ function Inicio() {
     <div>
       <div className="comic mb-6 flex items-center gap-4 rounded-xl bg-card p-4">
         <img
-          src={aniversarioAsset.url}
+          src={ANIVERSARIO_SRC}
           alt="Sello 10 aniversario"
           className="h-20 w-auto shrink-0"
         />

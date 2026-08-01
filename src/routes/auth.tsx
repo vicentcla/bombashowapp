@@ -2,8 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import bannerAsset from "@/assets/banner.png.asset.json";
-import logoAsset from "@/assets/logo.png.asset.json";
+const BANNER_SRC = "/banner-2.jpg";
+const LOGO_SRC = "/logo-titulo-2.jpg";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/auth")({
@@ -75,8 +75,8 @@ function AuthPage() {
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
-      <img src={logoAsset.url} alt="Logo de La Bomba Show" className="mb-2 h-32 w-auto" />
-      <img src={bannerAsset.url} alt="La Bomba Show Xaranga" className="mb-6 w-full max-w-sm" />
+      <img src={LOGO_SRC} alt="Logo de La Bomba Show" className="mb-2 h-32 w-auto" />
+      <img src={BANNER_SRC} alt="La Bomba Show Xaranga" className="mb-6 w-full max-w-sm" />
 
       <form onSubmit={submit} className="comic w-full max-w-sm rounded-xl bg-card p-5">
         <h1 className="mb-4 text-3xl">{mode === "login" ? "Entrar" : "Crear cuenta"}</h1>

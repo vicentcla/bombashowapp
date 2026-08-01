@@ -13,7 +13,7 @@ import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import logoAsset from "@/assets/logo.png.asset.json";
+const LOGO_SRC = "/logo-titulo-2.jpg";
 
 const NAV = [
   { to: "/inicio", label: "Inicio", icon: Home },
@@ -43,7 +43,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-3 py-2 sm:px-4">
           <Link to="/inicio" className="shrink-0 min-w-0">
             <img
-              src={logoAsset.url}
+              src={LOGO_SRC}
               alt="La Bomba Show Xaranga"
               className="h-10 w-auto object-contain md:h-12"
             />
