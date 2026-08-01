@@ -636,14 +636,23 @@ function StreetSongDialog({
       .map((t) => t.trim())
       .filter(Boolean);
 
-    const payload = {
+    const payload: Record<string, any> = {
       title: title.trim(),
       tags: parsedTags,
     };
 
-    const { error } = song?.id
+    let { error } = song?.id
       ? await supabase.from("street_songs").update(payload).eq("id", song.id)
       : await supabase.from("street_songs").insert(payload);
+
+    // Fallback por si la columna 'tags' no existe aún en el esquema remoto de Supabase
+    if (error && error.message?.toLowerCase().includes("tags")) {
+      const fallbackPayload = { title: title.trim() };
+      const fallbackRes = song?.id
+        ? await supabase.from("street_songs").update(fallbackPayload).eq("id", song.id)
+        : await supabase.from("street_songs").insert(fallbackPayload);
+      error = fallbackRes.error;
+    }
 
     setBusy(false);
     if (error) {
