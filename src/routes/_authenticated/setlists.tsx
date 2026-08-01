@@ -167,30 +167,23 @@ function SetlistsPage() {
   const setlists = useSetlists();
   const invalidate = useInvalidate();
   const [selected, setSelected] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
+  // Sensors para drag and drop en modal de creación
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  );
 
   // Formulario nuevo setlist
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
   const [targetMinutes, setTargetMinutes] = useState(90);
-  const [numPasses, setNumPasses] = useState(2);
-  const [passDurations, setPassDurations] = useState<number[]>([45, 45]);
-  const [newBreaks, setNewBreaks] = useState<BreakItem[]>([]);
 
-  function handleNumPassesChange(n: number) {
-    setNumPasses(n);
-    const avg = Math.round(targetMinutes / n);
-    const arr = Array.from({ length: n }, (_, i) => passDurations[i] || avg);
-    setPassDurations(arr);
-  }
-
-  function handleTargetMinutesChange(val: number) {
-    setTargetMinutes(val);
-    if (numPasses > 0) {
-      const avg = Math.round(val / numPasses);
-      setPassDurations(Array.from({ length: numPasses }, () => avg));
-    }
-  }
+  const [createPasses, setCreatePasses] = useState<PassConfig[]>([
+    { id: "p1", name: "Pase 1", target_minutes: 45 },
+    { id: "p2", name: "Pase 2", target_minutes: 45 },
+  ]);
+  const [createBreaks, setCreateBreaks] = useState<BreakItem[]>([]);
+  const [createSectionOrder, setCreateSectionOrder] = useState<string[]>(["p1", "p2"]);
 
   async function createSetlist() {
     if (!name.trim()) {
@@ -198,24 +191,22 @@ function SetlistsPage() {
       return;
     }
 
-    const passes: PassConfig[] = Array.from({ length: numPasses }, (_, i) => ({
-      id: `p${i + 1}`,
-      name: numPasses === 1 ? "Pase único" : `Pase ${i + 1}`,
-      target_minutes: passDurations[i] || 0,
-    }));
-
-    // Section order: all passes in order, breaks appended at end of each pass (simplified default)
-    const section_order: string[] = passes.map((p) => p.id);
-    // If there are breaks, insert them after the last pass by default
-    const breaks: BreakItem[] = newBreaks;
-    breaks.forEach((b) => section_order.push(b.id));
+    const passIds = new Set(createPasses.map((p) => p.id));
+    const breakIds = new Set(createBreaks.map((b) => b.id));
+    const cleanedOrder = createSectionOrder.filter((id) => passIds.has(id) || breakIds.has(id));
+    createPasses.forEach((p) => {
+      if (!cleanedOrder.includes(p.id)) cleanedOrder.push(p.id);
+    });
+    createBreaks.forEach((b) => {
+      if (!cleanedOrder.includes(b.id)) cleanedOrder.push(b.id);
+    });
 
     const config: SetlistNotesConfig = {
       target_minutes: targetMinutes,
-      passes,
+      passes: createPasses,
+      breaks: createBreaks,
+      section_order: cleanedOrder,
       item_pass_map: {},
-      breaks,
-      section_order,
     };
 
     const { data, error } = await supabase
@@ -235,7 +226,12 @@ function SetlistsPage() {
 
     setName("");
     setDate("");
-    setNewBreaks([]);
+    setCreatePasses([
+      { id: "p1", name: "Pase 1", target_minutes: 45 },
+      { id: "p2", name: "Pase 2", target_minutes: 45 },
+    ]);
+    setCreateBreaks([]);
+    setCreateSectionOrder(["p1", "p2"]);
     setCreating(false);
     invalidate("setlists");
     setSelected(data.id);
@@ -363,118 +359,101 @@ function SetlistsPage() {
               </div>
             </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-bold uppercase">Número de pases / partes</label>
-              <div className="comic-sm flex overflow-hidden rounded-md border bg-background">
-                {[1, 2, 3, 4].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => handleNumPassesChange(n)}
-                    className={`flex-1 py-2 text-xs font-extrabold uppercase ${
-                      numPasses === n
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-accent hover:text-accent-foreground"
-                    }`}
-                  >
-                    {n} {n === 1 ? "Pase" : "Pases"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Duración de cada pase */}
-            {numPasses > 1 && (
-              <div className="rounded-lg bg-background p-3 space-y-2">
-                <p className="text-xs font-extrabold uppercase text-muted-foreground">
-                  Duración individual de cada pase:
-                </p>
-                {Array.from({ length: numPasses }).map((_, i) => (
-                  <div key={i} className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold">Pase {i + 1}:</span>
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        min={1}
-                        max={300}
-                        value={passDurations[i] || 0}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          const next = [...passDurations];
-                          next[i] = val;
-                          setPassDurations(next);
-                        }}
-                        className="comic-sm w-20 rounded bg-card px-2 py-1 text-sm font-bold text-center outline-none"
-                      />
-                      <span className="text-xs font-bold text-muted-foreground">min</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Descansos en la creación */}
+            {/* Estructura unificada y reordenable de pases y descansos */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold uppercase flex items-center gap-1.5">
-                  <Coffee className="h-3.5 w-3.5 text-amber-500" /> Descansos
+                  <Layers className="h-3.5 w-3.5 text-primary" /> Estructura y Orden del Show
                 </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewBreaks([
-                      ...newBreaks,
-                      { id: `b_${Date.now()}`, minutes: 15, title: "Descanso" },
-                    ]);
-                  }}
-                  className="comic-sm rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 text-xs font-bold uppercase border border-amber-500/30"
-                >
-                  + Añadir descanso
-                </button>
-              </div>
-
-              {newBreaks.length === 0 && (
-                <p className="text-xs text-muted-foreground font-bold text-center py-2">
-                  Sin descansos (opcional)
-                </p>
-              )}
-
-              {newBreaks.map((b, idx) => (
-                <div key={b.id} className="flex items-center gap-2 rounded bg-background p-2">
-                  <input
-                    value={b.title ?? "Descanso"}
-                    onChange={(e) => {
-                      const next = [...newBreaks];
-                      next[idx] = { ...next[idx]!, title: e.target.value };
-                      setNewBreaks(next);
-                    }}
-                    placeholder="Etiqueta"
-                    className="comic-sm min-w-0 flex-1 rounded bg-card px-2 py-1 text-xs font-bold outline-none"
-                  />
-                  <div className="flex items-center gap-1 shrink-0">
-                    <input
-                      type="number"
-                      min={1}
-                      max={180}
-                      value={b.minutes}
-                      onChange={(e) => {
-                        const next = [...newBreaks];
-                        next[idx] = { ...next[idx]!, minutes: Number(e.target.value) };
-                        setNewBreaks(next);
-                      }}
-                      className="comic-sm w-16 rounded bg-card px-2 py-1 text-xs font-bold text-center outline-none"
-                    />
-                    <span className="text-[10px] font-bold text-muted-foreground">min</span>
-                  </div>
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={() => setNewBreaks(newBreaks.filter((_, i) => i !== idx))}
-                    className="comic-sm rounded bg-destructive/10 p-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => {
+                      const passNum = createPasses.length + 1;
+                      const newPass: PassConfig = {
+                        id: `p_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+                        name: `Pase ${passNum}`,
+                        target_minutes: 30,
+                      };
+                      setCreatePasses([...createPasses, newPass]);
+                      setCreateSectionOrder([...createSectionOrder, newPass.id]);
+                    }}
+                    className="comic-sm rounded bg-primary/10 text-primary hover:bg-primary/20 px-2 py-1 text-xs font-extrabold uppercase border border-primary/30 flex items-center gap-1"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <Plus className="h-3 w-3" /> Pase
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newBreak: BreakItem = {
+                        id: `b_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+                        minutes: 15,
+                        title: "Descanso",
+                      };
+                      setCreateBreaks([...createBreaks, newBreak]);
+                      setCreateSectionOrder([...createSectionOrder, newBreak.id]);
+                    }}
+                    className="comic-sm rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 px-2 py-1 text-xs font-extrabold uppercase border border-amber-500/30 flex items-center gap-1"
+                  >
+                    <Coffee className="h-3 w-3" /> Descanso
                   </button>
                 </div>
-              ))}
+              </div>
+
+              <p className="text-[11px] text-muted-foreground font-bold">
+                Arrastra el icono <GripVertical className="inline h-3 w-3" /> para reordenar los pases y descansos.
+              </p>
+
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCorners}
+                onDragEnd={(event) => {
+                  const { active, over } = event;
+                  if (over && active.id !== over.id) {
+                    const oldIndex = createSectionOrder.indexOf(String(active.id));
+                    const newIndex = createSectionOrder.indexOf(String(over.id));
+                    if (oldIndex !== -1 && newIndex !== -1) {
+                      setCreateSectionOrder(arrayMove(createSectionOrder, oldIndex, newIndex));
+                    }
+                  }
+                }}
+              >
+                <SortableContext items={createSectionOrder} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {createSectionOrder.map((sectionId) => {
+                      const pass = createPasses.find((p) => p.id === sectionId);
+                      const breakItem = createBreaks.find((b) => b.id === sectionId);
+                      const isPass = !!pass;
+                      if (!pass && !breakItem) return null;
+
+                      return (
+                        <ConfigSortableSectionItem
+                          key={sectionId}
+                          id={sectionId}
+                          isPass={isPass}
+                          pass={pass}
+                          breakItem={breakItem}
+                          onUpdatePass={(updated) => {
+                            setCreatePasses(createPasses.map((p) => (p.id === updated.id ? updated : p)));
+                          }}
+                          onUpdateBreak={(updated) => {
+                            setCreateBreaks(createBreaks.map((b) => (b.id === updated.id ? updated : b)));
+                          }}
+                          onRemovePass={() => {
+                            setCreatePasses(createPasses.filter((p) => p.id !== sectionId));
+                            setCreateSectionOrder(createSectionOrder.filter((id) => id !== sectionId));
+                          }}
+                          onRemoveBreak={() => {
+                            setCreateBreaks(createBreaks.filter((b) => b.id !== sectionId));
+                            setCreateSectionOrder(createSectionOrder.filter((id) => id !== sectionId));
+                          }}
+                          canRemovePass={createPasses.length > 1}
+                        />
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </div>
 
             <button
@@ -1014,6 +993,138 @@ function AddBreakModal({
   );
 }
 
+// ─── Componente para cada sección (pase o descanso) reordenable en la configuración ───
+function ConfigSortableSectionItem({
+  id,
+  isPass,
+  pass,
+  breakItem,
+  onUpdatePass,
+  onUpdateBreak,
+  onRemovePass,
+  onRemoveBreak,
+  canRemovePass,
+}: {
+  id: string;
+  isPass: boolean;
+  pass?: PassConfig;
+  breakItem?: BreakItem;
+  onUpdatePass: (updated: PassConfig) => void;
+  onUpdateBreak: (updated: BreakItem) => void;
+  onRemovePass: () => void;
+  onRemoveBreak: () => void;
+  canRemovePass: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 20 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`comic-sm flex items-center gap-2 rounded-lg p-2.5 bg-background border transition-all ${
+        isPass
+          ? "border-primary/40 shadow-sm"
+          : "border-amber-500/40 bg-amber-500/5 shadow-sm"
+      }`}
+    >
+      <button
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        type="button"
+        className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground touch-none shrink-0"
+        title="Arrastra para reordenar"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+
+      <span
+        className={`comic-sm rounded px-2 py-0.5 text-[10px] font-extrabold uppercase shrink-0 ${
+          isPass ? "bg-primary text-primary-foreground" : "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+        }`}
+      >
+        {isPass ? "Pase" : "Descanso"}
+      </span>
+
+      {isPass && pass && (
+        <>
+          <input
+            value={pass.name}
+            onChange={(e) => onUpdatePass({ ...pass, name: e.target.value })}
+            placeholder="Nombre del pase"
+            className="comic-sm min-w-0 flex-1 rounded bg-card px-2.5 py-1 text-xs font-bold outline-none border border-ink/10 focus:border-primary"
+          />
+          <div className="flex items-center gap-1 shrink-0">
+            <input
+              type="number"
+              min={0}
+              value={pass.target_minutes}
+              onChange={(e) => onUpdatePass({ ...pass, target_minutes: Number(e.target.value) })}
+              className="comic-sm w-14 rounded bg-card px-2 py-1 text-xs font-bold text-center outline-none border border-ink/10 focus:border-primary"
+            />
+            <span className="text-[10px] font-bold text-muted-foreground">min</span>
+          </div>
+          {canRemovePass && (
+            <button
+              type="button"
+              onClick={onRemovePass}
+              className="comic-sm rounded bg-destructive/10 p-1 text-destructive hover:bg-destructive hover:text-destructive-foreground shrink-0 transition-colors"
+              title="Eliminar pase"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </>
+      )}
+
+      {!isPass && breakItem && (
+        <>
+          <input
+            value={breakItem.title ?? "Descanso"}
+            onChange={(e) => onUpdateBreak({ ...breakItem, title: e.target.value })}
+            placeholder="Etiqueta"
+            className="comic-sm min-w-0 flex-1 rounded bg-card px-2.5 py-1 text-xs font-bold outline-none border border-ink/10 focus:border-amber-500"
+          />
+          <div className="flex items-center gap-1 shrink-0">
+            <input
+              type="number"
+              min={1}
+              max={180}
+              value={breakItem.minutes}
+              onChange={(e) => onUpdateBreak({ ...breakItem, minutes: Number(e.target.value) })}
+              className="comic-sm w-14 rounded bg-card px-2 py-1 text-xs font-bold text-center outline-none border border-ink/10 focus:border-amber-500"
+            />
+            <span className="text-[10px] font-bold text-muted-foreground">min</span>
+          </div>
+          <button
+            type="button"
+            onClick={onRemoveBreak}
+            className="comic-sm rounded bg-destructive/10 p-1 text-destructive hover:bg-destructive hover:text-destructive-foreground shrink-0 transition-colors"
+            title="Eliminar descanso"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () => void }) {
   const setlists = useSetlists();
   const items = useSetlistItems(setlistId);
@@ -1048,6 +1159,12 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
   const [editTargetMinutes, setEditTargetMinutes] = useState(config.target_minutes);
   const [editPasses, setEditPasses] = useState<PassConfig[]>(config.passes);
   const [editBreaks, setEditBreaks] = useState<BreakItem[]>(config.breaks ?? []);
+  const [editSectionOrder, setEditSectionOrder] = useState<string[]>(
+    config.section_order ?? [
+      ...config.passes.map((p) => p.id),
+      ...(config.breaks ?? []).map((b) => b.id),
+    ]
+  );
 
   // Mapeo de canción -> pase
   const itemPassMap = config.item_pass_map || {};
@@ -1135,22 +1252,23 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
   async function handleSaveConfig() {
     if (!setlist) return;
 
-    const currentOrder = config.section_order ?? config.passes.map((p) => p.id);
-    // Add IDs for new passes to section_order
-    const newPassIds = editPasses
-      .map((p) => p.id)
-      .filter((id) => !currentOrder.includes(id));
-    const filteredOrder = currentOrder.filter((id) =>
-      editPasses.some((p) => p.id === id) || (config.breaks ?? []).some((b) => b.id === id),
-    );
-    const newSectionOrder = [...filteredOrder, ...newPassIds];
+    // Limpiar editSectionOrder para conservar IDs válidos
+    const passIds = new Set(editPasses.map((p) => p.id));
+    const breakIds = new Set(editBreaks.map((b) => b.id));
+    const cleanedOrder = editSectionOrder.filter((id) => passIds.has(id) || breakIds.has(id));
+    editPasses.forEach((p) => {
+      if (!cleanedOrder.includes(p.id)) cleanedOrder.push(p.id);
+    });
+    editBreaks.forEach((b) => {
+      if (!cleanedOrder.includes(b.id)) cleanedOrder.push(b.id);
+    });
 
     const newConfig: SetlistNotesConfig = {
       ...config,
       target_minutes: editTargetMinutes,
       passes: editPasses,
       breaks: editBreaks,
-      section_order: newSectionOrder,
+      section_order: cleanedOrder,
       item_pass_map: itemPassMap,
     };
 
@@ -1496,6 +1614,13 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
               setEditDate(setlist?.event_date || "");
               setEditTargetMinutes(config.target_minutes);
               setEditPasses(config.passes);
+              setEditBreaks(config.breaks ?? []);
+              setEditSectionOrder(
+                config.section_order ?? [
+                  ...config.passes.map((p) => p.id),
+                  ...(config.breaks ?? []).map((b) => b.id),
+                ]
+              );
               setEditingConfig(true);
             }}
             className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-extrabold uppercase text-secondary-foreground"
@@ -1976,130 +2101,101 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
               </div>
             </div>
 
-            {/* Pases */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold uppercase">Pases / Partes del show</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextId = `p${Date.now()}`;
-                    setEditPasses([
-                      ...editPasses,
-                      { id: nextId, name: `Pase ${editPasses.length + 1}`, target_minutes: 30 },
-                    ]);
-                  }}
-                  className="comic-sm rounded bg-accent px-2 py-0.5 text-xs font-bold uppercase"
-                >
-                  + Añadir pase
-                </button>
-              </div>
-
-              {editPasses.map((p, idx) => (
-                <div key={p.id} className="flex items-center gap-2 rounded bg-background p-2">
-                  <input
-                    value={p.name}
-                    onChange={(e) => {
-                      const next = [...editPasses];
-                      next[idx] = { ...next[idx]!, name: e.target.value };
-                      setEditPasses(next);
-                    }}
-                    className="comic-sm min-w-0 flex-1 rounded bg-card px-2 py-1 text-xs font-bold outline-none"
-                    placeholder="Nombre del pase"
-                  />
-                  <div className="flex items-center gap-1 shrink-0">
-                    <input
-                      type="number"
-                      min={0}
-                      value={p.target_minutes}
-                      onChange={(e) => {
-                        const next = [...editPasses];
-                        next[idx] = { ...next[idx]!, target_minutes: Number(e.target.value) };
-                        setEditPasses(next);
-                      }}
-                      className="comic-sm w-16 rounded bg-card px-2 py-1 text-xs font-bold text-center outline-none"
-                    />
-                    <span className="text-[10px] font-bold text-muted-foreground">min</span>
-                  </div>
-                  {editPasses.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditPasses(editPasses.filter((_, i) => i !== idx));
-                      }}
-                      className="comic-sm rounded bg-destructive/10 p-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Descansos */}
+            {/* Estructura unificada y reordenable de pases y descansos */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold uppercase flex items-center gap-1.5">
-                  <Coffee className="h-3.5 w-3.5 text-amber-500" /> Descansos
+                  <Layers className="h-3.5 w-3.5 text-primary" /> Estructura y Orden del Show
                 </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newBreak: BreakItem = {
-                      id: `b_${Date.now()}`,
-                      minutes: 15,
-                      title: "Descanso",
-                    };
-                    setEditBreaks([...editBreaks, newBreak]);
-                  }}
-                  className="comic-sm rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 text-xs font-bold uppercase border border-amber-500/30"
-                >
-                  + Añadir descanso
-                </button>
-              </div>
-
-              {editBreaks.length === 0 && (
-                <p className="text-xs text-muted-foreground font-bold text-center py-2">
-                  Sin descansos configurados
-                </p>
-              )}
-
-              {editBreaks.map((b, idx) => (
-                <div key={b.id} className="flex items-center gap-2 rounded bg-background p-2">
-                  <input
-                    value={b.title ?? "Descanso"}
-                    onChange={(e) => {
-                      const next = [...editBreaks];
-                      next[idx] = { ...next[idx]!, title: e.target.value };
-                      setEditBreaks(next);
-                    }}
-                    placeholder="Etiqueta"
-                    className="comic-sm min-w-0 flex-1 rounded bg-card px-2 py-1 text-xs font-bold outline-none"
-                  />
-                  <div className="flex items-center gap-1 shrink-0">
-                    <input
-                      type="number"
-                      min={1}
-                      max={180}
-                      value={b.minutes}
-                      onChange={(e) => {
-                        const next = [...editBreaks];
-                        next[idx] = { ...next[idx]!, minutes: Number(e.target.value) };
-                        setEditBreaks(next);
-                      }}
-                      className="comic-sm w-16 rounded bg-card px-2 py-1 text-xs font-bold text-center outline-none"
-                    />
-                    <span className="text-[10px] font-bold text-muted-foreground">min</span>
-                  </div>
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={() => setEditBreaks(editBreaks.filter((_, i) => i !== idx))}
-                    className="comic-sm rounded bg-destructive/10 p-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => {
+                      const passNum = editPasses.length + 1;
+                      const newPass: PassConfig = {
+                        id: `p_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+                        name: `Pase ${passNum}`,
+                        target_minutes: 30,
+                      };
+                      setEditPasses([...editPasses, newPass]);
+                      setEditSectionOrder([...editSectionOrder, newPass.id]);
+                    }}
+                    className="comic-sm rounded bg-primary/10 text-primary hover:bg-primary/20 px-2 py-1 text-xs font-extrabold uppercase border border-primary/30 flex items-center gap-1"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <Plus className="h-3 w-3" /> Pase
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newBreak: BreakItem = {
+                        id: `b_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+                        minutes: 15,
+                        title: "Descanso",
+                      };
+                      setEditBreaks([...editBreaks, newBreak]);
+                      setEditSectionOrder([...editSectionOrder, newBreak.id]);
+                    }}
+                    className="comic-sm rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 px-2 py-1 text-xs font-extrabold uppercase border border-amber-500/30 flex items-center gap-1"
+                  >
+                    <Coffee className="h-3 w-3" /> Descanso
                   </button>
                 </div>
-              ))}
+              </div>
+
+              <p className="text-[11px] text-muted-foreground font-bold">
+                Arrastra el icono <GripVertical className="inline h-3 w-3" /> para reordenar los pases y descansos.
+              </p>
+
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCorners}
+                onDragEnd={(event) => {
+                  const { active, over } = event;
+                  if (over && active.id !== over.id) {
+                    const oldIndex = editSectionOrder.indexOf(String(active.id));
+                    const newIndex = editSectionOrder.indexOf(String(over.id));
+                    if (oldIndex !== -1 && newIndex !== -1) {
+                      setEditSectionOrder(arrayMove(editSectionOrder, oldIndex, newIndex));
+                    }
+                  }
+                }}
+              >
+                <SortableContext items={editSectionOrder} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {editSectionOrder.map((sectionId) => {
+                      const pass = editPasses.find((p) => p.id === sectionId);
+                      const breakItem = editBreaks.find((b) => b.id === sectionId);
+                      const isPass = !!pass;
+                      if (!pass && !breakItem) return null;
+
+                      return (
+                        <ConfigSortableSectionItem
+                          key={sectionId}
+                          id={sectionId}
+                          isPass={isPass}
+                          pass={pass}
+                          breakItem={breakItem}
+                          onUpdatePass={(updated) => {
+                            setEditPasses(editPasses.map((p) => (p.id === updated.id ? updated : p)));
+                          }}
+                          onUpdateBreak={(updated) => {
+                            setEditBreaks(editBreaks.map((b) => (b.id === updated.id ? updated : b)));
+                          }}
+                          onRemovePass={() => {
+                            setEditPasses(editPasses.filter((p) => p.id !== sectionId));
+                            setEditSectionOrder(editSectionOrder.filter((id) => id !== sectionId));
+                          }}
+                          onRemoveBreak={() => {
+                            setEditBreaks(editBreaks.filter((b) => b.id !== sectionId));
+                            setEditSectionOrder(editSectionOrder.filter((id) => id !== sectionId));
+                          }}
+                          canRemovePass={editPasses.length > 1}
+                        />
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </div>
 
             <button
