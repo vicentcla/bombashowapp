@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LyricDialog } from "@/components/LyricDialog";
 import { ImportExcelDialog } from "@/components/ImportExcelDialog";
+import { ImportCalleDialog } from "@/components/ImportCalleDialog";
 import { SortBar, type SortMode } from "@/components/SortBar";
 import { SortableList, SortableItem } from "@/components/SortableList";
 import {
@@ -14,6 +15,7 @@ import {
   useInvalidate,
   useReorder,
   type Arrangement,
+  type StreetSong,
 } from "@/lib/queries";
 import { formatDuration, formatLongDuration } from "@/lib/format";
 
@@ -347,6 +349,8 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
   const invalidate = useInvalidate();
   const reorder = useReorder("street_songs");
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<StreetSong | null>(null);
+  const [showImport, setShowImport] = useState(false);
   const [title, setTitle] = useState("");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortMode>("alfabetico");
@@ -377,17 +381,22 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
     reorder.mutate(newItems.map((s) => s.id));
   }
 
-  async function addSong() {
+  async function saveSong() {
     if (!title.trim()) return;
-    const { error } = await supabase.from("street_songs").insert({ title: title.trim() });
+
+    const { error } = editing
+      ? await supabase.from("street_songs").update({ title: title.trim() }).eq("id", editing.id)
+      : await supabase.from("street_songs").insert({ title: title.trim() });
+
     if (error) {
       toast.error(error.message);
       return;
     }
     setTitle("");
     setAdding(false);
+    setEditing(null);
     invalidate("street_songs");
-    toast.success("Canción de calle añadida");
+    toast.success(editing ? "Canción de calle actualizada" : "Canción de calle añadida");
   }
 
   async function removeSong(id: string) {
@@ -406,12 +415,24 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
         <p className="mr-auto text-sm font-bold text-muted-foreground">
           {songs.data?.length ?? 0} canciones de calle
         </p>
-        <button
-          onClick={() => setAdding(true)}
-          className="comic comic-press flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-extrabold uppercase text-primary-foreground"
-        >
-          <Plus className="h-4 w-4" /> Nueva canción de calle
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="comic comic-press flex items-center gap-1.5 rounded-md bg-secondary px-3 py-2 text-sm font-extrabold uppercase text-secondary-foreground"
+          >
+            <FileSpreadsheet className="h-4 w-4" /> Importar Lista
+          </button>
+          <button
+            onClick={() => {
+              setEditing(null);
+              setTitle("");
+              setAdding(true);
+            }}
+            className="comic comic-press flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-extrabold uppercase text-primary-foreground"
+          >
+            <Plus className="h-4 w-4" /> Nueva canción de calle
+          </button>
+        </div>
       </div>
 
       <div className="comic-sm mb-3 flex items-center gap-2 rounded-md bg-card px-3">
@@ -443,6 +464,17 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2">
+                  <button
+                    onClick={() => {
+                      setEditing(s);
+                      setTitle(s.title);
+                      setAdding(true);
+                    }}
+                    aria-label={`Editar ${s.title}`}
+                    className="comic-sm comic-press rounded bg-secondary p-2 text-secondary-foreground"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
                   <button
                     onClick={() => setLyricFor({ id: s.id, title: s.title })}
                     aria-label={`Letra de ${s.title}`}
@@ -477,6 +509,17 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
               </div>
               <div className="flex shrink-0 gap-2">
                 <button
+                  onClick={() => {
+                    setEditing(s);
+                    setTitle(s.title);
+                    setAdding(true);
+                  }}
+                  aria-label={`Editar ${s.title}`}
+                  className="comic-sm comic-press rounded bg-secondary p-2 text-secondary-foreground"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
                   onClick={() => setLyricFor({ id: s.id, title: s.title })}
                   aria-label={`Letra de ${s.title}`}
                   className="comic-sm comic-press rounded bg-accent p-2 text-accent-foreground"
@@ -506,12 +549,30 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
         />
       )}
 
+      {showImport && (
+        <ImportCalleDialog
+          onClose={() => setShowImport(false)}
+          onImported={() => invalidate("street_songs", "lyrics")}
+          existingTitles={
+            new Set((songs.data ?? []).map((s) => s.title.toUpperCase().trim()))
+          }
+        />
+      )}
+
       {adding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
           <div className="comic w-full max-w-sm rounded-xl bg-card p-4">
             <div className="mb-3 flex items-center">
-              <h2 className="mr-auto text-2xl leading-none">Nueva canción de calle</h2>
-              <button onClick={() => setAdding(false)} aria-label="Cerrar">
+              <h2 className="mr-auto text-2xl leading-none">
+                {editing ? "Editar canción de calle" : "Nueva canción de calle"}
+              </h2>
+              <button
+                onClick={() => {
+                  setAdding(false);
+                  setEditing(null);
+                }}
+                aria-label="Cerrar"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -523,7 +584,7 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
               className="comic-sm mb-3 w-full rounded-md bg-background px-3 py-2 outline-none"
             />
             <button
-              onClick={addSong}
+              onClick={saveSong}
               className="comic comic-press w-full rounded-md bg-primary px-4 py-2 font-extrabold uppercase text-primary-foreground"
             >
               Guardar
