@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { X, Upload, FileSpreadsheet, CheckSquare, Square } from "lucide-react";
+import { X, Upload, FileSpreadsheet, CheckSquare, Square, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -9,38 +9,95 @@ type ImportStreetItem = {
 };
 
 function parseStreetSongsText(text: string): ImportStreetItem[] {
-  const lines = text
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
+  if (!text || !text.trim()) return [];
 
+  const rawLines = text.split("\n");
   const items: ImportStreetItem[] = [];
 
-  for (const line of lines) {
-    if (line.toLowerCase().includes("título") || line.startsWith("| ---")) continue;
+  // Detectar si se está usando formato de bloques (# Titulo, === Titulo, [Titulo], o ---)
+  const isBlockFormat =
+    text.includes("---") ||
+    /^#\s+/m.test(text) ||
+    /^===\s*/m.test(text) ||
+    /^\[.+\]/m.test(text) ||
+    /^(cancion|canción|título|titulo):/im.test(text);
 
-    // Si tiene barras | o /, separar por título y letra (si la hay)
-    let parts: string[];
-    if (line.includes("|") || line.includes("/")) {
-      const normalized = line.replace(/\//g, "|");
-      parts = normalized
-        .split("|")
-        .map((p) => p.trim())
-        .filter((p, idx, arr) => {
-          if ((idx === 0 || idx === arr.length - 1) && p === "") return false;
-          return true;
+  if (isBlockFormat) {
+    let currentTitle = "";
+    let currentLyricLines: string[] = [];
+
+    const flushCurrent = () => {
+      if (currentTitle.trim()) {
+        const lyricText = currentLyricLines.join("\n").trim();
+        items.push({
+          title: currentTitle.trim(),
+          lyric: lyricText || undefined,
         });
-    } else {
-      // O separar por comas/pestañas
-      parts = line.split(/[\t,]/).map((p) => p.trim());
+      }
+      currentTitle = "";
+      currentLyricLines = [];
+    };
+
+    for (let i = 0; i < rawLines.length; i++) {
+      const line = rawLines[i];
+      const trimmed = line.trim();
+
+      // Separador explícito de bloque ---
+      if (trimmed === "---" || trimmed.startsWith("===")) {
+        flushCurrent();
+        continue;
+      }
+
+      // Cabecera con # Título, [Título], Título:
+      const headerMatch =
+        trimmed.match(/^#+\s*(.+)$/) ||
+        trimmed.match(/^\[(.+)\]$/) ||
+        trimmed.match(/^(?:cancion|canción|título|titulo):\s*(.+)$/i);
+
+      if (headerMatch) {
+        flushCurrent();
+        currentTitle = headerMatch[1].replace(/^["']|["']$/g, "").trim();
+        continue;
+      }
+
+      // Si aún no tenemos título en el bloque y la línea no está vacía
+      if (!currentTitle && trimmed) {
+        currentTitle = trimmed;
+        continue;
+      }
+
+      // Si ya tenemos título, acumular las líneas de letra (manteniendo saltos)
+      if (currentTitle) {
+        currentLyricLines.push(line);
+      }
     }
+    flushCurrent();
+  } else {
+    // Formato de lista simple (una línea por canción o separadas por / o |)
+    for (const line of rawLines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.toLowerCase().includes("título") || trimmed.startsWith("| ---")) continue;
 
-    const title = (parts[0] || line).replace(/^["']|["']$/g, "").trim();
-    if (!title) continue;
+      let parts: string[];
+      if (trimmed.includes("|") || trimmed.includes("/")) {
+        const normalized = trimmed.replace(/\//g, "|");
+        parts = normalized
+          .split("|")
+          .map((p) => p.trim())
+          .filter((p, idx, arr) => {
+            if ((idx === 0 || idx === arr.length - 1) && p === "") return false;
+            return true;
+          });
+      } else {
+        parts = [trimmed];
+      }
 
-    const lyric = parts[1] || undefined;
+      const title = (parts[0] || trimmed).replace(/^["']|["']$/g, "").trim();
+      if (!title) continue;
 
-    items.push({ title, lyric });
+      const lyric = parts[1] || undefined;
+      items.push({ title, lyric });
+    }
   }
 
   return items;
@@ -57,6 +114,7 @@ export function ImportCalleDialog({
 }) {
   const [pastedText, setPastedText] = useState("");
   const [selectedTitles, setSelectedTitles] = useState<Set<string>>(new Set());
+  const [expandedPreview, setExpandedPreview] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
 
   const rawItems = useMemo(() => parseStreetSongsText(pastedText), [pastedText]);
@@ -91,6 +149,15 @@ export function ImportCalleDialog({
       } else {
         next.add(title);
       }
+      return next;
+    });
+  }
+
+  function togglePreview(title: string) {
+    setExpandedPreview((prev) => {
+      const next = new Set(prev);
+      if (next.has(title)) next.delete(title);
+      else next.add(title);
       return next;
     });
   }
@@ -169,17 +236,17 @@ export function ImportCalleDialog({
 
         <div className="space-y-1.5">
           <label className="text-xs font-bold uppercase block">
-            Pega aquí las canciones (una por línea):
+            Escribe o pega tus canciones con letra:
           </label>
           <p className="text-[11px] text-muted-foreground font-medium leading-normal">
-            Puedes pegar los títulos directamente (uno por línea), o separados por <strong>/</strong> o <strong>|</strong> si quieres añadir también la letra (ej: <em>Título / Letra</em>).
+            Escribe <strong># Nombre de Canción</strong> en la primera línea y pon la letra debajo (con sus estrofas y saltos de línea normales). Separa varias canciones con <strong>#</strong> o <strong>---</strong>.
           </p>
           <textarea
-            rows={5}
+            rows={6}
             value={pastedText}
             onChange={(e) => setPastedText(e.target.value)}
-            placeholder={`Pega aquí la lista de canciones:\nCanción de Calle 1\nCanción de Calle 2\nCanción 3 / Letra de la canción 3`}
-            className="comic-sm w-full rounded-md bg-background p-2.5 text-xs outline-none font-mono placeholder:text-muted-foreground/60"
+            placeholder={`Ejemplo con letras en varios párrafos:\n\n# Calderete\nCalderete\nCalderete\nCalde Calderete x3\n\nCalde Calderete\nLerete Lere\n\n---\n\n# Otra Canción de Calle\nPrimera frase de la canción\nSegunda frase`}
+            className="comic-sm w-full rounded-md bg-background p-2.5 text-xs outline-none font-mono placeholder:text-muted-foreground/60 leading-relaxed"
           />
         </div>
 
@@ -208,54 +275,71 @@ export function ImportCalleDialog({
             )}
           </div>
 
-          <div className="comic-sm flex-1 overflow-y-auto rounded-md bg-background p-2 text-xs space-y-1 max-h-56">
+          <div className="comic-sm flex-1 overflow-y-auto rounded-md bg-background p-2 text-xs space-y-1.5 max-h-56">
             {rawItems.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground">
-                Escribe o pega una lista de canciones arriba para previsualizar.
+                Escribe o pega tus canciones arriba para previsualizarlas aquí.
               </div>
             ) : (
               rawItems.map((item, idx) => {
                 const exists = existingTitles.has(item.title.toUpperCase().trim());
                 const isSelected = selectedTitles.has(item.title);
+                const isExpanded = expandedPreview.has(item.title);
 
                 return (
-                  <label
+                  <div
                     key={idx}
-                    onClick={(e) => {
-                      if (exists) e.preventDefault();
-                    }}
-                    className={`flex items-center justify-between p-2 rounded-lg transition-colors cursor-pointer ${
+                    className={`p-2 rounded-lg transition-colors border ${
                       exists
-                        ? "opacity-40 bg-muted cursor-not-allowed"
+                        ? "opacity-40 bg-muted cursor-not-allowed border-transparent"
                         : isSelected
-                        ? "bg-primary/10 border border-primary/30"
-                        : "bg-card hover:bg-accent/40"
+                        ? "bg-primary/10 border-primary/30"
+                        : "bg-card hover:bg-accent/40 border-transparent"
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <input
-                        type="checkbox"
-                        checked={exists ? false : isSelected}
-                        disabled={exists}
-                        onChange={() => !exists && toggleItem(item.title)}
-                        className="h-4 w-4 rounded accent-primary cursor-pointer disabled:cursor-not-allowed"
-                      />
-                      <span className="font-bold truncate">{item.title}</span>
+                    <div className="flex items-center justify-between">
+                      <label
+                        onClick={(e) => {
+                          if (exists) e.preventDefault();
+                        }}
+                        className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={exists ? false : isSelected}
+                          disabled={exists}
+                          onChange={() => !exists && toggleItem(item.title)}
+                          className="h-4 w-4 rounded accent-primary cursor-pointer disabled:cursor-not-allowed"
+                        />
+                        <span className="font-bold truncate text-sm">{item.title}</span>
+                      </label>
+
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        {item.lyric && (
+                          <button
+                            type="button"
+                            onClick={() => togglePreview(item.title)}
+                            className="flex items-center gap-1 text-[10px] bg-accent px-2 py-0.5 rounded font-extrabold text-accent-foreground hover:opacity-80"
+                          >
+                            <span>Con letra ({item.lyric.split("\n").filter(Boolean).length} líneas)</span>
+                            {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                          </button>
+                        )}
+                        {exists && (
+                          <span className="text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded font-extrabold">
+                            Ya existe
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                      {item.lyric && (
-                        <span className="text-[10px] bg-accent px-1.5 py-0.5 rounded font-extrabold text-accent-foreground">
-                          Con letra
-                        </span>
-                      )}
-                      {exists && (
-                        <span className="text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded font-extrabold">
-                          Ya existe
-                        </span>
-                      )}
-                    </div>
-                  </label>
+                    {/* Previsualización desplegable de la letra */}
+                    {item.lyric && isExpanded && (
+                      <div className="mt-2 p-2 rounded bg-card/80 border text-[11px] font-mono whitespace-pre-wrap text-muted-foreground leading-snug">
+                        {item.lyric}
+                      </div>
+                    )}
+                  </div>
                 );
               })
             )}
