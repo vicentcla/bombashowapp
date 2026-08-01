@@ -78,11 +78,11 @@ function Ajustes() {
   // Cargar datos iniciales del usuario
   useEffect(() => {
     if (user) {
-      const metaName = user.user_metadata?.display_name || user.user_metadata?.full_name || "";
-      const metaInstrument = user.user_metadata?.instrument || "";
+      const metaName = user.user_metadata?.['display_name'] || user.user_metadata?.['full_name'] || "";
+      const metaInstrument = user.user_metadata?.['instrument'] || "";
       
-      const dbName = profileQuery.data?.display_name || "";
-      const dbInstrument = (profileQuery.data as Record<string, unknown> | null)?.instrument as string || "";
+      const dbName = profileQuery.data?.['display_name'] || "";
+      const dbInstrument = (profileQuery.data as Record<string, unknown> | null)?.['instrument'] as string || "";
 
       setDisplayName(dbName || metaName || user.email?.split("@")[0] || "");
       setInstrument(dbInstrument || metaInstrument || "");
@@ -120,7 +120,7 @@ function Ajustes() {
       
       // Añadimos instrumento si existe en la columna
       try {
-        profileData.instrument = instrument;
+        profileData['instrument'] = instrument;
       } catch {
         // Ignorar si no aplica
       }

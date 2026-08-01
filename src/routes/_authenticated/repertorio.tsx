@@ -21,8 +21,8 @@ import { formatDuration, formatLongDuration } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/repertorio")({
   validateSearch: (search: Record<string, unknown>) => ({
-    tab: search.tab === "calle" ? "calle" : ("arreglos" as "arreglos" | "calle"),
-    editLyricId: typeof search.editLyricId === "string" ? search.editLyricId : undefined,
+    tab: search['tab'] === "calle" ? "calle" : ("arreglos" as "arreglos" | "calle"),
+    editLyricId: typeof search['editLyricId'] === "string" ? search['editLyricId'] : undefined,
   }),
   head: () => ({
     meta: [
@@ -44,7 +44,7 @@ export const Route = createFileRoute("/_authenticated/repertorio")({
 function Repertorio() {
   const search = Route.useSearch();
   const [activeTab, setActiveTab] = useState<"arreglos" | "calle">(
-    search.tab === "calle" ? "calle" : "arreglos"
+    search['tab'] === "calle" ? "calle" : "arreglos"
   );
 
   const handleTabChange = (newTab: "arreglos" | "calle") => {
@@ -92,9 +92,9 @@ function Repertorio() {
       </div>
 
       {activeTab === "arreglos" ? (
-        <RepertorioArreglos initialEditLyricId={search.editLyricId} />
+        <RepertorioArreglos initialEditLyricId={search['editLyricId']} />
       ) : (
-        <RepertorioCalle initialEditLyricId={search.editLyricId} />
+        <RepertorioCalle initialEditLyricId={search['editLyricId']} />
       )}
     </div>
   );

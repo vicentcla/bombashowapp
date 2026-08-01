@@ -197,3 +197,10 @@
     opacity: 0.8;
   }
 }
+
+/* Separadores visibles en modo oscuro */
+.dark .lyrics-body hr {
+  border-top-color: rgba(255, 255, 255, 0.3);
+  opacity: 1;
+}
+
