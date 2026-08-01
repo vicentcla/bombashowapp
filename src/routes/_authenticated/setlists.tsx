@@ -16,6 +16,7 @@ import {
   Music2,
   Sparkles,
   BookOpen,
+  Coffee,
 } from "lucide-react";
 import {
   DndContext,
@@ -77,10 +78,18 @@ export type PassConfig = {
   target_minutes: number;
 };
 
+export type BreakItem = {
+  id: string;
+  pass_id: string;
+  minutes: number;
+  title?: string;
+};
+
 export type SetlistNotesConfig = {
   target_minutes: number;
   passes: PassConfig[];
   item_pass_map: Record<string, string>; // item_id -> pass_id
+  breaks?: BreakItem[];
   notes_text?: string;
 };
 
@@ -90,6 +99,7 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
       target_minutes: 0,
       passes: [{ id: "p1", name: "Pase único", target_minutes: 0 }],
       item_pass_map: {},
+      breaks: [],
     };
   }
   try {
@@ -108,20 +118,31 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
         typeof parsed.item_pass_map === "object" && parsed.item_pass_map
           ? (parsed.item_pass_map as Record<string, string>)
           : {};
+      const breaks =
+        Array.isArray(parsed.breaks)
+          ? parsed.breaks.map((b: Record<string, unknown>) => ({
+              id: String(b['id'] || `b_${Math.random()}`),
+              pass_id: String(b['pass_id'] || "p1"),
+              minutes: Number(b['minutes']) || 15,
+              title: typeof b['title'] === "string" ? b['title'] : "Descanso",
+            }))
+          : [];
       return {
         target_minutes,
         passes,
         item_pass_map,
+        breaks,
         notes_text: typeof parsed.notes_text === "string" ? parsed.notes_text : "",
       };
     }
   } catch {
-    // Si no es un JSON válido, conservamos como texto normal
+    // Si no es un JSON válido
   }
   return {
     target_minutes: 0,
     passes: [{ id: "p1", name: "Pase único", target_minutes: 0 }],
     item_pass_map: {},
+    breaks: [],
     notes_text: notes,
   };
 }
@@ -593,6 +614,281 @@ function SetlistLyricModal({ lyric, onClose }: { lyric: Lyric; onClose: () => vo
   );
 }
 
+// ─── Modal para Selección Múltiple de Canciones a un Pase ────────────────────
+function AddSongsToPassModal({
+  passName,
+  arrangements,
+  onClose,
+  onAdd,
+}: {
+  passName: string;
+  arrangements: Arrangement[];
+  onClose: () => void;
+  onAdd: (songIds: string[]) => Promise<void>;
+}) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
+  const [tag, setTag] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of arrangements) for (const t of a.tags ?? []) set.add(t);
+    return [...set].sort();
+  }, [arrangements]);
+
+  const filtered = useMemo(() => {
+    let list = arrangements.filter((a) => !tag || (a.tags ?? []).includes(tag));
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      list = list.filter(
+        (a) =>
+          a.title.toLowerCase().includes(q) ||
+          (a.tags ?? []).some((t) => t.toLowerCase().includes(q)),
+      );
+    }
+    return list;
+  }, [arrangements, search, tag]);
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+    );
+  }
+
+  function toggleSelectAll() {
+    const filteredIds = filtered.map((a) => a.id);
+    const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedIds.includes(id));
+    if (allSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !filteredIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => [...new Set([...prev, ...filteredIds])]);
+    }
+  }
+
+  async function handleConfirm() {
+    if (!selectedIds.length) return;
+    setBusy(true);
+    await onAdd(selectedIds);
+    setBusy(false);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+      <div className="comic flex max-h-[85vh] w-full max-w-lg flex-col rounded-xl bg-card p-5 space-y-4 shadow-2xl">
+        <div className="flex items-center justify-between border-b pb-3">
+          <div>
+            <h2 className="text-2xl font-extrabold leading-none">Añadir canciones</h2>
+            <p className="text-xs font-bold text-muted-foreground mt-1">
+              Asignar directamente a <span className="text-primary">{passName}</span>
+            </p>
+          </div>
+          <button onClick={onClose} aria-label="Cerrar">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Buscador */}
+        <div className="comic-sm flex items-center rounded-md bg-background px-3 py-2">
+          <Search className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por título o etiqueta…"
+            className="w-full bg-transparent text-base outline-none"
+          />
+        </div>
+
+        {/* Filtros por etiqueta */}
+        {allTags.length > 0 && (
+          <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => setTag("")}
+              className={`comic-sm rounded px-2 py-0.5 text-[11px] font-extrabold uppercase ${
+                tag === "" ? "bg-primary text-primary-foreground" : "bg-muted"
+              }`}
+            >
+              Todas ({arrangements.length})
+            </button>
+            {allTags.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTag(t === tag ? "" : t)}
+                className={`comic-sm rounded px-2 py-0.5 text-[11px] font-extrabold uppercase ${
+                  tag === t ? "bg-primary text-primary-foreground" : "bg-muted"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Selección múltiple rápida */}
+        <div className="flex items-center justify-between text-xs font-bold px-1">
+          <button
+            type="button"
+            onClick={toggleSelectAll}
+            className="text-primary hover:underline"
+          >
+            {filtered.length > 0 && filtered.every((a) => selectedIds.includes(a.id))
+              ? "Deseleccionar todas"
+              : "Seleccionar todas las filtradas"}
+          </button>
+          <span className="text-muted-foreground">{selectedIds.length} seleccionadas</span>
+        </div>
+
+        {/* Lista con Checkboxes */}
+        <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-72 border rounded-lg p-2 bg-background">
+          {filtered.length === 0 ? (
+            <p className="p-4 text-center text-xs font-bold text-muted-foreground">
+              No hay canciones que coincidan con la búsqueda.
+            </p>
+          ) : (
+            filtered.map((a) => {
+              const isChecked = selectedIds.includes(a.id);
+              return (
+                <div
+                  key={a.id}
+                  onClick={() => toggleSelect(a.id)}
+                  className={`comic-sm flex items-center justify-between gap-3 rounded-lg p-2.5 cursor-pointer transition-colors ${
+                    isChecked
+                      ? "bg-primary/15 border-primary/50 border"
+                      : "bg-card hover:bg-muted/60"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`h-5 w-5 shrink-0 rounded flex items-center justify-center border font-extrabold text-xs transition-colors ${
+                        isChecked
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border bg-background"
+                      }`}
+                    >
+                      {isChecked ? "✓" : ""}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-extrabold leading-tight">{a.title}</p>
+                      {!!a.tags?.length && (
+                        <p className="text-[10px] font-bold text-muted-foreground truncate">
+                          {a.tags.join(", ")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <span className="shrink-0 text-xs font-bold font-mono text-muted-foreground">
+                    {formatDuration(a.duration_seconds)}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Botón Añadir */}
+        <button
+          onClick={handleConfirm}
+          disabled={!selectedIds.length || busy}
+          className="comic comic-press flex items-center justify-center gap-2 w-full rounded-md bg-primary py-3 font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+        >
+          <Plus className="h-5 w-5" />
+          Añadir {selectedIds.length > 0 ? `(${selectedIds.length})` : ""} a {passName}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal para Añadir Descanso a un Pase ────────────────────────────────────
+function AddBreakModal({
+  passName,
+  onClose,
+  onAdd,
+}: {
+  passName: string;
+  onClose: () => void;
+  onAdd: (minutes: number, title?: string) => Promise<void>;
+}) {
+  const [minutes, setMinutes] = useState(15);
+  const [title, setTitle] = useState("Descanso");
+  const [busy, setBusy] = useState(false);
+
+  const presets = [5, 10, 15, 20, 30, 45];
+
+  async function handleConfirm() {
+    setBusy(true);
+    await onAdd(minutes, title);
+    setBusy(false);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+      <div className="comic w-full max-w-sm rounded-xl bg-card p-5 space-y-4 shadow-2xl">
+        <div className="flex items-center justify-between border-b pb-3">
+          <div>
+            <h2 className="text-2xl font-extrabold leading-none">Añadir descanso</h2>
+            <p className="text-xs font-bold text-muted-foreground mt-1">
+              Para <span className="text-primary">{passName}</span>
+            </p>
+          </div>
+          <button onClick={onClose} aria-label="Cerrar">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-bold uppercase">Duración (minutos)</label>
+          <div className="grid grid-cols-3 gap-1.5 mb-2">
+            {presets.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMinutes(m)}
+                className={`comic-sm py-2 rounded text-xs font-extrabold uppercase ${
+                  minutes === m ? "bg-primary text-primary-foreground" : "bg-background"
+                }`}
+              >
+                {m} min
+              </button>
+            ))}
+          </div>
+          <input
+            type="number"
+            min={1}
+            max={180}
+            value={minutes}
+            onChange={(e) => setMinutes(Number(e.target.value))}
+            className="comic-sm w-full rounded-md bg-background px-3 py-2 text-base font-bold outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-bold uppercase">Título / Etiqueta</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Descanso, Pausa bocata..."
+            className="comic-sm w-full rounded-md bg-background px-3 py-2 text-base outline-none"
+          />
+        </div>
+
+        <button
+          onClick={handleConfirm}
+          disabled={busy || minutes <= 0}
+          className="comic comic-press flex items-center justify-center gap-2 w-full rounded-md bg-amber-500 text-ink py-3 font-extrabold uppercase disabled:opacity-50"
+        >
+          <Coffee className="h-5 w-5" /> Añadir Descanso ({minutes} min)
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () => void }) {
   const setlists = useSetlists();
   const items = useSetlistItems(setlistId);
@@ -613,6 +909,10 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
   const [activeLyric, setActiveLyric] = useState<Lyric | null>(null);
   // Para drag overlay (ID del item que se está arrastrando)
   const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
+
+  // Modal state para añadir canciones o descansos a un pase específico
+  const [addingSongsPass, setAddingSongsPass] = useState<{ id: string; name: string } | null>(null);
+  const [addingBreakPass, setAddingBreakPass] = useState<{ id: string; name: string } | null>(null);
 
   // Formulario de edición de configuración
   const [editName, setEditName] = useState(setlist?.name || "");
@@ -635,19 +935,24 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
     return lyrics.data.find((l) => l.arrangement_id === arrangementId) ?? null;
   }
 
-  // Total acumulado general
-  const totalSecondsAll = useMemo(
+  // Total acumulado general (canciones + descansos)
+  const totalSecondsSongs = useMemo(
     () => (items.data ?? []).reduce((acc, i) => acc + (i.arrangements?.duration_seconds ?? 0), 0),
     [items.data],
   );
+  const totalSecondsBreaks = useMemo(
+    () => (config.breaks ?? []).reduce((acc, b) => acc + b.minutes * 60, 0),
+    [config.breaks],
+  );
 
-  const overallComp = formatTimeComparison(totalSecondsAll, config.target_minutes);
+  const overallComp = formatTimeComparison(totalSecondsSongs + totalSecondsBreaks, config.target_minutes);
 
   // Guardar configuración del setlist
   async function handleSaveConfig() {
     if (!setlist) return;
 
     const newConfig: SetlistNotesConfig = {
+      ...config,
       target_minutes: editTargetMinutes,
       passes: editPasses,
       item_pass_map: itemPassMap,
@@ -672,25 +977,32 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
     toast.success("Configuración del setlist actualizada");
   }
 
-  // Añadir un nuevo arreglo al setlist (en el pase actual o primero)
-  async function handleAddSong(targetPassId?: string) {
-    if (!selectedSongId) return;
-    const passId = targetPassId || (activePassId !== "all" ? activePassId : config.passes[0]?.id || "p1");
-    const position = (items.data?.length ?? 0) + 1;
+  // Añadir MÚLTIPLES arreglos a un pase específico
+  async function handleAddMultipleSongsToPass(passId: string, songIds: string[]) {
+    if (!songIds.length) return;
 
-    const { data: newItem, error } = await supabase
+    const startPos = (items.data?.length ?? 0) + 1;
+    const newItemsPayload = songIds.map((arrId, index) => ({
+      setlist_id: setlistId,
+      arrangement_id: arrId,
+      position: startPos + index,
+    }));
+
+    const { data: inserted, error } = await supabase
       .from("setlist_items")
-      .insert({ setlist_id: setlistId, arrangement_id: selectedSongId, position })
-      .select("id")
-      .single();
+      .insert(newItemsPayload)
+      .select("id");
 
     if (error) {
       toast.error(error.message);
       return;
     }
 
-    // Actualizamos el mapeo de pases en el setlist
-    const newPassMap = { ...itemPassMap, [newItem.id]: passId };
+    const newPassMap = { ...itemPassMap };
+    (inserted || []).forEach((newItem) => {
+      newPassMap[newItem.id] = passId;
+    });
+
     const updatedConfig: SetlistNotesConfig = { ...config, item_pass_map: newPassMap };
 
     await supabase
@@ -698,9 +1010,79 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
       .update({ notes: serializeSetlistNotes(updatedConfig) })
       .eq("id", setlistId);
 
-    setSelectedSongId("");
     invalidate("setlist_items", "setlists");
-    toast.success("Arreglo añadido al setlist");
+    toast.success(
+      songIds.length === 1 ? "1 arreglo añadido al pase" : `${songIds.length} arreglos añadidos al pase`,
+    );
+  }
+
+  // Gestión de descansos
+  async function handleAddBreakToPass(passId: string, minutes: number, title?: string) {
+    const newBreak: BreakItem = {
+      id: `b_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      pass_id: passId,
+      minutes: Math.max(1, minutes),
+      title: title?.trim() || "Descanso",
+    };
+
+    const currentBreaks = config.breaks || [];
+    const updatedConfig: SetlistNotesConfig = {
+      ...config,
+      breaks: [...currentBreaks, newBreak],
+    };
+
+    const { error } = await supabase
+      .from("setlists")
+      .update({ notes: serializeSetlistNotes(updatedConfig) })
+      .eq("id", setlistId);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    invalidate("setlists");
+    toast.success(`Descanso de ${minutes} min añadido`);
+  }
+
+  async function handleUpdateBreak(breakId: string, deltaMinutes: number) {
+    const currentBreaks = config.breaks || [];
+    const updatedBreaks = currentBreaks.map((b) => {
+      if (b.id === breakId) {
+        return { ...b, minutes: Math.max(1, b.minutes + deltaMinutes) };
+      }
+      return b;
+    });
+
+    const updatedConfig: SetlistNotesConfig = {
+      ...config,
+      breaks: updatedBreaks,
+    };
+
+    await supabase
+      .from("setlists")
+      .update({ notes: serializeSetlistNotes(updatedConfig) })
+      .eq("id", setlistId);
+
+    invalidate("setlists");
+  }
+
+  async function handleRemoveBreak(breakId: string) {
+    const currentBreaks = config.breaks || [];
+    const updatedBreaks = currentBreaks.filter((b) => b.id !== breakId);
+
+    const updatedConfig: SetlistNotesConfig = {
+      ...config,
+      breaks: updatedBreaks,
+    };
+
+    await supabase
+      .from("setlists")
+      .update({ notes: serializeSetlistNotes(updatedConfig) })
+      .eq("id", setlistId);
+
+    invalidate("setlists");
+    toast.success("Descanso eliminado");
   }
 
   // Cambiar un arreglo de pase
@@ -810,6 +1192,30 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
       {activeLyric && (
         <SetlistLyricModal lyric={activeLyric} onClose={() => setActiveLyric(null)} />
       )}
+
+      {/* Modal para añadir múltiples canciones a un pase */}
+      {addingSongsPass && (
+        <AddSongsToPassModal
+          passName={addingSongsPass.name}
+          arrangements={arrangements.data ?? []}
+          onClose={() => setAddingSongsPass(null)}
+          onAdd={async (songIds) => {
+            await handleAddMultipleSongsToPass(addingSongsPass.id, songIds);
+          }}
+        />
+      )}
+
+      {/* Modal para añadir descansos a un pase */}
+      {addingBreakPass && (
+        <AddBreakModal
+          passName={addingBreakPass.name}
+          onClose={() => setAddingBreakPass(null)}
+          onAdd={async (minutes, title) => {
+            await handleAddBreakToPass(addingBreakPass.id, minutes, title);
+          }}
+        />
+      )}
+
       {/* Botón Volver, Modificar Canciones y Configurar */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button
@@ -886,6 +1292,11 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
             </p>
             <p className="text-2xl font-extrabold leading-tight text-primary">
               {overallComp.addedText}
+              {totalSecondsBreaks > 0 && (
+                <span className="text-xs text-amber-600 dark:text-amber-400 font-bold block mt-0.5">
+                  (+{formatLongDuration(totalSecondsBreaks)} en descansos)
+                </span>
+              )}
             </p>
           </div>
 
@@ -941,10 +1352,11 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
             const passItems = (items.data ?? []).filter(
               (i) => (itemPassMap[i.id] || config.passes[0]?.id) === p.id,
             );
-            const passSeconds = passItems.reduce(
-              (s, i) => s + (i.arrangements?.duration_seconds ?? 0),
-              0,
-            );
+            const passBreaks = (config.breaks ?? []).filter((b) => b.pass_id === p.id);
+            const passSeconds =
+              passItems.reduce((s, i) => s + (i.arrangements?.duration_seconds ?? 0), 0) +
+              passBreaks.reduce((s, b) => s + b.minutes * 60, 0);
+
             return (
               <button
                 key={p.id}
@@ -962,62 +1374,19 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
         </div>
       )}
 
-      {/* Bloque de Edición para añadir arreglos al setlist */}
-      {isEditingItems ? (
-        <div className="comic rounded-xl bg-card p-4 space-y-3 border-2 border-primary">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-extrabold uppercase text-primary flex items-center gap-1.5">
-              <Pencil className="h-4 w-4" /> Modo Edición: Añadir o Reordenar Arreglos
-            </h3>
-            <button
-              onClick={() => setIsEditingItems(false)}
-              className="comic-sm rounded bg-emerald-600 px-2.5 py-1 text-xs font-extrabold uppercase text-white hover:opacity-90"
-            >
-              ✓ Concluir Edición
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-2 pt-1 border-t">
-            <div className="comic-sm flex items-center rounded-md bg-background px-3 py-2">
-              <Search className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
-              <select
-                value={selectedSongId}
-                onChange={(e) => setSelectedSongId(e.target.value)}
-                className="w-full bg-transparent text-base outline-none cursor-pointer"
-              >
-                <option value="">Seleccionar canción del repertorio...</option>
-                {availableArrangements.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.title} ({formatDuration(a.duration_seconds)})
-                    {a.tags?.length ? ` · [${a.tags.join(", ")}]` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              onClick={() => handleAddSong()}
-              disabled={!selectedSongId}
-              className="comic comic-press flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 font-extrabold uppercase text-primary-foreground disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4" /> Añadir
-            </button>
-          </div>
+      {/* Notificación de Modo Edición Activo */}
+      {isEditingItems && (
+        <div className="comic rounded-xl bg-card p-3 flex flex-wrap items-center justify-between gap-2 border-2 border-primary">
+          <h3 className="text-xs font-extrabold uppercase text-primary flex items-center gap-1.5">
+            <Pencil className="h-4 w-4" /> Modo Edición: Añade canciones o descansos a cada pase directamente a continuación
+          </h3>
+          <button
+            onClick={() => setIsEditingItems(false)}
+            className="comic-sm rounded bg-emerald-600 px-2.5 py-1 text-xs font-extrabold uppercase text-white hover:opacity-90 ml-auto"
+          >
+            ✓ Concluir Edición
+          </button>
         </div>
-      ) : (
-        items.data?.length === 0 && (
-          <div className="comic rounded-xl bg-card p-6 text-center space-y-3">
-            <p className="text-sm font-bold text-muted-foreground">
-              Este setlist aún no tiene canciones. Pulsa en Editar para añadir temas.
-            </p>
-            <button
-              onClick={() => setIsEditingItems(true)}
-              className="comic comic-press inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-extrabold uppercase text-primary-foreground"
-            >
-              <Pencil className="h-4 w-4" /> Editar canciones del setlist
-            </button>
-          </div>
-        )
       )}
 
       {/* Renderizado de Secciones por Pase (cross-container DnD en modo edición) */}
@@ -1036,12 +1405,18 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
                 return assignedPass === pass.id;
               });
 
-              const passSeconds = passItems.reduce(
+              const passBreaks = (config.breaks ?? []).filter((b) => b.pass_id === pass.id);
+
+              const passSongSeconds = passItems.reduce(
                 (acc, i) => acc + (i.arrangements?.duration_seconds ?? 0),
                 0,
               );
+              const passBreakSeconds = passBreaks.reduce((acc, b) => acc + b.minutes * 60, 0);
 
-              const passComp = formatTimeComparison(passSeconds, pass.target_minutes);
+              const passComp = formatTimeComparison(
+                passSongSeconds + passBreakSeconds,
+                pass.target_minutes,
+              );
 
               return (
                 <div key={pass.id} className="comic rounded-xl bg-card p-5 space-y-4">
@@ -1050,22 +1425,45 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
                     <div>
                       <h3 className="text-2xl font-extrabold leading-none">{pass.name}</h3>
                       <p className="mt-1 text-xs font-bold text-muted-foreground">
-                        {passItems.length} temas · {passComp.addedText}
+                        {passItems.length} temas
+                        {passBreaks.length > 0 ? ` · ${passBreaks.length} descansos` : ""} ·{" "}
+                        {passComp.addedText}
                         {pass.target_minutes > 0 ? ` de ${passComp.targetText} objetivo` : ""}
                       </p>
                     </div>
 
-                    {pass.target_minutes > 0 && (
-                      <span
-                        className={`comic-sm rounded px-2.5 py-1 text-xs font-extrabold uppercase ${
-                          passComp.status === "exact" || passComp.status === "exceeded"
-                            ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
-                            : "bg-accent text-accent-foreground"
-                        }`}
-                      >
-                        {passComp.diffText}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {isEditingItems ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setAddingSongsPass({ id: pass.id, name: pass.name })}
+                            className="comic-sm comic-press flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-extrabold uppercase text-primary-foreground"
+                          >
+                            <Plus className="h-3.5 w-3.5" /> Añadir canciones
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAddingBreakPass({ id: pass.id, name: pass.name })}
+                            className="comic-sm comic-press flex items-center gap-1 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/30 px-2.5 py-1.5 text-xs font-extrabold uppercase"
+                          >
+                            <Coffee className="h-3.5 w-3.5" /> + Descanso
+                          </button>
+                        </>
+                      ) : (
+                        pass.target_minutes > 0 && (
+                          <span
+                            className={`comic-sm rounded px-2.5 py-1 text-xs font-extrabold uppercase ${
+                              passComp.status === "exact" || passComp.status === "exceeded"
+                                ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                                : "bg-accent text-accent-foreground"
+                            }`}
+                          >
+                            {passComp.diffText}
+                          </span>
+                        )
+                      )}
+                    </div>
                   </div>
 
                   {/* Barra de Progreso del Pase */}
@@ -1083,6 +1481,65 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
                           style={{ width: `${Math.min(100, passComp.percentage)}%` }}
                         />
                       </div>
+                    </div>
+                  )}
+
+                  {/* Renderizado de Descansos del Pase */}
+                  {passBreaks.length > 0 && (
+                    <div className="space-y-2">
+                      {passBreaks.map((b) =>
+                        isEditingItems ? (
+                          <div
+                            key={b.id}
+                            className="comic flex items-center justify-between gap-3 rounded-xl bg-amber-500/10 border-2 border-amber-500/30 p-3 text-amber-900 dark:text-amber-200"
+                          >
+                            <div className="flex items-center gap-2 font-extrabold text-sm">
+                              <Coffee className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                              <span>{b.title || "DESCANSO"}</span>
+                              <span className="comic-sm rounded bg-amber-500/20 px-2 py-0.5 text-xs font-bold">
+                                {b.minutes} min
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleUpdateBreak(b.id, -5)}
+                                className="comic-sm rounded bg-background px-2 py-0.5 text-xs font-bold hover:bg-muted"
+                                title="Reducir 5 min"
+                              >
+                                -5m
+                              </button>
+                              <button
+                                onClick={() => handleUpdateBreak(b.id, 5)}
+                                className="comic-sm rounded bg-background px-2 py-0.5 text-xs font-bold hover:bg-muted"
+                                title="Aumentar 5 min"
+                              >
+                                +5m
+                              </button>
+                              <button
+                                onClick={() => handleRemoveBreak(b.id)}
+                                aria-label="Eliminar descanso"
+                                className="comic-sm comic-press rounded bg-destructive/10 p-1.5 text-destructive hover:bg-destructive hover:text-destructive-foreground ml-1"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            key={b.id}
+                            className="comic flex items-center justify-between gap-3 rounded-xl bg-amber-500/15 border border-amber-500/40 p-3 text-amber-900 dark:text-amber-200 shadow-sm"
+                          >
+                            <div className="flex items-center gap-2 font-extrabold text-base">
+                              <Coffee className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                              <span>{b.title || "DESCANSO"}</span>
+                            </div>
+                            <span className="comic-sm rounded bg-amber-500/25 px-3 py-1 text-xs font-extrabold uppercase font-mono">
+                              ☕ {b.minutes} MIN
+                            </span>
+                          </div>
+                        ),
+                      )}
                     </div>
                   )}
 
