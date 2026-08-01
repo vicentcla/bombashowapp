@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus,
@@ -67,6 +67,9 @@ import { SortableList, SortableItem } from "@/components/SortableList";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/_authenticated/setlists")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    open: typeof search["open"] === "string" ? search["open"] : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Setlists — La Bomba Show" },
@@ -296,8 +299,21 @@ export function renumberVirtualItems(
 function SetlistsPage() {
   const setlists = useSetlists();
   const invalidate = useInvalidate();
-  const [selected, setSelected] = useState<string | null>(null);
+  const search = Route.useSearch();
+  const navigate = useNavigate();
+  const [selected, setSelected] = useState<string | null>(search.open ?? null);
   const [selectedToConfig, setSelectedToConfig] = useState(false);
+
+  function openSetlist(id: string) {
+    setSelected(id);
+    navigate({ to: "/setlists", search: { open: id } });
+  }
+
+  function closeSetlist() {
+    setSelected(null);
+    setSelectedToConfig(false);
+    navigate({ to: "/setlists", search: { open: undefined } });
+  }
   const [creating, setCreating] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [showNewMenu, setShowNewMenu] = useState(false);
@@ -372,7 +388,7 @@ function SetlistsPage() {
     setCreateSectionOrder(["p1", "p2"]);
     setCreating(false);
     invalidate("setlists");
-    setSelected(data.id);
+    openSetlist(data.id);
     toast.success("Setlist creado correctamente");
   }
 
@@ -408,7 +424,7 @@ function SetlistsPage() {
     }
 
     invalidate("setlists");
-    setSelected(data.id);
+    openSetlist(data.id);
     toast.success("Plantilla de 2 pases creada");
   }
 
@@ -525,7 +541,7 @@ function SetlistsPage() {
 
     invalidate("setlists", "setlist_items");
     setSelectedToConfig(true);
-    setSelected(newSetlist.id);
+    openSetlist(newSetlist.id);
     toast.success(`Copia completa de "${source.name}" creada`);
   }
 
@@ -555,7 +571,7 @@ function SetlistsPage() {
         return;
       }
 
-      if (selected === id) setSelected(null);
+      if (selected === id) closeSetlist();
       invalidate("setlists", "setlist_items");
 
       toast(`Setlist "${setlistName}" eliminado`, {
@@ -621,10 +637,7 @@ function SetlistsPage() {
     return (
       <SetlistDetail
         setlistId={selected}
-        onBack={() => {
-          setSelected(null);
-          setSelectedToConfig(false);
-        }}
+        onBack={closeSetlist}
         {...(selectedToConfig ? { initialTab: "config" } : {})}
       />
     );
@@ -797,7 +810,7 @@ function SetlistsPage() {
               key={s.id}
               setlist={s}
               config={config}
-              onSelect={() => setSelected(s.id)}
+              onSelect={() => openSetlist(s.id)}
               onDelete={() => removeSetlist(s.id, s.name)}
               onArchive={() => toggleArchive(s, config)}
             />

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { FileText, Clock, ListMusic, Library } from "lucide-react";
 const ANIVERSARIO_SRC = "/logo-x-final-3.png";
 import { useArrangements, useStreetSongs, useSetlists, useLyrics } from "@/lib/queries";
+import { GlobalSearch } from "@/components/GlobalSearch";
 
 export const Route = createFileRoute("/_authenticated/inicio")({
   head: () => ({
@@ -61,7 +62,9 @@ function Inicio() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <GlobalSearch />
+
+      <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {cards.map(({ to, label, icon: Icon, count }) => (
           <Link
             key={to}
