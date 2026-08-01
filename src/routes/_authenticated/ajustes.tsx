@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { User, Shield, Music, Check, X, Clock, Settings, Mail, Save } from "lucide-react";
+import { User, Shield, Music, Drum, Check, X, Clock, Settings, Mail, Save, Waves, Wind } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { useRoleRequests, useInvalidate } from "@/lib/queries";
@@ -19,6 +19,14 @@ export const Route = createFileRoute("/_authenticated/ajustes")({
 
 const INSTRUMENTS = ["Percusión", "Trombón", "Trompeta", "Saxo", "Sousaphone"] as const;
 type Instrument = (typeof INSTRUMENTS)[number];
+
+const INSTRUMENT_ICONS: Record<string, React.ElementType> = {
+  "Percusión": Drum,
+  "Trombón": Wind,
+  "Trompeta": Wind,
+  "Saxo": Music,
+  "Sousaphone": Waves,
+};
 
 function Ajustes() {
   const { user } = useAuth();
@@ -251,9 +259,6 @@ function Ajustes() {
               <div className="comic-sm flex items-center rounded-md bg-muted px-3 py-2 text-muted-foreground">
                 <Mail className="mr-2 h-4 w-4" />
                 <span className="font-semibold text-base">{user?.email}</span>
-                <span className="ml-auto text-xs font-bold uppercase text-muted-foreground/70">
-                  (Inmodificable)
-                </span>
               </div>
             </div>
 
@@ -300,7 +305,10 @@ function Ajustes() {
                 Instrumento
               </label>
               <div className="comic-sm flex items-center rounded-md bg-background px-3 py-2">
-                <Music className="mr-2 h-4 w-4 text-muted-foreground" />
+                {(() => {
+                  const InstrIcon = INSTRUMENT_ICONS[instrument] ?? Music;
+                  return <InstrIcon className="mr-2 h-4 w-4 text-primary transition-all" />;
+                })()}
                 <select
                   value={instrument}
                   onChange={(e) => setInstrument(e.target.value)}
