@@ -6,8 +6,9 @@ import { formatLyricsWithSubtitles, htmlToPlainText } from "@/lib/format";
 
 type ImportStreetItem = {
   title: string;
-  lyric?: string;
+  lyric?: string | undefined;
 };
+
 
 function parseStreetSongsText(text: string): ImportStreetItem[] {
   if (!text || !text.trim()) return [];
@@ -40,7 +41,7 @@ function parseStreetSongsText(text: string): ImportStreetItem[] {
     };
 
     for (let i = 0; i < rawLines.length; i++) {
-      const line = rawLines[i];
+      const line = rawLines[i] ?? "";
       const trimmed = line.trim();
 
       // Separador explícito de bloque ---
@@ -57,7 +58,7 @@ function parseStreetSongsText(text: string): ImportStreetItem[] {
 
       if (headerMatch) {
         flushCurrent();
-        currentTitle = headerMatch[1].replace(/^["']|["']$/g, "").trim();
+        currentTitle = (headerMatch[1] ?? "").replace(/^["']|["']$/g, "").trim();
         continue;
       }
 

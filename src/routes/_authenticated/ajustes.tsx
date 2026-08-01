@@ -55,7 +55,7 @@ function Ajustes() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select("id, display_name, created_at")
         .eq("id", user!.id)
         .maybeSingle();
       if (error) throw error;
@@ -69,7 +69,7 @@ function Ajustes() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, display_name, email");
+        .select("id, display_name");
       if (error) throw error;
       return data;
     },
@@ -78,11 +78,11 @@ function Ajustes() {
   // Cargar datos iniciales del usuario
   useEffect(() => {
     if (user) {
-      const metaName = user.user_metadata?.display_name || user.user_metadata?.full_name || "";
-      const metaInstrument = user.user_metadata?.instrument || "";
+      const metaName = user.user_metadata?.['display_name'] || user.user_metadata?.['full_name'] || "";
+      const metaInstrument = user.user_metadata?.['instrument'] || "";
       
-      const dbName = profileQuery.data?.display_name || "";
-      const dbInstrument = (profileQuery.data as Record<string, unknown> | null)?.instrument as string || "";
+      const dbName = profileQuery.data?.['display_name'] || "";
+      const dbInstrument = (profileQuery.data as Record<string, unknown> | null)?.['instrument'] as string || "";
 
       setDisplayName(dbName || metaName || user.email?.split("@")[0] || "");
       setInstrument(dbInstrument || metaInstrument || "");
@@ -94,7 +94,7 @@ function Ajustes() {
 
   function nameOf(userId: string) {
     const p = allProfilesQuery.data?.find((x) => x.id === userId);
-    return p?.display_name || p?.email || userId;
+    return p?.display_name || userId;
   }
 
   async function handleSaveProfile(e: React.FormEvent) {
@@ -120,7 +120,7 @@ function Ajustes() {
       
       // Añadimos instrumento si existe en la columna
       try {
-        profileData.instrument = instrument;
+        profileData['instrument'] = instrument;
       } catch {
         // Ignorar si no aplica
       }
