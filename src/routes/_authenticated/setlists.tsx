@@ -350,7 +350,7 @@ function SetlistsPage() {
                   min={1}
                   max={600}
                   value={targetMinutes}
-                  onChange={(e) => handleTargetMinutesChange(Number(e.target.value))}
+                  onChange={(e) => setTargetMinutes(Number(e.target.value))}
                   className="comic-sm w-32 rounded-md bg-background px-3 py-2 text-base font-bold outline-none"
                 />
                 <span className="text-xs font-bold text-muted-foreground">
