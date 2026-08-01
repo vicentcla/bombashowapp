@@ -188,6 +188,8 @@ function SetlistsPage() {
   const [creating, setCreating] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [showNewMenu, setShowNewMenu] = useState(false);
+  const [showCopyFrom, setShowCopyFrom] = useState(false);
+  const [copyFromSearch, setCopyFromSearch] = useState("");
 
   // Sensors para drag and drop en modal de creación
   const sensors = useSensors(
@@ -295,6 +297,59 @@ function SetlistsPage() {
     invalidate("setlists");
     setSelected(data.id);
     toast.success("Plantilla de 2 pases creada");
+  }
+
+  // Crear copia exacta de un setlist existente (sin nombre y sin canciones)
+  async function createFromSetlist(source: { id: string; name: string; notes: string | null }) {
+    setShowCopyFrom(false);
+    setShowNewMenu(false);
+
+    const sourceConfig = parseSetlistNotes(source.notes);
+    // Reasignar IDs frescos a pases y descansos para no colisionar
+    const ts = Date.now();
+    const passIdMap: Record<string, string> = {};
+    const newPasses: PassConfig[] = sourceConfig.passes.map((p, i) => {
+      const newId = `p_${ts}_${i}`;
+      passIdMap[p.id] = newId;
+      return { ...p, id: newId };
+    });
+    const breakIdMap: Record<string, string> = {};
+    const newBreaks: BreakItem[] = (sourceConfig.breaks ?? []).map((b, i) => {
+      const newId = `b_${ts}_${i}`;
+      breakIdMap[b.id] = newId;
+      return { ...b, id: newId };
+    });
+    const newOrder = (sourceConfig.section_order ?? sourceConfig.passes.map((p) => p.id)).map(
+      (id) => passIdMap[id] ?? breakIdMap[id] ?? id
+    );
+
+    const newConfig: SetlistNotesConfig = {
+      ...sourceConfig,
+      passes: newPasses,
+      breaks: newBreaks,
+      section_order: newOrder,
+      item_pass_map: {}, // no copiamos canciones
+      archived: false,
+    };
+
+    const { data, error } = await supabase
+      .from("setlists")
+      .insert({
+        name: "",
+        event_date: null,
+        notes: serializeSetlistNotes(newConfig),
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    invalidate("setlists");
+    setSelected(data.id);
+    toast.success(`Copia de "${source.name}" creada — ponle un nombre`);
   }
 
   async function removeSetlist(id: string, setlistName: string) {
@@ -409,6 +464,13 @@ function SetlistsPage() {
                     <LayoutTemplate className="h-4 w-4 text-primary" />
                     Plantilla 2 pases
                   </button>
+                  <button
+                    onClick={() => { setShowNewMenu(false); setShowCopyFrom(true); setCopyFromSearch(""); }}
+                    className="flex w-full items-center gap-2.5 px-4 py-3 text-sm font-extrabold uppercase hover:bg-accent transition-colors text-left border-t border-ink/10"
+                  >
+                    <Archive className="h-4 w-4 text-primary" />
+                    A partir de...
+                  </button>
                 </div>
               </>
             )}
@@ -472,6 +534,99 @@ function SetlistsPage() {
           );
         })}
       </div>
+
+      {/* Modal "A partir de..." – copiar un setlist existente */}
+      {showCopyFrom && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+          <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4 mt-4">
+            <div className="flex items-center justify-between border-b pb-2">
+              <h2 className="text-2xl font-extrabold leading-none">A partir de...</h2>
+              <button onClick={() => setShowCopyFrom(false)} aria-label="Cerrar">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground font-medium">
+              Selecciona un setlist para copiar su estructura (pases, descansos y duración). Las canciones no se copian y el nombre quedará vacío.
+            </p>
+
+            {/* Buscador */}
+            <div className="flex items-center gap-2 rounded-lg bg-background px-3 py-2 border border-ink/10">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <input
+                value={copyFromSearch}
+                onChange={(e) => setCopyFromSearch(e.target.value)}
+                placeholder="Buscar setlist..."
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                autoFocus
+              />
+              {copyFromSearch && (
+                <button
+                  onClick={() => setCopyFromSearch("")}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {(() => {
+              const all = setlists.data ?? [];
+              const q = copyFromSearch.toLowerCase().trim();
+              const filtered = q ? all.filter((s) => s.name.toLowerCase().includes(q)) : all;
+              const activeItems = filtered.filter((s) => !parseSetlistNotes(s.notes).archived);
+              const archivedItems = filtered.filter((s) => parseSetlistNotes(s.notes).archived === true);
+
+              const renderItem = (s: { id: string; name: string; event_date: string | null; notes: string | null }) => {
+                const cfg = parseSetlistNotes(s.notes);
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => createFromSetlist(s)}
+                    className="w-full text-left rounded-lg border border-ink/10 bg-background px-4 py-3 hover:border-primary/60 hover:bg-primary/5 transition-all group"
+                  >
+                    <p className="font-extrabold text-sm group-hover:text-primary transition-colors">
+                      {s.name || <span className="italic text-muted-foreground">(sin nombre)</span>}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {cfg.passes.length} {cfg.passes.length === 1 ? "pase" : "pases"}
+                      {(cfg.breaks?.length ?? 0) > 0 && ` · ${cfg.breaks!.length} descanso${cfg.breaks!.length > 1 ? "s" : ""}`}
+                      {cfg.target_minutes > 0 && ` · ${cfg.target_minutes} min objetivo`}
+                      {s.event_date && ` · ${new Date(s.event_date).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}`}
+                    </p>
+                  </button>
+                );
+              };
+
+              return (
+                <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                  {activeItems.length === 0 && archivedItems.length === 0 && (
+                    <p className="text-center text-sm text-muted-foreground py-8">No hay setlists que coincidan.</p>
+                  )}
+
+                  {activeItems.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-extrabold uppercase text-muted-foreground tracking-wider px-1">
+                        Activos
+                      </p>
+                      {activeItems.map(renderItem)}
+                    </div>
+                  )}
+
+                  {archivedItems.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-extrabold uppercase text-muted-foreground tracking-wider px-1 flex items-center gap-1">
+                        <Archive className="h-3 w-3" /> Archivados
+                      </p>
+                      {archivedItems.map(renderItem)}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* Modal Nuevo Setlist */}
       {creating && (
