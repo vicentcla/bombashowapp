@@ -113,7 +113,9 @@ export function formatLyricsWithSubtitles(text: string): string {
         htmlParts.push("<hr />");
       }
       isFirstSubtitle = false;
-      htmlParts.push(`<p><strong>${trimmed}</strong></p>`);
+      // Quitar el guión inicial para que el subtítulo muestre solo el texto en negrita
+      const subtitleText = trimmed.replace(/^-+\s*/, "").trim();
+      htmlParts.push(`<p><strong>${subtitleText}</strong></p>`);
     } else if (trimmed === "") {
       flushParagraph();
     } else {
