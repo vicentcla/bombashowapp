@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { FileText, Clock, ListMusic, Library } from "lucide-react";
-const ANIVERSARIO_SRC = "/logo-x-final-3.jpg";
+const ANIVERSARIO_SRC = "/logo-x-final-3.png";
 import { useArrangements, useStreetSongs, useSetlists, useLyrics } from "@/lib/queries";
 
 export const Route = createFileRoute("/_authenticated/inicio")({

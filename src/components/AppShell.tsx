@@ -13,7 +13,7 @@ import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeToggle } from "@/components/ThemeToggle";
-const LOGO_SRC = "/logo-titulo-2.jpg";
+const LOGO_SRC = "/logo-titulo-2.png";
 
 const NAV = [
   { to: "/inicio", label: "Inicio", icon: Home },
