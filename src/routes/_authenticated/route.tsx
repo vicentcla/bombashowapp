@@ -15,15 +15,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthGate() {
-  const { data: status, isLoading } = useProfileStatus();
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-sm font-bold text-muted-foreground">Cargando…</p>
-      </div>
-    );
-  }
+  const { data: status } = useProfileStatus();
 
   if (status === "pending" || status === "rejected") {
     return <PendingApprovalScreen status={status} />;
