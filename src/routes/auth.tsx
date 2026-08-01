@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 const BANNER_SRC = "/banner-2.png";
 const LOGO_SRC = "/logo-titulo-2.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { LogIn, KeyRound } from "lucide-react";
+import { LogIn, KeyRound, Mail, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -32,6 +32,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [recovery, setRecovery] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
@@ -46,6 +47,27 @@ function AuthPage() {
   }, [navigate]);
 
   if (recovery) return <RecoveryForm />;
+  if (forgotSent) return <RecoverySent email={email} onBack={() => setForgotSent(false)} />;
+
+  async function sendRecoveryEmail() {
+    const target = email.trim();
+    if (!target) {
+      toast.error("Escribe tu correo para enviarte el enlace de recuperación");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(target, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      if (error) throw error;
+      setForgotSent(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se ha podido enviar el correo");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -113,6 +135,16 @@ function AuthPage() {
         </label>
 
         <button
+          type="button"
+          onClick={sendRecoveryEmail}
+          disabled={busy}
+          className="mb-4 flex items-center gap-1.5 text-sm font-bold text-primary hover:underline disabled:opacity-60"
+        >
+          <KeyRound className="h-4 w-4" />
+          He olvidado la contraseña
+        </button>
+
+        <button
           type="submit"
           disabled={busy}
           className="comic comic-press flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-lg font-extrabold uppercase text-primary-foreground disabled:opacity-60"
@@ -159,6 +191,37 @@ function AuthPage() {
           <span className="text-foreground">pendientes de aprobación</span> de un administrador.
         </p>
       </form>
+    </div>
+  );
+}
+
+function RecoverySent({ email, onBack }: { email: string; onBack: () => void }) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-10">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
+      <img src={LOGO_SRC} alt="Logo de La Bomba Show" className="mb-2 h-32 w-auto" />
+      <img src={BANNER_SRC} alt="La Bomba Show Xaranga" className="mb-6 w-full max-w-sm" />
+
+      <div className="comic w-full max-w-sm rounded-xl bg-card p-5 text-center">
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Mail className="h-7 w-7" />
+        </div>
+        <h1 className="mb-2 text-2xl">Revisa tu correo</h1>
+        <p className="text-sm font-bold text-muted-foreground">
+          Hemos enviado un enlace a <span className="text-foreground">{email}</span> para
+          restablecer tu contraseña. Si no lo ves, revisa la carpeta de spam.
+        </p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="comic-sm comic-press mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-secondary px-4 py-3 text-base font-extrabold uppercase text-secondary-foreground"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          Volver
+        </button>
+      </div>
     </div>
   );
 }
