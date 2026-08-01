@@ -5,6 +5,30 @@ export function formatDuration(totalSeconds: number): string {
   return `${m}:${String(rest).padStart(2, "0")}`;
 }
 
+/** Formatea una cadena de dígitos (mmss) como mm:ss con los dos puntos automáticos. */
+export function formatDurationInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 4);
+  if (!digits) return "";
+  if (digits.length <= 2) return `0:${digits.padStart(2, "0")}`;
+  return `${digits.slice(0, -2)}:${digits.slice(-2)}`;
+}
+
+/** Convierte los dígitos de un campo mm:ss (p. ej. "245" => 2:45) a segundos. */
+export function durationInputToSeconds(raw: string): number {
+  const digits = raw.replace(/\D/g, "").slice(0, 4);
+  if (!digits) return 0;
+  if (digits.length <= 2) return parseInt(digits, 10) || 0;
+  return (parseInt(digits.slice(0, -2), 10) || 0) * 60 + (parseInt(digits.slice(-2), 10) || 0);
+}
+
+/** Convierte segundos a dígitos para pre-rellenar el campo mm:ss (p. ej. 165 => "245"). */
+export function durationSecondsToInput(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const m = Math.floor(s / 60);
+  const rest = s % 60;
+  return m > 0 ? `${m}${String(rest).padStart(2, "0")}` : String(rest).padStart(2, "0");
+}
+
 export function formatLongDuration(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   const h = Math.floor(s / 3600);

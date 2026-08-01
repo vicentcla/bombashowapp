@@ -57,7 +57,9 @@ import {
   type Lyric,
 } from "@/lib/queries";
 import {
+  durationInputToSeconds,
   formatDuration,
+  formatDurationInput,
   formatLongDuration,
   formatMinutesToHours,
   formatTimeComparison,
@@ -1371,8 +1373,7 @@ function AddSongsToPassModal({
   const [tag, setTag] = useState("");
   const [busy, setBusy] = useState(false);
   const [creating, setCreating] = useState<string | null>(null);
-  const [minutes, setMinutes] = useState("0");
-  const [seconds, setSeconds] = useState("0");
+  const [duration, setDuration] = useState("");
 
   const allTags = useMemo(() => {
     const map = new Map<string, string>();
@@ -1427,8 +1428,7 @@ function AddSongsToPassModal({
   async function handleCreateManual() {
     const title = creating?.trim();
     if (!title) return;
-    const durationSeconds =
-      (parseInt(minutes || "0", 10) || 0) * 60 + (parseInt(seconds || "0", 10) || 0);
+    const durationSeconds = durationInputToSeconds(duration);
     setBusy(true);
     await onAddManual(title, durationSeconds);
     setBusy(false);
@@ -1437,8 +1437,7 @@ function AddSongsToPassModal({
 
   function startCreate() {
     setCreating(search.trim());
-    setMinutes("0");
-    setSeconds("0");
+    setDuration("");
   }
 
   return (
@@ -1527,36 +1526,21 @@ function AddSongsToPassModal({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block text-xs font-bold uppercase">
-                  Minutos
-                  <input
-                    type="number"
-                    min={0}
-                    max={600}
-                    value={minutes}
-                    onChange={(e) => setMinutes(e.target.value)}
-                    className="comic-sm mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-base outline-none"
-                  />
-                </label>
-                <label className="block text-xs font-bold uppercase">
-                  Segundos
-                  <input
-                    type="number"
-                    min={0}
-                    max={59}
-                    value={seconds}
-                    onChange={(e) => setSeconds(e.target.value)}
-                    className="comic-sm mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-base outline-none"
-                  />
-                </label>
-              </div>
+              <label className="block text-xs font-bold uppercase">
+                Duración (mm:ss)
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="0:00"
+                  value={formatDurationInput(duration)}
+                  onChange={(e) => setDuration(e.target.value)}
+                  className="comic-sm mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-base outline-none"
+                />
+              </label>
 
               <p className="text-xs font-bold text-muted-foreground">
-                Duración:{" "}
-                {formatDuration(
-                  (parseInt(minutes || "0", 10) || 0) * 60 + (parseInt(seconds || "0", 10) || 0),
-                )}
+                Duración: {formatDuration(durationInputToSeconds(duration))}
               </p>
 
               <button
@@ -1585,7 +1569,7 @@ function AddSongsToPassModal({
                   <Plus className="h-4 w-4" />
                 </span>
                 <span>
-                  Crear <span className="underline">"{search.trim()}"</span>…
+                  Crear <span>"{search.trim()}"</span>…
                 </span>
               </button>
             ) : (

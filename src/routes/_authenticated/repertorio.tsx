@@ -29,7 +29,14 @@ import {
   type Lyric,
   type StreetSong,
 } from "@/lib/queries";
-import { formatDuration, formatLongDuration, normalize } from "@/lib/format";
+import {
+  durationInputToSeconds,
+  durationSecondsToInput,
+  formatDuration,
+  formatDurationInput,
+  formatLongDuration,
+  normalize,
+} from "@/lib/format";
 import { TagInput } from "@/components/TagInput";
 
 export const Route = createFileRoute("/_authenticated/repertorio")({
@@ -880,10 +887,9 @@ function ArrangementDialog({
   onSaved: () => void;
 }) {
   const [title, setTitle] = useState(arrangement.title ?? "");
-  const [minutes, setMinutes] = useState(
-    String(Math.floor((arrangement.duration_seconds ?? 0) / 60)),
+  const [duration, setDuration] = useState(
+    durationSecondsToInput(arrangement.duration_seconds ?? 0),
   );
-  const [seconds, setSeconds] = useState(String((arrangement.duration_seconds ?? 0) % 60));
   const [tags, setTags] = useState<string[]>(arrangement.tags ?? []);
   const [busy, setBusy] = useState(false);
 
@@ -895,8 +901,7 @@ function ArrangementDialog({
     setBusy(true);
     const payload = {
       title: title.trim(),
-      duration_seconds:
-        (parseInt(minutes || "0", 10) || 0) * 60 + (parseInt(seconds || "0", 10) || 0),
+      duration_seconds: durationInputToSeconds(duration),
       tags: tags.map((t) => t.trim()).filter(Boolean),
     };
     const { error } = arrangement.id
@@ -933,29 +938,18 @@ function ArrangementDialog({
           />
         </label>
 
-        <div className="mb-3 grid grid-cols-2 gap-3">
-          <label className="block text-sm font-bold uppercase">
-            Minutos
-            <input
-              type="number"
-              min={0}
-              value={minutes}
-              onChange={(e) => setMinutes(e.target.value)}
-              className="comic-sm mt-1 w-full rounded-md bg-background px-3 py-2 text-base font-normal outline-none"
-            />
-          </label>
-          <label className="block text-sm font-bold uppercase">
-            Segundos
-            <input
-              type="number"
-              min={0}
-              max={59}
-              value={seconds}
-              onChange={(e) => setSeconds(e.target.value)}
-              className="comic-sm mt-1 w-full rounded-md bg-background px-3 py-2 text-base font-normal outline-none"
-            />
-          </label>
-        </div>
+        <label className="mb-3 block text-sm font-bold uppercase">
+          Duración (mm:ss)
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="0:00"
+            value={formatDurationInput(duration)}
+            onChange={(e) => setDuration(e.target.value)}
+            className="comic-sm mt-1 w-full rounded-md bg-background px-3 py-2 text-base font-normal outline-none"
+          />
+        </label>
 
         <div className="mb-4 block text-sm font-bold uppercase">
           <span className="mb-1 block">Etiquetas</span>
