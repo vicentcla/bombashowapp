@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { X, Upload, FileSpreadsheet, CheckSquare, Square, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { formatLyricsWithSubtitles, htmlToPlainText } from "@/lib/format";
 
 type ImportStreetItem = {
   title: string;
@@ -188,18 +189,19 @@ export function ImportCalleDialog({
 
       if (songErr) throw songErr;
 
-      // 2. Si venía alguna letra, insertarla en la tabla lyrics
+      // 2. Si venía alguna letra, convertirla a HTML y guardarla en la tabla lyrics
       const lyricsToInsert = (insertedSongs || [])
         .map((song) => {
           const matched = finalItemsToImport.find(
             (i) => i.title.toUpperCase().trim() === song.title.toUpperCase().trim()
           );
           if (matched?.lyric) {
+            const htmlContent = formatLyricsWithSubtitles(matched.lyric);
             return {
               kind: "calle",
               title: song.title,
-              content: matched.lyric,
-              plain_text: matched.lyric,
+              content: htmlContent,
+              plain_text: htmlToPlainText(htmlContent),
               street_song_id: song.id,
             };
           }
@@ -239,13 +241,13 @@ export function ImportCalleDialog({
             Escribe o pega tus canciones con letra:
           </label>
           <p className="text-[11px] text-muted-foreground font-medium leading-normal">
-            Escribe <strong># Nombre de Canción</strong> en la primera línea y pon la letra debajo (con sus estrofas y saltos de línea normales). Separa varias canciones con <strong>#</strong> o <strong>---</strong>.
+            Escribe <strong># Nombre</strong> para el título de la canción. Usa <strong>- SUBTÍTULO</strong> para secciones en negrita dentro de la letra. Separa canciones con <strong>---</strong> o con otro <strong>#</strong>.
           </p>
           <textarea
-            rows={6}
+            rows={7}
             value={pastedText}
             onChange={(e) => setPastedText(e.target.value)}
-            placeholder={`Ejemplo con letras en varios párrafos:\n\n# Calderete\nCalderete\nCalderete\nCalde Calderete x3\n\nCalde Calderete\nLerete Lere\n\n---\n\n# Otra Canción de Calle\nPrimera frase de la canción\nSegunda frase`}
+            placeholder={`# Los Negros\n- LAS NEGRAS\nLas negras de la Guayaba,\nTienen el chocho pelao x2\n\n- TODO LO QUE ENTRA\nTodo lo que entra sale,\nPero se queda un ratito\n\n---\n\n# Otra Canción\nLetra sin subtítulos aquí`}
             className="comic-sm w-full rounded-md bg-background p-2.5 text-xs outline-none font-mono placeholder:text-muted-foreground/60 leading-relaxed"
           />
         </div>
@@ -335,9 +337,10 @@ export function ImportCalleDialog({
 
                     {/* Previsualización desplegable de la letra */}
                     {item.lyric && isExpanded && (
-                      <div className="mt-2 p-2 rounded bg-card/80 border text-[11px] font-mono whitespace-pre-wrap text-muted-foreground leading-snug">
-                        {item.lyric}
-                      </div>
+                      <div
+                        className="mt-2 p-2 rounded bg-card/80 border text-[11px] text-muted-foreground lyrics-body leading-snug"
+                        dangerouslySetInnerHTML={{ __html: formatLyricsWithSubtitles(item.lyric) }}
+                      />
                     )}
                   </div>
                 );
