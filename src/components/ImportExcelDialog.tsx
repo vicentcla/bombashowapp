@@ -100,8 +100,9 @@ function parsePastedTable(text: string): ImportItem[] {
     if (line.toLowerCase().includes("nombre del arreglo") || line.startsWith("| ---")) continue;
 
     let parts: string[];
-    if (line.includes("|")) {
-      parts = line.split("|").map((p) => p.trim()).filter((p, idx, arr) => {
+    if (line.includes("|") || line.includes("/")) {
+      const normalizedLine = line.replace(/\//g, "|");
+      parts = normalizedLine.split("|").map((p) => p.trim()).filter((p, idx, arr) => {
         if ((idx === 0 || idx === arr.length - 1) && p === "") return false;
         return true;
       });
@@ -256,7 +257,7 @@ export function ImportExcelDialog({
               Pega aquí las filas de Excel o CSV:
             </label>
             <p className="text-[11px] text-muted-foreground font-medium leading-normal">
-              Copia directamente las celdas de tu Excel (o crea una tabla con | como separador). Columnas: <strong>| Título | Duración (en MM:SS) | Al puesto (Opcional).</strong>
+              Copia directamente las celdas de tu Excel (o crea una tabla con | o / como separador). Columnas: <strong>| Título | Duración (en MM:SS) | Al puesto (Opcional).</strong>
             </p>
             <textarea
               rows={4}
