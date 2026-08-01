@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -22,6 +22,7 @@ import {
   ChevronDown,
   LayoutTemplate,
   Undo2,
+  Lightbulb,
 } from "lucide-react";
 import {
   DndContext,
@@ -62,6 +63,7 @@ import {
   normalize,
 } from "@/lib/format";
 import { SortableList, SortableItem } from "@/components/SortableList";
+import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/_authenticated/setlists")({
   head: () => ({
@@ -92,6 +94,20 @@ export type BreakItem = {
 };
 
 // section_order lista IDs de pases y descansos en el orden que deben aparecer en el timeline
+export type SetlistProposal = {
+  id: string;
+  setlist_id: string;
+  setlist_name: string;
+  arrangement_id: string;
+  arrangement_title: string;
+  pass_id: string;
+  pass_name: string;
+  user_id: string;
+  user_name: string;
+  created_at: string;
+  status: "pending" | "approved" | "rejected";
+};
+
 export type SetlistNotesConfig = {
   target_minutes: number;
   passes: PassConfig[];
@@ -100,6 +116,7 @@ export type SetlistNotesConfig = {
   section_order?: string[]; // ordered IDs: pass IDs and break IDs interleaved
   notes_text?: string;
   archived?: boolean;
+  proposals?: SetlistProposal[];
 };
 
 export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
@@ -152,6 +169,10 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
         if (!rawOrder.includes(b.id)) rawOrder.push(b.id);
       });
 
+      const proposals: SetlistProposal[] = Array.isArray(parsed.proposals)
+        ? (parsed.proposals as SetlistProposal[])
+        : [];
+
       return {
         target_minutes,
         passes,
@@ -160,6 +181,7 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
         section_order: rawOrder,
         notes_text: typeof parsed.notes_text === "string" ? parsed.notes_text : "",
         archived: parsed.archived === true,
+        proposals,
       };
     }
   } catch {
@@ -173,6 +195,7 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
     section_order: ["p1"],
     notes_text: notes,
     archived: false,
+    proposals: [],
   };
 }
 
@@ -363,7 +386,7 @@ function SetlistsPage() {
     const { data: newSetlist, error: createErr } = await supabase
       .from("setlists")
       .insert({
-        name: `Copia de ${source.name || "setlist"}`,
+        name: "-",
         event_date: null,
         notes: serializeSetlistNotes(initialConfig),
       })
@@ -1618,6 +1641,8 @@ function SetlistDetail({
   onBack: () => void;
   initialTab?: "config";
 }) {
+  const { user } = useAuth();
+  const { isAdmin } = useIsAdmin();
   const setlists = useSetlists();
   const items = useSetlistItems(setlistId);
   const arrangements = useArrangements();
@@ -1626,6 +1651,8 @@ function SetlistDetail({
 
   const setlist = setlists.data?.find((s) => s.id === setlistId);
   const config = useMemo(() => parseSetlistNotes(setlist?.notes ?? null), [setlist?.notes]);
+
+  const [showProposeModal, setShowProposeModal] = useState(false);
 
   // Tab activo de pases ("all" o el id del pase)
   const [activePassId, setActivePassId] = useState<string>("all");
@@ -2111,6 +2138,56 @@ function SetlistDetail({
         />
       )}
 
+      {/* Modal para proponer canción */}
+      {showProposeModal && setlist && (
+        <ProposeSongModal
+          setlistName={setlist.name}
+          passes={config.passes}
+          arrangements={arrangements.data ?? []}
+          onClose={() => setShowProposeModal(false)}
+          onPropose={async (arrangementId, passId) => {
+            const arr = (arrangements.data ?? []).find((a) => a.id === arrangementId);
+            const pass = config.passes.find((p) => p.id === passId);
+            if (!arr || !pass || !setlist) return;
+
+            const userMeta = user?.user_metadata;
+            const userName =
+              userMeta?.['display_name'] ||
+              userMeta?.['full_name'] ||
+              user?.email?.split("@")[0] ||
+              "Miembro";
+
+            const newProp: SetlistProposal = {
+              id: `prop_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              setlist_id: setlist.id,
+              setlist_name: setlist.name,
+              arrangement_id: arr.id,
+              arrangement_title: arr.title,
+              pass_id: pass.id,
+              pass_name: pass.name,
+              user_id: user?.id || "anonymous",
+              user_name: userName,
+              created_at: new Date().toISOString(),
+              status: "pending",
+            };
+
+            const updatedConfig: SetlistNotesConfig = {
+              ...config,
+              proposals: [...(config.proposals ?? []), newProp],
+            };
+
+            const { error } = await supabase
+              .from("setlists")
+              .update({ notes: serializeSetlistNotes(updatedConfig) })
+              .eq("id", setlist.id);
+
+            if (error) throw error;
+            invalidate("setlists");
+            toast.success(`Propuesta de "${arr.title}" enviada a los administradores`);
+          }}
+        />
+      )}
+
       {/* Modal para añadir descanso entre secciones */}
       {showBreakModal && (
         <AddBreakModal
@@ -2133,6 +2210,13 @@ function SetlistDetail({
         </button>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowProposeModal(true)}
+            className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 px-3 py-1.5 text-xs font-extrabold uppercase hover:bg-amber-500/20 transition-colors"
+          >
+            <Lightbulb className="h-3.5 w-3.5 text-amber-500" /> Proponer tema
+          </button>
+
           <button
             onClick={() => setIsEditingItems((prev) => !prev)}
             className={`comic-sm comic-press flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-extrabold uppercase transition-colors ${
@@ -2806,6 +2890,135 @@ function SetlistDetail({
           </div>
         );
       })()}
+    </div>
+  );
+}
+
+// ─── Modal para proponer canción a un setlist ────────────────────────────────────
+
+function ProposeSongModal({
+  setlistName,
+  passes,
+  arrangements,
+  onClose,
+  onPropose,
+}: {
+  setlistName: string;
+  passes: PassConfig[];
+  arrangements: Arrangement[];
+  onClose: () => void;
+  onPropose: (arrangementId: string, passId: string) => Promise<void>;
+}) {
+  const [selectedArrangementId, setSelectedArrangementId] = useState(arrangements[0]?.id || "");
+  const [selectedPassId, setSelectedPassId] = useState(passes[0]?.id || "");
+  const [search, setSearch] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const filteredArrangements = useMemo(() => {
+    if (!search.trim()) return arrangements;
+    const q = normalize(search.trim());
+    return arrangements.filter(
+      (a) => normalize(a.title).includes(q) || (a.tags ?? []).some((t) => normalize(t).includes(q))
+    );
+  }, [arrangements, search]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedArrangementId || !selectedPassId) {
+      toast.error("Selecciona una canción y un pase");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onPropose(selectedArrangementId, selectedPassId);
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al enviar la propuesta");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+      <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4 mt-6">
+        <div className="flex items-center justify-between border-b pb-2">
+          <div className="flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-amber-500" />
+            <h2 className="text-xl font-extrabold leading-none">Proponer canción</h2>
+          </div>
+          <button onClick={onClose} aria-label="Cerrar">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <p className="text-xs text-muted-foreground font-medium">
+          Propón una canción para incluir en el setlist "{setlistName}". Los administradores revisarán y aprobarán tu propuesta.
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Selección de pase */}
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase">Pase de destino</label>
+            <select
+              value={selectedPassId}
+              onChange={(e) => setSelectedPassId(e.target.value)}
+              className="comic-sm w-full rounded-md bg-background px-3 py-2 text-sm font-bold outline-none border border-ink/10"
+            >
+              {passes.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Selección de canción con buscador */}
+          <div>
+            <label className="mb-1 block text-xs font-bold uppercase">Selecciona canción / arreglo</label>
+            <div className="flex items-center gap-2 rounded-lg bg-background px-3 py-2 border border-ink/10 mb-2">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por título o etiqueta..."
+                className="w-full bg-transparent text-xs font-medium outline-none"
+              />
+            </div>
+
+            <div className="max-h-48 overflow-y-auto space-y-1 pr-1 border rounded-lg p-1.5 bg-background">
+              {filteredArrangements.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4">No se encontraron temas</p>
+              ) : (
+                filteredArrangements.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => setSelectedArrangementId(a.id)}
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs font-extrabold flex items-center justify-between transition-colors ${
+                      selectedArrangementId === a.id
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    <span>{a.title}</span>
+                    <span className="text-[10px] opacity-80">{formatDuration(a.duration_seconds)}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting || !selectedArrangementId}
+            className="comic comic-press flex items-center justify-center gap-2 w-full rounded-lg bg-primary py-3 text-sm font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+          >
+            <Lightbulb className="h-4 w-4" />
+            {submitting ? "Enviando..." : "Enviar propuesta"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
