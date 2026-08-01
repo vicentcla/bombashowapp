@@ -465,6 +465,13 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <button
+                    onClick={() => setLyricFor({ id: s.id, title: s.title })}
+                    aria-label={`Letra de ${s.title}`}
+                    className="comic-sm comic-press rounded bg-accent p-2 text-accent-foreground"
+                  >
+                    <FileText className="h-4 w-4" />
+                  </button>
+                  <button
                     onClick={() => {
                       setEditing(s);
                       setTitle(s.title);
@@ -474,13 +481,6 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
                     className="comic-sm comic-press rounded bg-secondary p-2 text-secondary-foreground"
                   >
                     <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setLyricFor({ id: s.id, title: s.title })}
-                    aria-label={`Letra de ${s.title}`}
-                    className="comic-sm comic-press rounded bg-accent p-2 text-accent-foreground"
-                  >
-                    <FileText className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => removeSong(s.id)}
@@ -509,6 +509,13 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
               </div>
               <div className="flex shrink-0 gap-2">
                 <button
+                  onClick={() => setLyricFor({ id: s.id, title: s.title })}
+                  aria-label={`Letra de ${s.title}`}
+                  className="comic-sm comic-press rounded bg-accent p-2 text-accent-foreground"
+                >
+                  <FileText className="h-4 w-4" />
+                </button>
+                <button
                   onClick={() => {
                     setEditing(s);
                     setTitle(s.title);
@@ -518,13 +525,6 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
                   className="comic-sm comic-press rounded bg-secondary p-2 text-secondary-foreground"
                 >
                   <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setLyricFor({ id: s.id, title: s.title })}
-                  aria-label={`Letra de ${s.title}`}
-                  className="comic-sm comic-press rounded bg-accent p-2 text-accent-foreground"
-                >
-                  <FileText className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => removeSong(s.id)}
