@@ -88,10 +88,18 @@ function ContadoresCalle() {
   const counts = useCurrentCounts("calle");
   const reorder = useReorder("street_songs");
   const [search, setSearch] = useState("");
+  const [tag, setTag] = useState("");
   const [sort, setSort] = useState<SortMode>("alfabetico");
 
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of songs.data ?? []) for (const t of s.tags ?? []) set.add(t);
+    return [...set].sort();
+  }, [songs.data]);
+
   const list = useMemo(() => {
-    const sorted = [...(songs.data ?? [])];
+    const base = (songs.data ?? []).filter((s) => !tag || (s.tags ?? []).includes(tag));
+    const sorted = [...base];
     if (sort === "alfabetico") sorted.sort((a, b) => a.title.localeCompare(b.title, "es"));
     if (sort === "mas")
       sorted.sort(
@@ -100,7 +108,7 @@ function ContadoresCalle() {
       );
     if (sort === "manual") sorted.sort((a, b) => a.sort_order - b.sort_order);
     return sorted;
-  }, [songs.data, sort, counts]);
+  }, [songs.data, tag, sort, counts]);
 
   function handleReorder(newItems: { id: string; title: string }[]) {
     reorder.mutate(newItems.map((i) => i.id));
@@ -111,6 +119,30 @@ function ContadoresCalle() {
       <div className="mb-4">
         <h2 className="text-2xl font-bold">Canciones de calle</h2>
       </div>
+
+      {allTags.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setTag("")}
+            className={`comic-sm rounded px-2.5 py-1 text-xs font-extrabold uppercase ${
+              tag === "" ? "bg-primary text-primary-foreground" : "bg-card"
+            }`}
+          >
+            Todas ({songs.data?.length ?? 0})
+          </button>
+          {allTags.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTag(t === tag ? "" : t)}
+              className={`comic-sm rounded px-2.5 py-1 text-xs font-extrabold uppercase ${
+                tag === t ? "bg-primary text-primary-foreground" : "bg-card"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="comic-sm mb-3 flex items-center gap-2 rounded-md bg-card px-3">
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -127,7 +159,7 @@ function ContadoresCalle() {
       <Counters
         scope="calle"
         search={search}
-        items={list.map((s) => ({ id: s.id, title: s.title }))}
+        items={list.map((s) => ({ id: s.id, title: s.title, tags: s.tags ?? [] }))}
         {...(sort === "manual" ? { onReorder: handleReorder } : {})}
       />
     </div>

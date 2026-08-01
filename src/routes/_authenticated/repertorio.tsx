@@ -351,7 +351,7 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<StreetSong | null>(null);
   const [showImport, setShowImport] = useState(false);
-  const [title, setTitle] = useState("");
+  const [tag, setTag] = useState("");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortMode>("alfabetico");
   const [lyricFor, setLyricFor] = useState<{ id: string; title: string } | null>(null);
@@ -365,38 +365,28 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
     }
   }, [initialEditLyricId, songs.data]);
 
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of songs.data ?? []) for (const t of s.tags ?? []) set.add(t);
+    return Array.from(set).sort();
+  }, [songs.data]);
+
   const list = useMemo(() => {
-    let base = songs.data ?? [];
+    let base = (songs.data ?? []).filter((s) => !tag || (s.tags ?? []).includes(tag));
     if (search.trim()) {
       const q = search.toLowerCase();
-      base = base.filter((s) => s.title.toLowerCase().includes(q));
+      base = base.filter(
+        (s) => s.title.toLowerCase().includes(q) || (s.tags ?? []).some((t) => t.toLowerCase().includes(q))
+      );
     }
     const copy = [...base];
     if (sort === "alfabetico") copy.sort((a, b) => a.title.localeCompare(b.title, "es"));
     if (sort === "manual") copy.sort((a, b) => a.sort_order - b.sort_order);
     return copy;
-  }, [songs.data, search, sort]);
+  }, [songs.data, search, sort, tag]);
 
   function handleReorder(newItems: { id: string; title: string; sort_order: number }[]) {
     reorder.mutate(newItems.map((s) => s.id));
-  }
-
-  async function saveSong() {
-    if (!title.trim()) return;
-
-    const { error } = editing
-      ? await supabase.from("street_songs").update({ title: title.trim() }).eq("id", editing.id)
-      : await supabase.from("street_songs").insert({ title: title.trim() });
-
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    setTitle("");
-    setAdding(false);
-    setEditing(null);
-    invalidate("street_songs");
-    toast.success(editing ? "Canción de calle actualizada" : "Canción de calle añadida");
   }
 
   async function removeSong(id: string) {
@@ -425,7 +415,6 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
           <button
             onClick={() => {
               setEditing(null);
-              setTitle("");
               setAdding(true);
             }}
             className="comic comic-press flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-extrabold uppercase text-primary-foreground"
@@ -434,6 +423,30 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
           </button>
         </div>
       </div>
+
+      {allTags.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setTag("")}
+            className={`comic-sm rounded px-2.5 py-1 text-xs font-extrabold uppercase ${
+              tag === "" ? "bg-primary text-primary-foreground" : "bg-card"
+            }`}
+          >
+            Todas ({songs.data?.length ?? 0})
+          </button>
+          {allTags.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTag(t === tag ? "" : t)}
+              className={`comic-sm rounded px-2.5 py-1 text-xs font-extrabold uppercase ${
+                tag === t ? "bg-primary text-primary-foreground" : "bg-card"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="comic-sm mb-3 flex items-center gap-2 rounded-md bg-card px-3">
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -462,6 +475,18 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
                   <p className="text-xs font-bold text-muted-foreground">
                     {lyrics.data?.some((l) => l.street_song_id === s.id) ? "Con letra" : "Sin letra"}
                   </p>
+                  {!!s.tags?.length && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {s.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[10px] font-bold uppercase"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <button
@@ -474,7 +499,6 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
                   <button
                     onClick={() => {
                       setEditing(s);
-                      setTitle(s.title);
                       setAdding(true);
                     }}
                     aria-label={`Editar ${s.title}`}
@@ -506,6 +530,18 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
                 <p className="text-xs font-bold text-muted-foreground">
                   {lyrics.data?.some((l) => l.street_song_id === s.id) ? "Con letra" : "Sin letra"}
                 </p>
+                {!!s.tags?.length && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {s.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[10px] font-bold uppercase"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex shrink-0 gap-2">
                 <button
@@ -518,7 +554,6 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
                 <button
                   onClick={() => {
                     setEditing(s);
-                    setTitle(s.title);
                     setAdding(true);
                   }}
                   aria-label={`Editar ${s.title}`}
@@ -560,38 +595,106 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
       )}
 
       {adding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
-          <div className="comic w-full max-w-sm rounded-xl bg-card p-4">
-            <div className="mb-3 flex items-center">
-              <h2 className="mr-auto text-2xl leading-none">
-                {editing ? "Editar canción de calle" : "Nueva canción de calle"}
-              </h2>
-              <button
-                onClick={() => {
-                  setAdding(false);
-                  setEditing(null);
-                }}
-                aria-label="Cerrar"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Título"
-              maxLength={120}
-              className="comic-sm mb-3 w-full rounded-md bg-background px-3 py-2 outline-none"
-            />
-            <button
-              onClick={saveSong}
-              className="comic comic-press w-full rounded-md bg-primary px-4 py-2 font-extrabold uppercase text-primary-foreground"
-            >
-              Guardar
-            </button>
-          </div>
-        </div>
+        <StreetSongDialog
+          song={editing}
+          onClose={() => {
+            setAdding(false);
+            setEditing(null);
+          }}
+          onSaved={() => {
+            invalidate("street_songs");
+            setAdding(false);
+            setEditing(null);
+          }}
+        />
       )}
+    </div>
+  );
+}
+
+function StreetSongDialog({
+  song,
+  onClose,
+  onSaved,
+}: {
+  song: Partial<StreetSong> | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [title, setTitle] = useState(song?.title ?? "");
+  const [tags, setTags] = useState((song?.tags ?? []).join(", "));
+  const [busy, setBusy] = useState(false);
+
+  async function save() {
+    if (!title.trim()) {
+      toast.error("Pon un título");
+      return;
+    }
+    setBusy(true);
+    const parsedTags = tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const payload = {
+      title: title.trim(),
+      tags: parsedTags,
+    };
+
+    const { error } = song?.id
+      ? await supabase.from("street_songs").update(payload).eq("id", song.id)
+      : await supabase.from("street_songs").insert(payload);
+
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(song?.id ? "Canción de calle actualizada" : "Canción de calle añadida");
+    onSaved();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+      <div className="comic w-full max-w-md rounded-xl bg-card p-4">
+        <div className="mb-3 flex items-center">
+          <h2 className="mr-auto text-2xl leading-none">
+            {song?.id ? "Editar canción de calle" : "Nueva canción de calle"}
+          </h2>
+          <button onClick={onClose} aria-label="Cerrar">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <label className="mb-3 block text-sm font-bold uppercase">
+          Título
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={120}
+            placeholder="Título de la canción"
+            className="comic-sm mt-1 w-full rounded-md bg-background px-3 py-2 text-base font-normal outline-none"
+          />
+        </label>
+
+        <label className="mb-4 block text-sm font-bold uppercase">
+          Etiquetas (separadas por comas)
+          <input
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder="Starter, Arreglo, Pack"
+            className="comic-sm mt-1 w-full rounded-md bg-background px-3 py-2 text-base font-normal outline-none"
+          />
+        </label>
+
+        <button
+          onClick={save}
+          disabled={busy}
+          className="comic comic-press w-full rounded-md bg-primary px-4 py-2 font-extrabold uppercase text-primary-foreground disabled:opacity-60"
+        >
+          Guardar
+        </button>
+      </div>
     </div>
   );
 }

@@ -17,6 +17,7 @@ export type Arrangement = {
 export type StreetSong = {
   id: string;
   title: string;
+  tags?: string[];
   sort_order: number;
   created_at: string;
 };
