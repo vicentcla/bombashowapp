@@ -83,6 +83,48 @@ export function htmlToPlainText(html: string): string {
   return (el.textContent ?? "").replace(/\s+/g, " ").trim();
 }
 
+/** Formatea un texto plano de letra con subtítulos iniciados por '-' en HTML con negritas y separadores. */
+export function formatLyricsWithSubtitles(text: string): string {
+  if (!text || !text.trim()) return "";
+
+  // Si ya es HTML con etiquetas de párrafo o bloques, retornamos saneado
+  if (text.includes("<p>") || text.includes("<div>") || text.includes("<br")) {
+    return sanitizeLyricsHtml(text);
+  }
+
+  const lines = text.split("\n");
+  const htmlParts: string[] = [];
+  let currentParagraph: string[] = [];
+  let isFirstSubtitle = true;
+
+  const flushParagraph = () => {
+    if (currentParagraph.length > 0) {
+      htmlParts.push(`<p>${currentParagraph.join("<br />")}</p>`);
+      currentParagraph = [];
+    }
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith("-")) {
+      flushParagraph();
+      if (!isFirstSubtitle) {
+        htmlParts.push("<hr />");
+      }
+      isFirstSubtitle = false;
+      htmlParts.push(`<p><strong>${trimmed}</strong></p>`);
+    } else if (trimmed === "") {
+      flushParagraph();
+    } else {
+      currentParagraph.push(trimmed);
+    }
+  }
+  flushParagraph();
+
+  return htmlParts.join("");
+}
+
 export function normalize(value: string): string {
   return value
     .toLowerCase()

@@ -115,8 +115,8 @@
   --destructive-foreground: oklch(0.99 0 0);
   --warning: oklch(0.79 0.17 60);
   --warning-foreground: oklch(0.16 0.02 260);
-  --ink: oklch(0.08 0.01 260);
-  --border: oklch(0.08 0.01 260);
+  --ink: oklch(0.92 0.005 240);
+  --border: oklch(0.85 0.01 240);
   --input: oklch(0.34 0.03 260);
   --ring: oklch(0.72 0.16 235);
   --chart-1: oklch(0.72 0.16 235);
@@ -130,7 +130,7 @@
   --sidebar-primary-foreground: oklch(0.14 0.02 260);
   --sidebar-accent: oklch(0.28 0.03 260);
   --sidebar-accent-foreground: oklch(0.97 0.005 240);
-  --sidebar-border: oklch(0.08 0.01 260);
+  --sidebar-border: oklch(0.85 0.01 240);
   --sidebar-ring: oklch(0.72 0.16 235);
 }
 
@@ -153,7 +153,7 @@
   }
 }
 
-/* Marco cómic: borde negro grueso + sombra dura */
+/* Marco cómic: borde negro/blanco según tema + sombra dura */
 @utility comic {
   border: 3px solid var(--color-ink);
   box-shadow: 4px 4px 0 0 var(--color-ink);
@@ -191,7 +191,9 @@
     margin-bottom: 0.6rem;
   }
   & hr {
-    margin: 1.2rem 0;
-    border-top: 2px dashed var(--color-border);
+    margin: 1rem 0;
+    border: none;
+    border-top: 2px solid var(--color-border);
+    opacity: 0.8;
   }
 }
