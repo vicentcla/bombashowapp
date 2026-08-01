@@ -25,7 +25,7 @@ function AuthGate() {
     );
   }
 
-  if (status !== "approved") {
+  if (status === "pending" || status === "rejected") {
     return <PendingApprovalScreen status={status} />;
   }
 
