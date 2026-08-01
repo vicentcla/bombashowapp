@@ -15,7 +15,28 @@ import {
   Search,
   Music2,
   Sparkles,
+  BookOpen,
 } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  closestCorners,
+  type DragEndEvent,
+  type DragStartEvent,
+  useDroppable,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -23,7 +44,9 @@ import {
   useSetlists,
   useSetlistItems,
   useInvalidate,
+  useLyrics,
   type Arrangement,
+  type Lyric,
 } from "@/lib/queries";
 import {
   formatDuration,
@@ -472,10 +495,109 @@ function SetlistCard({
 
 // ─── Detalle del Setlist (`SetlistDetail`) ─────────────────────────────────────
 
+// ─── Droppable zone para un pase (cross-container DnD) ─────────────────────────
+function PassDropZone({
+  passId,
+  children,
+  className = "",
+}: {
+  passId: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: passId });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${className} transition-colors duration-150 ${isOver ? "ring-2 ring-primary/60 bg-primary/5 rounded-xl" : ""}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ─── Item arrastrable dentro del pase (con handle) ──────────────────────────────
+function DraggableItem({
+  id,
+  children,
+  className = "",
+}: {
+  id: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.35 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={className}>
+      <button
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        type="button"
+        aria-label="Arrastrar para mover"
+        className="cursor-grab touch-none rounded p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+        style={{ touchAction: "none" }}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      {children}
+    </div>
+  );
+}
+
+// ─── Modal de visualización de letra (igual que en letras.tsx) ──────────────────
+function SetlistLyricModal({ lyric, onClose }: { lyric: Lyric; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+      <div className="comic flex max-h-[85vh] w-full max-w-lg flex-col rounded-xl bg-card p-5 shadow-2xl">
+        <div className="mb-4 flex items-start justify-between gap-3 border-b border-border pb-3">
+          <div>
+            <h2 className="text-3xl font-extrabold leading-tight text-primary">{lyric.title}</h2>
+            <span className="mt-1 inline-block text-xs font-bold uppercase text-muted-foreground">
+              {lyric.kind === "calle" ? "Canción de calle" : "Arreglo"}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="comic-sm rounded p-1 hover:bg-muted"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+        <div className="overflow-y-auto py-2">
+          <div
+            className="lyrics-body text-base leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: lyric.content }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () => void }) {
   const setlists = useSetlists();
   const items = useSetlistItems(setlistId);
   const arrangements = useArrangements();
+  const lyrics = useLyrics();
   const invalidate = useInvalidate();
 
   const setlist = setlists.data?.find((s) => s.id === setlistId);
@@ -487,6 +609,10 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
   const [selectedSongId, setSelectedSongId] = useState("");
   const [editingConfig, setEditingConfig] = useState(false);
   const [isEditingItems, setIsEditingItems] = useState(false);
+  // Para el lyric modal en modo lectura
+  const [activeLyric, setActiveLyric] = useState<Lyric | null>(null);
+  // Para drag overlay (ID del item que se está arrastrando)
+  const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
 
   // Formulario de edición de configuración
   const [editName, setEditName] = useState(setlist?.name || "");
@@ -496,6 +622,18 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
 
   // Mapeo de canción -> pase
   const itemPassMap = config.item_pass_map || {};
+
+  // Sensores DnD para cross-container
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+  );
+
+  // Función para buscar la letra de un arreglo por su arrangement_id
+  function findLyricForArrangement(arrangementId: string | null): Lyric | null {
+    if (!arrangementId || !lyrics.data) return null;
+    return lyrics.data.find((l) => l.arrangement_id === arrangementId) ?? null;
+  }
 
   // Total acumulado general
   const totalSecondsAll = useMemo(
@@ -617,6 +755,45 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
     invalidate("setlist_items");
   }
 
+  // Handlers de cross-container DnD
+  function handleDragStart(event: DragStartEvent) {
+    setDraggingItemId(String(event.active.id));
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    setDraggingItemId(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    // Determinar si over es un pase (contenedor) o un item
+    const isOverAPass = config.passes.some((p) => p.id === overId);
+    const targetPassId = isOverAPass
+      ? overId
+      : (itemPassMap[overId] || config.passes[0]?.id || "p1");
+
+    const currentPassId = itemPassMap[activeId] || config.passes[0]?.id || "p1";
+
+    if (targetPassId !== currentPassId) {
+      // Mover a otro pase
+      await handleMoveItemToPass(activeId, targetPassId);
+    } else {
+      // Reordenar dentro del mismo pase
+      if (activeId !== overId && !isOverAPass) {
+        const passItems = (items.data ?? []).filter(
+          (i) => (itemPassMap[i.id] || config.passes[0]?.id) === currentPassId,
+        );
+        const oldIndex = passItems.findIndex((i) => i.id === activeId);
+        const newIndex = passItems.findIndex((i) => i.id === overId);
+        if (oldIndex !== -1 && newIndex !== -1) {
+          await handleReorderPassItems(arrayMove(passItems, oldIndex, newIndex));
+        }
+      }
+    }
+  }
+
   // Filtrado de arreglos disponibles para añadir
   const availableArrangements = useMemo(() => {
     const q = searchSong.toLowerCase().trim();
@@ -629,6 +806,10 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
 
   return (
     <div className="space-y-6">
+      {/* Modal de letra en modo lectura */}
+      {activeLyric && (
+        <SetlistLyricModal lyric={activeLyric} onClose={() => setActiveLyric(null)} />
+      )}
       {/* Botón Volver, Modificar Canciones y Configurar */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button
@@ -839,166 +1020,195 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
         )
       )}
 
-      {/* Renderizado de Secciones por Pase */}
-      <div className="space-y-6">
-        {config.passes
-          .filter((p) => activePassId === "all" || activePassId === p.id)
-          .map((pass) => {
-            const passItems = (items.data ?? []).filter((i) => {
-              const assignedPass = itemPassMap[i.id] || config.passes[0]?.id || "p1";
-              return assignedPass === pass.id;
-            });
+      {/* Renderizado de Secciones por Pase (cross-container DnD en modo edición) */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="space-y-6">
+          {config.passes
+            .filter((p) => activePassId === "all" || activePassId === p.id)
+            .map((pass) => {
+              const passItems = (items.data ?? []).filter((i) => {
+                const assignedPass = itemPassMap[i.id] || config.passes[0]?.id || "p1";
+                return assignedPass === pass.id;
+              });
 
-            const passSeconds = passItems.reduce(
-              (acc, i) => acc + (i.arrangements?.duration_seconds ?? 0),
-              0,
-            );
+              const passSeconds = passItems.reduce(
+                (acc, i) => acc + (i.arrangements?.duration_seconds ?? 0),
+                0,
+              );
 
-            const passComp = formatTimeComparison(passSeconds, pass.target_minutes);
+              const passComp = formatTimeComparison(passSeconds, pass.target_minutes);
 
-            return (
-              <div key={pass.id} className="comic rounded-xl bg-card p-5 space-y-4">
-                {/* Cabecera del Pase */}
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-                  <div>
-                    <h3 className="text-2xl font-extrabold leading-none">{pass.name}</h3>
-                    <p className="mt-1 text-xs font-bold text-muted-foreground">
-                      {passItems.length} temas · {passComp.addedText}
-                      {pass.target_minutes > 0 ? ` de ${passComp.targetText} objetivo` : ""}
-                    </p>
+              return (
+                <div key={pass.id} className="comic rounded-xl bg-card p-5 space-y-4">
+                  {/* Cabecera del Pase */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+                    <div>
+                      <h3 className="text-2xl font-extrabold leading-none">{pass.name}</h3>
+                      <p className="mt-1 text-xs font-bold text-muted-foreground">
+                        {passItems.length} temas · {passComp.addedText}
+                        {pass.target_minutes > 0 ? ` de ${passComp.targetText} objetivo` : ""}
+                      </p>
+                    </div>
+
+                    {pass.target_minutes > 0 && (
+                      <span
+                        className={`comic-sm rounded px-2.5 py-1 text-xs font-extrabold uppercase ${
+                          passComp.status === "exact" || passComp.status === "exceeded"
+                            ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                            : "bg-accent text-accent-foreground"
+                        }`}
+                      >
+                        {passComp.diffText}
+                      </span>
+                    )}
                   </div>
 
+                  {/* Barra de Progreso del Pase */}
                   {pass.target_minutes > 0 && (
-                    <span
-                      className={`comic-sm rounded px-2.5 py-1 text-xs font-extrabold uppercase ${
-                        passComp.status === "exact" || passComp.status === "exceeded"
-                          ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
-                          : "bg-accent text-accent-foreground"
-                      }`}
-                    >
-                      {passComp.diffText}
-                    </span>
+                    <div className="space-y-1">
+                      <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-secondary border border-ink/20">
+                        <div
+                          className={`h-full transition-all duration-500 ${
+                            passComp.status === "exceeded"
+                              ? "bg-amber-500"
+                              : passComp.percentage >= 100
+                                ? "bg-emerald-500"
+                                : "bg-primary"
+                          }`}
+                          style={{ width: `${Math.min(100, passComp.percentage)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Lista de arreglos del pase (Lectura vs Edición) */}
+                  {passItems.length === 0 ? (
+                    isEditingItems ? (
+                      <PassDropZone passId={pass.id}>
+                        <p className="comic-sm rounded-lg bg-background p-4 text-center text-xs font-bold text-muted-foreground border-2 border-dashed border-primary/30">
+                          Arrastra canciones aquí para asignarlas a {pass.name}
+                        </p>
+                      </PassDropZone>
+                    ) : (
+                      <p className="comic-sm rounded-lg bg-background p-4 text-center text-xs font-bold text-muted-foreground">
+                        Este pase aún no tiene canciones.
+                      </p>
+                    )
+                  ) : isEditingItems ? (
+                    <PassDropZone passId={pass.id}>
+                      <SortableContext
+                        items={passItems.map((i) => i.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="space-y-2">
+                          {passItems.map((item, index) => (
+                            <DraggableItem
+                              key={item.id}
+                              id={item.id}
+                              className="comic grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-background p-3 my-2"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-xs font-extrabold text-primary mb-0.5">#{index + 1}</p>
+                                <p className="truncate text-base font-extrabold leading-tight">
+                                  {item.arrangements?.title || "Cargando..."}
+                                </p>
+                                <p className="text-xs font-bold text-muted-foreground">
+                                  {formatDuration(item.arrangements?.duration_seconds ?? 0)}
+                                </p>
+                              </div>
+
+                              <div className="flex shrink-0 items-center gap-2 ml-auto">
+                                <button
+                                  onClick={() => handleRemoveItem(item.id)}
+                                  aria-label="Quitar canción"
+                                  className="comic-sm comic-press rounded bg-destructive/10 p-2 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </DraggableItem>
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </PassDropZone>
+                  ) : (
+                    <div className="space-y-2">
+                      {passItems.map((item, index) => {
+                        const lyric = findLyricForArrangement(item.arrangement_id);
+                        return (
+                          <div
+                            key={item.id}
+                            className={`comic flex items-center justify-between gap-3 rounded-xl bg-background p-3.5 ${
+                              lyric ? "cursor-pointer hover:bg-primary/5 transition-colors" : ""
+                            }`}
+                            onClick={() => lyric && setActiveLyric(lyric)}
+                            title={lyric ? "Ver letra" : undefined}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="shrink-0 text-xl font-extrabold text-primary w-7 text-center">
+                                #{index + 1}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="truncate text-lg font-extrabold leading-tight">
+                                  {item.arrangements?.title || "Cargando..."}
+                                </p>
+                                {!!item.arrangements?.tags?.length && (
+                                  <div className="mt-0.5 flex flex-wrap gap-1">
+                                    {item.arrangements.tags.map((t) => (
+                                      <span
+                                        key={t}
+                                        className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[9px] font-bold uppercase text-secondary-foreground"
+                                      >
+                                        {t}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex shrink-0 items-center gap-2">
+                              <span className="text-sm font-extrabold text-muted-foreground font-mono">
+                                {formatDuration(item.arrangements?.duration_seconds ?? 0)}
+                              </span>
+                              {lyric && (
+                                <BookOpen className="h-4 w-4 text-primary/60" />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
+              );
+            })}
+        </div>
 
-                {/* Barra de Progreso del Pase */}
-                {pass.target_minutes > 0 && (
-                  <div className="space-y-1">
-                    <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-secondary border border-ink/20">
-                      <div
-                        className={`h-full transition-all duration-500 ${
-                          passComp.status === "exceeded"
-                            ? "bg-amber-500"
-                            : passComp.percentage >= 100
-                              ? "bg-emerald-500"
-                              : "bg-primary"
-                        }`}
-                        style={{ width: `${Math.min(100, passComp.percentage)}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Lista de arreglos del pase (Lectura vs Edición) */}
-                {passItems.length === 0 ? (
-                  <p className="comic-sm rounded-lg bg-background p-4 text-center text-xs font-bold text-muted-foreground">
-                    Este pase aún no tiene canciones.
-                  </p>
-                ) : isEditingItems ? (
-                  <SortableList
-                    items={passItems}
-                    onReorder={(reordered) => handleReorderPassItems(reordered)}
-                    strategy="vertical"
-                  >
-                    {(item, index) => (
-                      <SortableItem
-                        key={item.id}
-                        id={item.id}
-                        handleOnly
-                        className="comic grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl bg-background p-3 my-2"
-                      >
-                        <span className="shrink-0 text-xl font-extrabold text-primary">
-                          #{index + 1}
-                        </span>
-
-                        <div className="min-w-0">
-                          <p className="truncate text-lg font-extrabold leading-tight">
-                            {item.arrangements?.title || "Cargando..."}
-                          </p>
-                          <p className="text-xs font-bold text-muted-foreground">
-                            {formatDuration(item.arrangements?.duration_seconds ?? 0)}
-                          </p>
-                        </div>
-
-                        {/* Mover a otro pase si hay varios */}
-                        <div className="flex shrink-0 items-center gap-2 ml-auto">
-                          {config.passes.length > 1 && (
-                            <select
-                              value={itemPassMap[item.id] || config.passes[0]?.id || "p1"}
-                              onChange={(e) => handleMoveItemToPass(item.id, e.target.value)}
-                              className="comic-sm rounded bg-card px-2 py-1 text-xs font-bold outline-none cursor-pointer"
-                              title="Mover a otro pase"
-                            >
-                              {config.passes.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name}
-                                </option>
-                              ))}
-                            </select>
-                          )}
-
-                          <button
-                            onClick={() => handleRemoveItem(item.id)}
-                            aria-label="Quitar canción"
-                            className="comic-sm comic-press rounded bg-destructive/10 p-2 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </SortableItem>
-                    )}
-                  </SortableList>
-                ) : (
-                  <div className="space-y-2">
-                    {passItems.map((item, index) => (
-                      <div
-                        key={item.id}
-                        className="comic flex items-center justify-between gap-3 rounded-xl bg-background p-3.5"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className="shrink-0 text-xl font-extrabold text-primary w-7 text-center">
-                            #{index + 1}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="truncate text-lg font-extrabold leading-tight">
-                              {item.arrangements?.title || "Cargando..."}
-                            </p>
-                            {!!item.arrangements?.tags?.length && (
-                              <div className="mt-0.5 flex flex-wrap gap-1">
-                                {item.arrangements.tags.map((t) => (
-                                  <span
-                                    key={t}
-                                    className="comic-sm rounded bg-secondary px-1.5 py-0.2 text-[9px] font-bold uppercase text-secondary-foreground"
-                                  >
-                                    {t}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <span className="shrink-0 text-sm font-extrabold text-muted-foreground font-mono">
-                          {formatDuration(item.arrangements?.duration_seconds ?? 0)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+        {/* Overlay visual mientras se arrastra */}
+        <DragOverlay>
+          {draggingItemId && (() => {
+            const draggedItem = (items.data ?? []).find((i) => i.id === draggingItemId);
+            if (!draggedItem) return null;
+            return (
+              <div className="comic flex items-center gap-3 rounded-xl bg-primary text-primary-foreground p-3 shadow-2xl opacity-90">
+                <GripVertical className="h-5 w-5 shrink-0" />
+                <span className="font-extrabold text-base">
+                  {draggedItem.arrangements?.title || "Canción"}
+                </span>
+                <span className="ml-auto text-xs font-bold opacity-75">
+                  {formatDuration(draggedItem.arrangements?.duration_seconds ?? 0)}
+                </span>
               </div>
             );
-          })}
-      </div>
+          })()}
+        </DragOverlay>
+      </DndContext>
 
       {/* Modal Editar Configuración de Setlist y Pases */}
       {editingConfig && (
