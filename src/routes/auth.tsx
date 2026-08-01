@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 const BANNER_SRC = "/banner-2.png";
 const LOGO_SRC = "/logo-titulo-2.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { LogIn } from "lucide-react";
+import { LogIn, KeyRound } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -31,12 +31,21 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [recovery, setRecovery] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/inicio", replace: true });
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setRecovery(true);
     });
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session && !window.location.hash.includes("type=recovery")) {
+        navigate({ to: "/inicio", replace: true });
+      }
+    });
+    return () => sub.subscription.unsubscribe();
   }, [navigate]);
+
+  if (recovery) return <RecoveryForm />;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -149,6 +158,84 @@ function AuthPage() {
           Los nuevos accesos se registran con Gmail y quedan{" "}
           <span className="text-foreground">pendientes de aprobación</span> de un administrador.
         </p>
+      </form>
+    </div>
+  );
+}
+
+function RecoveryForm() {
+  const navigate = useNavigate();
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (password.length < 6) {
+      toast.error("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    if (password !== confirm) {
+      toast.error("Las contraseñas no coinciden");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      toast.success("Contraseña restablecida correctamente");
+      navigate({ to: "/inicio", replace: true });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se ha podido restablecer la contraseña");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-10">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
+      <img src={LOGO_SRC} alt="Logo de La Bomba Show" className="mb-2 h-32 w-auto" />
+      <img src={BANNER_SRC} alt="La Bomba Show Xaranga" className="mb-6 w-full max-w-sm" />
+
+      <form onSubmit={submit} className="comic w-full max-w-sm rounded-xl bg-card p-5">
+        <h1 className="mb-4 text-3xl">Nueva contraseña</h1>
+
+        <label className="mb-3 block text-sm font-bold uppercase">
+          Nueva contraseña
+          <input
+            type="password"
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+            className="comic-sm mt-1 w-full rounded-md bg-background px-3 py-2 text-base font-normal outline-none"
+          />
+        </label>
+
+        <label className="mb-4 block text-sm font-bold uppercase">
+          Repite la contraseña
+          <input
+            type="password"
+            required
+            minLength={6}
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            autoComplete="new-password"
+            className="comic-sm mt-1 w-full rounded-md bg-background px-3 py-2 text-base font-normal outline-none"
+          />
+        </label>
+
+        <button
+          type="submit"
+          disabled={busy}
+          className="comic comic-press flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-lg font-extrabold uppercase text-primary-foreground disabled:opacity-60"
+        >
+          <KeyRound className="h-5 w-5" />
+          {busy ? "Guardando…" : "Restablecer contraseña"}
+        </button>
       </form>
     </div>
   );

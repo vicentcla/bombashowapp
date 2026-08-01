@@ -8,6 +8,7 @@ import {
   Check,
   X,
   Clock,
+  KeyRound,
   Settings,
   Mail,
   Save,
@@ -85,6 +86,12 @@ function Ajustes() {
   const [displayName, setDisplayName] = useState("");
   const [instrument, setInstrument] = useState<string>("");
   const [saving, setSaving] = useState(false);
+
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
 
   // Obtener perfil de la BD
   const profileQuery = useQuery({
@@ -236,6 +243,63 @@ function Ajustes() {
       toast.error(err instanceof Error ? err.message : "Error al guardar el perfil");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user?.email) return;
+    if (!oldPassword) {
+      toast.error("Escribe tu contraseña actual");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("La nueva contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Las contraseñas nuevas no coinciden");
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: oldPassword,
+      });
+      if (signInError) {
+        toast.error("La contraseña actual no es correcta");
+        return;
+      }
+
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+
+      toast.success("Contraseña cambiada correctamente");
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se ha podido cambiar la contraseña");
+    } finally {
+      setChangingPassword(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    if (!user?.email) return;
+    setSendingReset(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      if (error) throw error;
+      toast.success("Te hemos enviado un correo para restablecer la contraseña");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se ha podido enviar el correo");
+    } finally {
+      setSendingReset(false);
     }
   }
 
@@ -591,6 +655,89 @@ function Ajustes() {
                 <Save className="h-5 w-5" />
                 {saving ? "Guardando..." : "Guardar cambios de perfil"}
               </button>
+            </div>
+
+            {/* Cambio de contraseña */}
+            <div className="border-t-2 border-dashed border-ink/20 pt-4">
+              <h2 className="text-xl font-bold uppercase text-muted-foreground">
+                Cambiar contraseña
+              </h2>
+
+              <form onSubmit={handleChangePassword} className="mt-3 space-y-4">
+                <div>
+                  <label className="mb-1 block text-sm font-bold uppercase">
+                    Contraseña actual
+                  </label>
+                  <div className="comic-sm flex items-center rounded-md bg-background px-3 py-2">
+                    <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="password"
+                      required
+                      value={oldPassword}
+                      onChange={(e) => setOldPassword(e.target.value)}
+                      autoComplete="current-password"
+                      placeholder="Tu contraseña actual"
+                      className="w-full bg-transparent text-base outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-bold uppercase">Nueva contraseña</label>
+                  <div className="comic-sm flex items-center rounded-md bg-background px-3 py-2">
+                    <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      autoComplete="new-password"
+                      placeholder="Mínimo 6 caracteres"
+                      className="w-full bg-transparent text-base outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-bold uppercase">
+                    Repite la nueva contraseña
+                  </label>
+                  <div className="comic-sm flex items-center rounded-md bg-background px-3 py-2">
+                    <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      autoComplete="new-password"
+                      placeholder="Repite la contraseña"
+                      className="w-full bg-transparent text-base outline-none"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={changingPassword}
+                  className="comic comic-press flex w-full items-center justify-center gap-2 rounded-lg bg-secondary py-3 font-extrabold uppercase text-secondary-foreground disabled:opacity-50"
+                >
+                  <KeyRound className="h-5 w-5" />
+                  {changingPassword ? "Cambiando..." : "Cambiar contraseña"}
+                </button>
+              </form>
+
+              <div className="mt-3 text-center">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={sendingReset}
+                  className="text-sm font-bold text-primary underline underline-offset-2 hover:opacity-80 disabled:opacity-50"
+                >
+                  {sendingReset ? "Enviando correo…" : "He olvidado la contraseña"}
+                </button>
+              </div>
             </div>
           </div>
         </form>
