@@ -21,6 +21,7 @@ import {
   ArchiveRestore,
   ChevronDown,
   LayoutTemplate,
+  Undo2,
 } from "lucide-react";
 import {
   DndContext,
@@ -300,13 +301,31 @@ function SetlistsPage() {
     toast.success("Plantilla de 2 pases creada");
   }
 
-  // Crear copia exacta de un setlist existente (sin nombre y sin canciones)
+  type DeletedSetlistBackup = {
+    setlist: {
+      id: string;
+      name: string;
+      event_date: string | null;
+      notes: string | null;
+    };
+    items: {
+      id: string;
+      setlist_id: string;
+      arrangement_id: string;
+      position: number;
+    }[];
+  };
+
+  const [lastDeletedSetlist, setLastDeletedSetlist] = useState<DeletedSetlistBackup | null>(null);
+
+  // Crear copia exacta de un setlist existente (pases, tiempos, descansos Y canciones)
   async function createFromSetlist(source: { id: string; name: string; notes: string | null }) {
     setShowCopyFrom(false);
     setShowNewMenu(false);
 
     const sourceConfig = parseSetlistNotes(source.notes);
-    // Reasignar IDs frescos a pases y descansos para no colisionar
+
+    // 1. Reasignar IDs frescos a pases y descansos para no colisionar
     const ts = Date.now();
     const passIdMap: Record<string, string> = {};
     const newPasses: PassConfig[] = sourceConfig.passes.map((p, i) => {
@@ -324,46 +343,141 @@ function SetlistsPage() {
       (id) => passIdMap[id] ?? breakIdMap[id] ?? id
     );
 
-    const newConfig: SetlistNotesConfig = {
+    // 2. Obtener todas las canciones (items) del setlist de origen
+    const { data: sourceItems } = await supabase
+      .from("setlist_items")
+      .select("*")
+      .eq("setlist_id", source.id)
+      .order("position", { ascending: true });
+
+    // 3. Crear el nuevo setlist en BD
+    const initialConfig: SetlistNotesConfig = {
       ...sourceConfig,
       passes: newPasses,
       breaks: newBreaks,
       section_order: newOrder,
-      item_pass_map: {}, // no copiamos canciones
+      item_pass_map: {},
       archived: false,
     };
 
-    const { data, error } = await supabase
+    const { data: newSetlist, error: createErr } = await supabase
       .from("setlists")
       .insert({
         name: `Copia de ${source.name || "setlist"}`,
         event_date: null,
-        notes: serializeSetlistNotes(newConfig),
+        notes: serializeSetlistNotes(initialConfig),
       })
       .select("id")
       .single();
 
-    if (error) {
-      toast.error(error.message);
+    if (createErr || !newSetlist) {
+      toast.error(createErr?.message || "Error al crear el setlist");
       return;
     }
 
-    invalidate("setlists");
+    // 4. Copiar los setlist_items e igualar las asignaciones a pases
+    const newItemPassMap: Record<string, string> = {};
+
+    if (sourceItems && sourceItems.length > 0) {
+      for (const item of sourceItems) {
+        const { data: newItem } = await supabase
+          .from("setlist_items")
+          .insert({
+            setlist_id: newSetlist.id,
+            arrangement_id: item.arrangement_id,
+            position: item.position,
+          })
+          .select("id")
+          .single();
+
+        if (newItem) {
+          const oldPassId = sourceConfig.item_pass_map[item.id];
+          if (oldPassId && passIdMap[oldPassId]) {
+            newItemPassMap[newItem.id] = passIdMap[oldPassId];
+          }
+        }
+      }
+    }
+
+    // 5. Guardar el item_pass_map definitivo en las notas del nuevo setlist
+    const finalConfig: SetlistNotesConfig = {
+      ...initialConfig,
+      item_pass_map: newItemPassMap,
+    };
+
+    await supabase
+      .from("setlists")
+      .update({ notes: serializeSetlistNotes(finalConfig) })
+      .eq("id", newSetlist.id);
+
+    invalidate("setlists", "setlist_items");
     setSelectedToConfig(true);
-    setSelected(data.id);
-    toast.success(`Copia de "${source.name}" creada — ponle un nombre`);
+    setSelected(newSetlist.id);
+    toast.success(`Copia completa de "${source.name}" creada`);
   }
 
   async function removeSetlist(id: string, setlistName: string) {
     if (!confirm(`¿Eliminar el setlist "${setlistName}"?`)) return;
-    const { error } = await supabase.from("setlists").delete().eq("id", id);
-    if (error) {
-      toast.error(error.message);
+
+    // Guardar copia de seguridad antes de borrar
+    const { data: sData } = await supabase.from("setlists").select("*").eq("id", id).single();
+    const { data: iData } = await supabase.from("setlist_items").select("*").eq("setlist_id", id);
+
+    if (sData) {
+      const backup: DeletedSetlistBackup = {
+        setlist: sData,
+        items: (iData as { id: string; setlist_id: string; arrangement_id: string; position: number }[]) ?? [],
+      };
+      setLastDeletedSetlist(backup);
+
+      const { error } = await supabase.from("setlists").delete().eq("id", id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      if (selected === id) setSelected(null);
+      invalidate("setlists", "setlist_items");
+
+      toast(`Setlist "${setlistName}" eliminado`, {
+        action: {
+          label: "Deshacer",
+          onClick: () => restoreSetlist(backup),
+        },
+        duration: 10000,
+      });
+    }
+  }
+
+  async function restoreSetlist(backup?: DeletedSetlistBackup | null) {
+    const target = backup || lastDeletedSetlist;
+    if (!target) return;
+
+    const { error: sErr } = await supabase.from("setlists").insert({
+      id: target.setlist.id,
+      name: target.setlist.name,
+      event_date: target.setlist.event_date,
+      notes: target.setlist.notes,
+    });
+
+    if (sErr) {
+      toast.error("Error al restaurar: " + sErr.message);
       return;
     }
-    if (selected === id) setSelected(null);
-    invalidate("setlists");
-    toast.success("Setlist eliminado");
+
+    if (target.items.length > 0) {
+      const itemsToInsert = target.items.map((item) => ({
+        id: item.id,
+        setlist_id: item.setlist_id,
+        arrangement_id: item.arrangement_id,
+        position: item.position,
+      }));
+      await supabase.from("setlist_items").insert(itemsToInsert);
+    }
+
+    setLastDeletedSetlist(null);
+    invalidate("setlists", "setlist_items");
+    toast.success(`Setlist "${target.setlist.name}" restaurado`);
   }
 
   async function toggleArchive(setlist: { id: string; notes: string | null }, currentConfig: SetlistNotesConfig) {
@@ -413,8 +527,18 @@ function SetlistsPage() {
           </div>
         </div>
 
-        {/* Controles de cabecera: tab Archivados + botón Nuevo con desplegable */}
+        {/* Controles de cabecera: tab Archivados + deshacer + botón Nuevo con desplegable */}
         <div className="flex items-center gap-2">
+          {lastDeletedSetlist && (
+            <button
+              onClick={() => restoreSetlist()}
+              className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300 px-3 py-2 text-xs font-extrabold uppercase hover:bg-amber-500/30 transition-colors"
+              title="Restaurar el último setlist eliminado"
+            >
+              <Undo2 className="h-3.5 w-3.5" /> Deshacer eliminación
+            </button>
+          )}
+
           {/* Tab Archivados */}
           <button
             onClick={() => setShowArchived((v) => !v)}
@@ -1831,8 +1955,11 @@ function SetlistDetail({
     invalidate("setlists");
   }
 
-  // Eliminar arreglo
+  // Eliminar tema del setlist (con opción Deshacer)
   async function handleRemoveItem(itemId: string) {
+    const itemToDelete = items.data?.find((i) => i.id === itemId);
+    const passId = itemPassMap[itemId];
+
     const { error } = await supabase.from("setlist_items").delete().eq("id", itemId);
     if (error) {
       toast.error(error.message);
@@ -1849,6 +1976,38 @@ function SetlistDetail({
       .eq("id", setlistId);
 
     invalidate("setlist_items", "setlists");
+
+    if (itemToDelete) {
+      toast(`Tema "${itemToDelete.arrangements?.title}" quitado del setlist`, {
+        action: {
+          label: "Deshacer",
+          onClick: async () => {
+            const { data: restored } = await supabase
+              .from("setlist_items")
+              .insert({
+                id: itemToDelete.id,
+                setlist_id: setlistId,
+                arrangement_id: itemToDelete.arrangement_id,
+                position: itemToDelete.position,
+              })
+              .select("id")
+              .single();
+
+            if (restored && passId) {
+              const restoredMap = { ...config.item_pass_map, [restored.id]: passId };
+              await supabase
+                .from("setlists")
+                .update({ notes: serializeSetlistNotes({ ...config, item_pass_map: restoredMap }) })
+                .eq("id", setlistId);
+            }
+
+            invalidate("setlist_items", "setlists");
+            toast.success("Tema restaurado en el setlist");
+          },
+        },
+        duration: 8000,
+      });
+    }
   }
 
   // Reordenar dentro de un pase

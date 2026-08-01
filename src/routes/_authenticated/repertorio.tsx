@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2, X, Pencil, FileText, Drum, Megaphone, Search, FileSpreadsheet } from "lucide-react";
+import { Plus, Trash2, X, Pencil, FileText, Drum, Megaphone, Search, FileSpreadsheet, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LyricDialog } from "@/components/LyricDialog";
@@ -145,18 +145,75 @@ function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: strin
     return copy;
   }, [arrangements.data, sort, tag]);
 
+  const [lastDeletedArrangement, setLastDeletedArrangement] = useState<{
+    arrangement: Arrangement;
+    lyric?: Lyric | null;
+  } | null>(null);
+
   function handleReorder(newItems: Arrangement[]) {
     reorder.mutate(newItems.map((a) => a.id));
   }
 
-  async function remove(id: string) {
-    if (!confirm("¿Eliminar este arreglo y sus datos asociados?")) return;
-    const { error } = await supabase.from("arrangements").delete().eq("id", id);
+  async function remove(arrangement: Arrangement) {
+    if (!confirm(`¿Eliminar el arreglo "${arrangement.title}" y sus datos asociados?`)) return;
+
+    const { data: lyricData } = await supabase
+      .from("lyrics")
+      .select("*")
+      .eq("arrangement_id", arrangement.id)
+      .maybeSingle();
+
+    const backup = { arrangement, lyric: lyricData };
+    setLastDeletedArrangement(backup);
+
+    const { error } = await supabase.from("arrangements").delete().eq("id", arrangement.id);
     if (error) {
       toast.error(error.message);
       return;
     }
     invalidate("arrangements", "setlist_items", "play_events", "lyrics");
+
+    toast(`Arreglo "${arrangement.title}" eliminado`, {
+      action: {
+        label: "Deshacer",
+        onClick: () => restoreArrangement(backup),
+      },
+      duration: 10000,
+    });
+  }
+
+  async function restoreArrangement(backup?: { arrangement: Arrangement; lyric?: Lyric | null } | null) {
+    const target = backup || lastDeletedArrangement;
+    if (!target) return;
+
+    const { error } = await supabase.from("arrangements").insert({
+      id: target.arrangement.id,
+      title: target.arrangement.title,
+      duration_seconds: target.arrangement.duration_seconds,
+      tags: target.arrangement.tags,
+      sort_order: target.arrangement.sort_order,
+    });
+
+    if (error) {
+      toast.error("Error al restaurar: " + error.message);
+      return;
+    }
+
+    if (target.lyric) {
+      await supabase.from("lyrics").insert({
+        id: target.lyric.id,
+        kind: target.lyric.kind,
+        title: target.lyric.title,
+        content: target.lyric.content,
+        plain_text: target.lyric.plain_text,
+        arrangement_id: target.lyric.arrangement_id,
+        street_song_id: target.lyric.street_song_id,
+      });
+    }
+
+    setLastDeletedArrangement(null);
+    invalidate("arrangements", "setlist_items", "play_events", "lyrics");
+    toast.success(`Arreglo "${target.arrangement.title}" restaurado`);
   }
 
   const total = (arrangements.data ?? []).reduce((s, a) => s + a.duration_seconds, 0);
@@ -168,6 +225,14 @@ function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: strin
           {arrangements.data?.length ?? 0} arreglos · {formatLongDuration(total)} en total
         </p>
         <div className="flex items-center gap-2">
+          {lastDeletedArrangement && (
+            <button
+              onClick={() => restoreArrangement()}
+              className="comic comic-press flex items-center gap-1.5 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300 px-3 py-2 text-sm font-extrabold uppercase hover:bg-amber-500/30 transition-colors"
+            >
+              <Undo2 className="h-4 w-4" /> Deshacer
+            </button>
+          )}
           <button
             onClick={() => setShowImport(true)}
             className="comic comic-press flex items-center gap-1.5 rounded-md bg-secondary px-3 py-2 text-sm font-extrabold uppercase text-secondary-foreground"
@@ -254,7 +319,7 @@ function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: strin
                     <Pencil className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => remove(a.id)}
+                    onClick={() => remove(a)}
                     aria-label={`Eliminar ${a.title}`}
                     className="comic-sm comic-press rounded bg-destructive p-2 text-destructive-foreground"
                   >
@@ -404,18 +469,74 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
     return copy;
   }, [songs.data, search, sort, tag]);
 
+  const [lastDeletedStreetSong, setLastDeletedStreetSong] = useState<{
+    song: StreetSong;
+    lyric?: Lyric | null;
+  } | null>(null);
+
   function handleReorder(newItems: { id: string; title: string; sort_order: number }[]) {
     reorder.mutate(newItems.map((s) => s.id));
   }
 
-  async function removeSong(id: string) {
-    if (!confirm("¿Eliminar la canción y sus contadores?")) return;
-    const { error } = await supabase.from("street_songs").delete().eq("id", id);
+  async function removeSong(song: StreetSong) {
+    if (!confirm(`¿Eliminar la canción "${song.title}"?`)) return;
+
+    const { data: lyricData } = await supabase
+      .from("lyrics")
+      .select("*")
+      .eq("street_song_id", song.id)
+      .maybeSingle();
+
+    const backup = { song, lyric: lyricData };
+    setLastDeletedStreetSong(backup);
+
+    const { error } = await supabase.from("street_songs").delete().eq("id", song.id);
     if (error) {
       toast.error(error.message);
       return;
     }
     invalidate("street_songs", "play_events", "lyrics");
+
+    toast(`Canción "${song.title}" eliminada`, {
+      action: {
+        label: "Deshacer",
+        onClick: () => restoreStreetSong(backup),
+      },
+      duration: 10000,
+    });
+  }
+
+  async function restoreStreetSong(backup?: { song: StreetSong; lyric?: Lyric | null } | null) {
+    const target = backup || lastDeletedStreetSong;
+    if (!target) return;
+
+    const { error } = await supabase.from("street_songs").insert({
+      id: target.song.id,
+      title: target.song.title,
+      tags: target.song.tags,
+      sort_order: target.song.sort_order,
+    });
+
+    if (error) {
+      toast.error("Error al restaurar: " + error.message);
+      return;
+    }
+
+    if (target.lyric) {
+      await supabase.from("lyrics").insert({
+        id: target.lyric.id,
+        kind: target.lyric.kind,
+        title: target.lyric.title,
+        content: target.lyric.content,
+        plain_text: target.lyric.plain_text,
+        arrangement_id: target.lyric.arrangement_id,
+        street_song_id: target.lyric.street_song_id,
+      });
+    }
+
+    setLastDeletedStreetSong(null);
+    invalidate("street_songs", "play_events", "lyrics");
+    toast.success(`Canción "${target.song.title}" restaurada`);
   }
 
   return (
@@ -425,6 +546,14 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
           {songs.data?.length ?? 0} canciones de calle
         </p>
         <div className="flex items-center gap-2">
+          {lastDeletedStreetSong && (
+            <button
+              onClick={() => restoreStreetSong()}
+              className="comic comic-press flex items-center gap-1.5 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300 px-3 py-2 text-sm font-extrabold uppercase hover:bg-amber-500/30 transition-colors"
+            >
+              <Undo2 className="h-4 w-4" /> Deshacer
+            </button>
+          )}
           <button
             onClick={() => setShowImport(true)}
             className="comic comic-press flex items-center gap-1.5 rounded-md bg-secondary px-3 py-2 text-sm font-extrabold uppercase text-secondary-foreground"
@@ -526,7 +655,7 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
                     <Pencil className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => removeSong(s.id)}
+                    onClick={() => removeSong(s)}
                     aria-label={`Eliminar ${s.title}`}
                     className="comic-sm comic-press rounded bg-destructive p-2 text-destructive-foreground"
                   >
@@ -581,7 +710,7 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
                   <Pencil className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => removeSong(s.id)}
+                  onClick={() => removeSong(s)}
                   aria-label={`Eliminar ${s.title}`}
                   className="comic-sm comic-press rounded bg-destructive p-2 text-destructive-foreground"
                 >
