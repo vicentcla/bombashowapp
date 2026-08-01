@@ -41,7 +41,7 @@ function parseStreetSongsText(text: string): ImportStreetItem[] {
     };
 
     for (let i = 0; i < rawLines.length; i++) {
-      const line = rawLines[i];
+      const line = rawLines[i] ?? "";
       const trimmed = line.trim();
 
       // Separador explícito de bloque ---
@@ -58,7 +58,7 @@ function parseStreetSongsText(text: string): ImportStreetItem[] {
 
       if (headerMatch) {
         flushCurrent();
-        currentTitle = headerMatch[1].replace(/^["']|["']$/g, "").trim();
+        currentTitle = (headerMatch[1] ?? "").replace(/^["']|["']$/g, "").trim();
         continue;
       }
 
