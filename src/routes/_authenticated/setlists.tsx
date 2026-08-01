@@ -24,7 +24,6 @@ import {
   Undo2,
   Lightbulb,
   Save,
-  StickyNote,
 } from "lucide-react";
 import {
   DndContext,
@@ -1359,16 +1358,21 @@ function AddSongsToPassModal({
   arrangements,
   onClose,
   onAdd,
+  onAddManual,
 }: {
   passName: string;
   arrangements: Arrangement[];
   onClose: () => void;
   onAdd: (songIds: string[]) => Promise<void>;
+  onAddManual: (title: string, durationSeconds: number) => Promise<void>;
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [tag, setTag] = useState("");
   const [busy, setBusy] = useState(false);
+  const [creating, setCreating] = useState<string | null>(null);
+  const [minutes, setMinutes] = useState("0");
+  const [seconds, setSeconds] = useState("0");
 
   const allTags = useMemo(() => {
     const map = new Map<string, string>();
@@ -1420,6 +1424,23 @@ function AddSongsToPassModal({
     onClose();
   }
 
+  async function handleCreateManual() {
+    const title = creating?.trim();
+    if (!title) return;
+    const durationSeconds =
+      (parseInt(minutes || "0", 10) || 0) * 60 + (parseInt(seconds || "0", 10) || 0);
+    setBusy(true);
+    await onAddManual(title, durationSeconds);
+    setBusy(false);
+    onClose();
+  }
+
+  function startCreate() {
+    setCreating(search.trim());
+    setMinutes("0");
+    setSeconds("0");
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
       <div className="comic flex max-h-[85vh] w-full max-w-lg flex-col rounded-xl bg-card p-5 space-y-4 shadow-2xl">
@@ -1441,13 +1462,13 @@ function AddSongsToPassModal({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por título o etiqueta…"
+            placeholder="Crear o buscar por título o etiqueta…"
             className="w-full bg-transparent text-base outline-none"
           />
         </div>
 
         {/* Filtros por etiqueta */}
-        {allTags.length > 0 && (
+        {creating === null && allTags.length > 0 && (
           <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
             <button
               type="button"
@@ -1474,21 +1495,104 @@ function AddSongsToPassModal({
         )}
 
         {/* Selección múltiple rápida */}
-        <div className="flex items-center justify-between text-xs font-bold px-1">
-          <button type="button" onClick={toggleSelectAll} className="text-primary hover:underline">
-            {filtered.length > 0 && filtered.every((a) => selectedIds.includes(a.id))
-              ? "Deseleccionar todas"
-              : "Seleccionar todas las filtradas"}
-          </button>
-          <span className="text-muted-foreground">{selectedIds.length} seleccionadas</span>
-        </div>
+        {creating === null && (
+          <div className="flex items-center justify-between text-xs font-bold px-1">
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className="text-primary hover:underline"
+            >
+              {filtered.length > 0 && filtered.every((a) => selectedIds.includes(a.id))
+                ? "Deseleccionar todas"
+                : "Seleccionar todas las filtradas"}
+            </button>
+            <span className="text-muted-foreground">{selectedIds.length} seleccionadas</span>
+          </div>
+        )}
 
-        {/* Lista con Checkboxes */}
+        {/* Lista con Checkboxes / crear canción manual */}
         <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-72 border rounded-lg p-2 bg-background">
-          {filtered.length === 0 ? (
-            <p className="p-4 text-center text-xs font-bold text-muted-foreground">
-              No hay canciones que coincidan con la búsqueda.
-            </p>
+          {creating !== null ? (
+            <div className="space-y-3 p-1">
+              <div>
+                <label className="mb-1 block text-xs font-bold uppercase">
+                  Nombre de la canción
+                </label>
+                <input
+                  value={creating}
+                  onChange={(e) => setCreating(e.target.value)}
+                  maxLength={120}
+                  autoFocus
+                  className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-base outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block text-xs font-bold uppercase">
+                  Minutos
+                  <input
+                    type="number"
+                    min={0}
+                    max={600}
+                    value={minutes}
+                    onChange={(e) => setMinutes(e.target.value)}
+                    className="comic-sm mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-base outline-none"
+                  />
+                </label>
+                <label className="block text-xs font-bold uppercase">
+                  Segundos
+                  <input
+                    type="number"
+                    min={0}
+                    max={59}
+                    value={seconds}
+                    onChange={(e) => setSeconds(e.target.value)}
+                    className="comic-sm mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-base outline-none"
+                  />
+                </label>
+              </div>
+
+              <p className="text-xs font-bold text-muted-foreground">
+                Duración:{" "}
+                {formatDuration(
+                  (parseInt(minutes || "0", 10) || 0) * 60 + (parseInt(seconds || "0", 10) || 0),
+                )}
+              </p>
+
+              <button
+                onClick={handleCreateManual}
+                disabled={busy || !creating.trim()}
+                className="comic comic-press flex w-full items-center justify-center gap-2 rounded-md bg-primary py-3 font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+              >
+                <Plus className="h-5 w-5" /> Crear y añadir a {passName}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreating(null)}
+                className="comic-sm w-full rounded-md py-2 text-xs font-extrabold uppercase text-muted-foreground hover:bg-muted/60"
+              >
+                Volver a la búsqueda
+              </button>
+            </div>
+          ) : filtered.length === 0 ? (
+            search.trim() ? (
+              <button
+                type="button"
+                onClick={startCreate}
+                className="comic-sm flex w-full items-center gap-3 rounded-lg bg-primary/10 p-3 text-left font-extrabold text-primary transition-colors hover:bg-primary/20"
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground">
+                  <Plus className="h-4 w-4" />
+                </span>
+                <span>
+                  Crear <span className="underline">"{search.trim()}"</span>…
+                </span>
+              </button>
+            ) : (
+              <p className="p-4 text-center text-xs font-bold text-muted-foreground">
+                Escribe para buscar o crear una canción.
+              </p>
+            )
           ) : (
             filtered.map((a) => {
               const isChecked = selectedIds.includes(a.id);
@@ -1532,113 +1636,16 @@ function AddSongsToPassModal({
         </div>
 
         {/* Botón Añadir */}
-        <button
-          onClick={handleConfirm}
-          disabled={!selectedIds.length || busy}
-          className="comic comic-press flex items-center justify-center gap-2 w-full rounded-md bg-primary py-3 font-extrabold uppercase text-primary-foreground disabled:opacity-50"
-        >
-          <Plus className="h-5 w-5" />
-          Añadir {selectedIds.length > 0 ? `(${selectedIds.length})` : ""} a {passName}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Modal para Añadir Canción Manual (fuera de repertorio) ───────────────────
-function AddManualSongModal({
-  passName,
-  onClose,
-  onAdd,
-}: {
-  passName: string;
-  onClose: () => void;
-  onAdd: (title: string, durationSeconds: number) => Promise<void>;
-}) {
-  const [title, setTitle] = useState("");
-  const [minutes, setMinutes] = useState("0");
-  const [seconds, setSeconds] = useState("0");
-  const [busy, setBusy] = useState(false);
-
-  async function handleConfirm() {
-    if (!title.trim()) {
-      toast.error("Pon el nombre de la canción");
-      return;
-    }
-    const durationSeconds =
-      (parseInt(minutes || "0", 10) || 0) * 60 + (parseInt(seconds || "0", 10) || 0);
-    setBusy(true);
-    await onAdd(title.trim(), durationSeconds);
-    setBusy(false);
-    onClose();
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
-      <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4 shadow-2xl">
-        <div className="flex items-center justify-between border-b pb-3">
-          <div>
-            <h2 className="text-2xl font-extrabold leading-none">Añadir canción manual</h2>
-            <p className="text-xs font-bold text-muted-foreground mt-1">
-              Fuera de repertorio · Asignar a <span className="text-primary">{passName}</span>
-            </p>
-          </div>
-          <button onClick={onClose} aria-label="Cerrar">
-            <X className="h-5 w-5" />
+        {creating === null && (
+          <button
+            onClick={handleConfirm}
+            disabled={!selectedIds.length || busy}
+            className="comic comic-press flex items-center justify-center gap-2 w-full rounded-md bg-primary py-3 font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+          >
+            <Plus className="h-5 w-5" />
+            Añadir {selectedIds.length > 0 ? `(${selectedIds.length})` : ""} a {passName}
           </button>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs font-bold uppercase">Nombre de la canción</label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="P. ej. Guateque en la feria"
-            maxLength={120}
-            autoFocus
-            className="comic-sm w-full rounded-md bg-background px-3 py-2 text-base outline-none"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-xs font-bold uppercase">
-            Minutos
-            <input
-              type="number"
-              min={0}
-              max={600}
-              value={minutes}
-              onChange={(e) => setMinutes(e.target.value)}
-              className="comic-sm mt-1 w-full rounded-md bg-background px-3 py-2 text-base outline-none"
-            />
-          </label>
-          <label className="block text-xs font-bold uppercase">
-            Segundos
-            <input
-              type="number"
-              min={0}
-              max={59}
-              value={seconds}
-              onChange={(e) => setSeconds(e.target.value)}
-              className="comic-sm mt-1 w-full rounded-md bg-background px-3 py-2 text-base outline-none"
-            />
-          </label>
-        </div>
-
-        <p className="text-xs font-bold text-muted-foreground">
-          Duración:{" "}
-          {formatDuration(
-            (parseInt(minutes || "0", 10) || 0) * 60 + (parseInt(seconds || "0", 10) || 0),
-          )}
-        </p>
-
-        <button
-          onClick={handleConfirm}
-          disabled={busy}
-          className="comic comic-press flex items-center justify-center gap-2 w-full rounded-md bg-primary py-3 font-extrabold uppercase text-primary-foreground disabled:opacity-50"
-        >
-          <Plus className="h-5 w-5" /> Añadir a {passName}
-        </button>
+        )}
       </div>
     </div>
   );
@@ -1934,9 +1941,6 @@ function SetlistDetail({
 
   // Modal state para añadir canciones o descansos a un pase específico
   const [addingSongsPass, setAddingSongsPass] = useState<{ id: string; name: string } | null>(null);
-  const [addingManualPass, setAddingManualPass] = useState<{ id: string; name: string } | null>(
-    null,
-  );
   const [showBreakModal, setShowBreakModal] = useState(false);
 
   // Confirmación de borrado de pase
@@ -2641,16 +2645,8 @@ function SetlistDetail({
           onAdd={async (songIds) => {
             await handleAddMultipleSongsToPass(addingSongsPass.id, songIds);
           }}
-        />
-      )}
-
-      {/* Modal para añadir una canción manual (fuera de repertorio) */}
-      {addingManualPass && (
-        <AddManualSongModal
-          passName={addingManualPass.name}
-          onClose={() => setAddingManualPass(null)}
-          onAdd={async (title, durationSeconds) => {
-            await handleAddManualSong(addingManualPass.id, title, durationSeconds);
+          onAddManual={async (title, durationSeconds) => {
+            await handleAddManualSong(addingSongsPass.id, title, durationSeconds);
           }}
         />
       )}
@@ -3044,13 +3040,6 @@ function SetlistDetail({
                             className="comic-sm comic-press flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-extrabold uppercase text-primary-foreground"
                           >
                             <Plus className="h-3.5 w-3.5" /> Añadir canciones
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAddingManualPass({ id: pass.id, name: pass.name })}
-                            className="comic-sm comic-press flex items-center gap-1 rounded-md bg-amber-500/15 px-3 py-1.5 text-xs font-extrabold uppercase text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/20"
-                          >
-                            <StickyNote className="h-3.5 w-3.5" /> Manual
                           </button>
                           {isAdmin && config.passes.length > 1 && (
                             <button
