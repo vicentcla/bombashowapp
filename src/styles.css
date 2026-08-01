@@ -139,8 +139,14 @@
     border-color: var(--color-border);
   }
 
+  html,
   body {
-    background-color: var(--color-background);
+    /* iOS 26 deriva el color de la barra de estado del fondo de html/body:
+       lo igualamos al color de la cabecera para que el borde superior sea del mismo color. */
+    background-color: var(--color-card);
+  }
+
+  body {
     color: var(--color-foreground);
     font-family: var(--font-sans);
   }
