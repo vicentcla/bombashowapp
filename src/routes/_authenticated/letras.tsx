@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, Pencil, X, FileText, Drum, Megaphone } from "lucide-react";
+import { toast } from "sonner";
 import {
   useLyrics,
   useArrangements,
@@ -93,12 +94,32 @@ function Letras() {
 
   const allTags = kind === "arreglos" ? allTagsArreglos : allTagsCalle;
 
-  function getLyricForArrangement(arrId: string): Lyric | null {
-    return lyrics.data?.find((l) => l.arrangement_id === arrId) ?? null;
+  function getLyricForArrangement(arrId: string, arrTitle: string): Lyric | null {
+    if (!lyrics.data) return null;
+    const byId = lyrics.data.find((l) => l.arrangement_id === arrId);
+    if (byId) return byId;
+    const norm = normalize(arrTitle);
+    return (
+      lyrics.data.find(
+        (l) => l.kind === "arreglo" && (normalize(l.title) === norm || l.title.toUpperCase().trim() === arrTitle.toUpperCase().trim())
+      ) ??
+      lyrics.data.find((l) => normalize(l.title) === norm) ??
+      null
+    );
   }
 
-  function getLyricForStreetSong(songId: string): Lyric | null {
-    return lyrics.data?.find((l) => l.street_song_id === songId) ?? null;
+  function getLyricForStreetSong(songId: string, songTitle: string): Lyric | null {
+    if (!lyrics.data) return null;
+    const byId = lyrics.data.find((l) => l.street_song_id === songId);
+    if (byId) return byId;
+    const norm = normalize(songTitle);
+    return (
+      lyrics.data.find(
+        (l) => l.kind === "calle" && (normalize(l.title) === norm || l.title.toUpperCase().trim() === songTitle.toUpperCase().trim())
+      ) ??
+      lyrics.data.find((l) => normalize(l.title) === norm) ??
+      null
+    );
   }
 
   const totalArreglos = (arrangements.data ?? []).reduce((s, a) => s + a.duration_seconds, 0);
@@ -199,15 +220,21 @@ function Letras() {
             </p>
           )}
           {listArreglos.map((a) => {
-            const lyric = getLyricForArrangement(a.id);
+            const lyric = getLyricForArrangement(a.id, a.title);
             return (
               <div
                 key={a.id}
-                onClick={() => lyric && setActiveLyric(lyric)}
-                className={`comic rounded-xl bg-card p-4 transition-colors ${
-                  lyric ? "cursor-pointer hover:bg-primary/5" : "opacity-60"
+                onClick={() => {
+                  if (lyric) {
+                    setActiveLyric(lyric);
+                  } else {
+                    toast.info(`"${a.title}" aún no tiene letra registrada.`);
+                  }
+                }}
+                className={`comic rounded-xl bg-card p-4 transition-colors cursor-pointer hover:bg-primary/5 ${
+                  !lyric ? "opacity-75" : ""
                 }`}
-                title={lyric ? "Ver letra" : "Sin letra"}
+                title={lyric ? "Ver letra" : "Sin letra registrada"}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -248,15 +275,21 @@ function Letras() {
             </p>
           )}
           {listCalle.map((s) => {
-            const lyric = getLyricForStreetSong(s.id);
+            const lyric = getLyricForStreetSong(s.id, s.title);
             return (
               <div
                 key={s.id}
-                onClick={() => lyric && setActiveLyric(lyric)}
-                className={`comic rounded-xl bg-card p-4 transition-colors ${
-                  lyric ? "cursor-pointer hover:bg-primary/5" : "opacity-60"
+                onClick={() => {
+                  if (lyric) {
+                    setActiveLyric(lyric);
+                  } else {
+                    toast.info(`"${s.title}" aún no tiene letra registrada.`);
+                  }
+                }}
+                className={`comic rounded-xl bg-card p-4 transition-colors cursor-pointer hover:bg-primary/5 ${
+                  !lyric ? "opacity-75" : ""
                 }`}
-                title={lyric ? "Ver letra" : "Sin letra"}
+                title={lyric ? "Ver letra" : "Sin letra registrada"}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">

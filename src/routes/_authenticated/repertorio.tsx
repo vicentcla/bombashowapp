@@ -651,6 +651,12 @@ function StreetSongDialog({
       const fallbackRes = song?.id
         ? await supabase.from("street_songs").update(fallbackPayload).eq("id", song.id)
         : await supabase.from("street_songs").insert(fallbackPayload);
+      if (!fallbackRes.error) {
+        toast.warning("Se guardó el título. Aplica la migración en Supabase para habilitar las etiquetas.");
+        onSaved();
+        setBusy(false);
+        return;
+      }
       error = fallbackRes.error;
     }
 
