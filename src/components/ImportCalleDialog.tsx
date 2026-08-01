@@ -7,8 +7,8 @@ import { formatLyricsWithSubtitles, htmlToPlainText } from "@/lib/format";
 type ImportStreetItem = {
   title: string;
   lyric?: string | undefined;
+  tags?: string[];
 };
-
 
 function parseStreetSongsText(text: string): ImportStreetItem[] {
   if (!text || !text.trim()) return [];
@@ -27,6 +27,7 @@ function parseStreetSongsText(text: string): ImportStreetItem[] {
   if (isBlockFormat) {
     let currentTitle = "";
     let currentLyricLines: string[] = [];
+    let currentTags: string[] = [];
 
     const flushCurrent = () => {
       if (currentTitle.trim()) {
@@ -34,10 +35,12 @@ function parseStreetSongsText(text: string): ImportStreetItem[] {
         items.push({
           title: currentTitle.trim(),
           lyric: lyricText || undefined,
+          tags: currentTags.length > 0 ? Array.from(new Set(currentTags)) : undefined,
         });
       }
       currentTitle = "";
       currentLyricLines = [];
+      currentTags = [];
     };
 
     for (let i = 0; i < rawLines.length; i++) {
@@ -58,8 +61,21 @@ function parseStreetSongsText(text: string): ImportStreetItem[] {
 
       if (headerMatch) {
         flushCurrent();
-        currentTitle = (headerMatch[1] ?? "").replace(/^["']|["']$/g, "").trim();
+        currentTitle = (headerMatch[1] ?? "").replace(/^["'“'”]|["'“'”]$/g, "").trim();
         continue;
+      }
+
+      // Detección de etiquetas entre comillas: "Starter, Trios" o “Starter, Trios”
+      const quoteTagsMatch = trimmed.match(/^["“]([^"”]+)["”]$/);
+      if (quoteTagsMatch) {
+        const extracted = quoteTagsMatch[1]
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean);
+        if (extracted.length > 0) {
+          currentTags.push(...extracted);
+          continue; // No incluir esta línea como texto de la letra
+        }
       }
 
       // Si aún no tenemos título en el bloque y la línea no está vacía
@@ -94,11 +110,27 @@ function parseStreetSongsText(text: string): ImportStreetItem[] {
         parts = [trimmed];
       }
 
-      const title = (parts[0] || trimmed).replace(/^["']|["']$/g, "").trim();
+      const title = (parts[0] || trimmed).replace(/^["'“'”]|["'“'”]$/g, "").trim();
       if (!title) continue;
 
-      const lyric = parts[1] || undefined;
-      items.push({ title, lyric });
+      let lyric = parts[1] || undefined;
+      let tags: string[] | undefined = undefined;
+
+      // Si la tercera columna venía entre comillas "Starter, Trios"
+      if (parts[2]) {
+        const qm = parts[2].match(/^["“]?([^"”]+)["”]?$/);
+        if (qm) {
+          tags = qm[1].split(",").map((t) => t.trim()).filter(Boolean);
+        }
+      } else if (lyric) {
+        const qm = lyric.match(/^["“]([^"”]+)["”]$/);
+        if (qm) {
+          tags = qm[1].split(",").map((t) => t.trim()).filter(Boolean);
+          lyric = undefined;
+        }
+      }
+
+      items.push({ title, lyric, tags });
     }
   }
 
@@ -177,16 +209,31 @@ export function ImportCalleDialog({
 
     setBusy(true);
     try {
-      // 1. Insertar canciones de calle
+      // 1. Insertar canciones de calle con sus etiquetas si las hay
       const payloadSongs = finalItemsToImport.map((item, idx) => ({
         title: item.title,
+        tags: item.tags || [],
         sort_order: existingTitles.size + idx + 1,
       }));
 
-      const { data: insertedSongs, error: songErr } = await supabase
+      let { data: insertedSongs, error: songErr } = await supabase
         .from("street_songs")
-        .insert(payloadSongs)
+        .insert(payloadSongs as any)
         .select();
+
+      // Fallback por si la columna 'tags' no se ha migrado aún en el esquema remoto de Supabase
+      if (songErr && songErr.message?.toLowerCase().includes("tags")) {
+        const fallbackSongs = finalItemsToImport.map((item, idx) => ({
+          title: item.title,
+          sort_order: existingTitles.size + idx + 1,
+        }));
+        const fallbackRes = await supabase
+          .from("street_songs")
+          .insert(fallbackSongs)
+          .select();
+        insertedSongs = fallbackRes.data;
+        songErr = fallbackRes.error;
+      }
 
       if (songErr) throw songErr;
 
@@ -239,16 +286,16 @@ export function ImportCalleDialog({
 
         <div className="space-y-1.5">
           <label className="text-xs font-bold uppercase block">
-            Escribe o pega tus canciones con letra:
+            Escribe o pega tus canciones con letra y etiquetas:
           </label>
           <p className="text-[11px] text-muted-foreground font-medium leading-normal">
-            Escribe <strong># Nombre</strong> para el título de la canción. Usa <strong>- SUBTÍTULO</strong> para secciones en negrita dentro de la letra. Separa canciones con <strong>---</strong> o con otro <strong>#</strong>.
+            Escribe <strong># Nombre</strong> para el título. Usa <strong>- SUBTÍTULO</strong> para secciones en negrita. Usa <strong>"Starter, Trios"</strong> (entre comillas) para añadir etiquetas. Separa varias canciones con <strong>---</strong> o con otro <strong>#</strong>.
           </p>
           <textarea
-            rows={7}
+            rows={8}
             value={pastedText}
             onChange={(e) => setPastedText(e.target.value)}
-            placeholder={`# Los Negros\n- LAS NEGRAS\nLas negras de la Guayaba,\nTienen el chocho pelao x2\n\n- TODO LO QUE ENTRA\nTodo lo que entra sale,\nPero se queda un ratito\n\n---\n\n# Otra Canción\nLetra sin subtítulos aquí`}
+            placeholder={`# Los Negros\n- LAS NEGRAS\nLas negras de la Guayaba,\nTienen el chocho pelao x2\n\n"Starter, Trios"\n\n- TODO LO QUE ENTRA\nTodo lo que entra sale,\nPero se queda un ratito\n\n---\n\n# Otra Canción de Calle\n"Pack, Arreglo"\nLetra de la canción aquí`}
             className="comic-sm w-full rounded-md bg-background p-2.5 text-xs outline-none font-mono placeholder:text-muted-foreground/60 leading-relaxed"
           />
         </div>
@@ -300,21 +347,35 @@ export function ImportCalleDialog({
                         : "bg-card hover:bg-accent/40 border-transparent"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start justify-between">
                       <label
                         onClick={(e) => {
                           if (exists) e.preventDefault();
                         }}
-                        className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
+                        className="flex items-start gap-2.5 min-w-0 flex-1 cursor-pointer"
                       >
                         <input
                           type="checkbox"
                           checked={exists ? false : isSelected}
                           disabled={exists}
                           onChange={() => !exists && toggleItem(item.title)}
-                          className="h-4 w-4 rounded accent-primary cursor-pointer disabled:cursor-not-allowed"
+                          className="h-4 w-4 mt-0.5 rounded accent-primary cursor-pointer disabled:cursor-not-allowed"
                         />
-                        <span className="font-bold truncate text-sm">{item.title}</span>
+                        <div className="min-w-0">
+                          <span className="font-bold truncate text-sm block leading-tight">{item.title}</span>
+                          {!!item.tags?.length && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {item.tags.map((t) => (
+                                <span
+                                  key={t}
+                                  className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-secondary-foreground"
+                                >
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </label>
 
                       <div className="flex items-center gap-2 shrink-0 ml-2">
