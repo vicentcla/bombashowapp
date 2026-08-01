@@ -486,6 +486,7 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
   const [searchSong, setSearchSong] = useState("");
   const [selectedSongId, setSelectedSongId] = useState("");
   const [editingConfig, setEditingConfig] = useState(false);
+  const [isEditingItems, setIsEditingItems] = useState(false);
 
   // Formulario de edición de configuración
   const [editName, setEditName] = useState(setlist?.name || "");
@@ -604,9 +605,6 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
 
   // Reordenar dentro de un pase
   async function handleReorderPassItems(reorderedItems: { id: string }[]) {
-    const fullList = items.data ?? [];
-    const idToPosition = new Map(fullList.map((item, idx) => [item.id, idx + 1]));
-
     await Promise.all(
       reorderedItems.map((item, index) => {
         return supabase
@@ -631,8 +629,8 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
 
   return (
     <div className="space-y-6">
-      {/* Botón Volver y Editar */}
-      <div className="flex items-center justify-between">
+      {/* Botón Volver, Modificar Canciones y Configurar */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <button
           onClick={onBack}
           className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-card px-3 py-1.5 text-xs font-extrabold uppercase hover:bg-accent"
@@ -640,18 +638,39 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
           ← Volver a setlists
         </button>
 
-        <button
-          onClick={() => {
-            setEditName(setlist?.name || "");
-            setEditDate(setlist?.event_date || "");
-            setEditTargetMinutes(config.target_minutes);
-            setEditPasses(config.passes);
-            setEditingConfig(true);
-          }}
-          className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-extrabold uppercase text-secondary-foreground"
-        >
-          <Settings className="h-3.5 w-3.5" /> Configurar Setlist
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsEditingItems((prev) => !prev)}
+            className={`comic-sm comic-press flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-extrabold uppercase transition-colors ${
+              isEditingItems
+                ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                : "bg-primary text-primary-foreground"
+            }`}
+          >
+            {isEditingItems ? (
+              <>
+                <CheckCircle2 className="h-3.5 w-3.5" /> Ver lectura limpia
+              </>
+            ) : (
+              <>
+                <Pencil className="h-3.5 w-3.5" /> Editar canciones
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={() => {
+              setEditName(setlist?.name || "");
+              setEditDate(setlist?.event_date || "");
+              setEditTargetMinutes(config.target_minutes);
+              setEditPasses(config.passes);
+              setEditingConfig(true);
+            }}
+            className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-extrabold uppercase text-secondary-foreground"
+          >
+            <Settings className="h-3.5 w-3.5" /> Configurar Setlist
+          </button>
+        </div>
       </div>
 
       {/* Banner Principal de Información y Duración Objetivo Total */}
@@ -678,8 +697,8 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
           </div>
         </div>
 
-        {/* Indicadores Comparativos de Tiempo General */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Indicadores Comparativos de Tiempo General (2 tarjetas) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="rounded-lg bg-background p-3">
             <p className="text-[11px] font-extrabold uppercase text-muted-foreground">
               Tiempo Añadido Total
@@ -697,25 +716,6 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
               {config.target_minutes > 0 ? overallComp.targetText : "Sin objetivo"}
             </p>
           </div>
-
-          <div className="rounded-lg bg-background p-3">
-            <p className="text-[11px] font-extrabold uppercase text-muted-foreground">
-              Estado / Restante
-            </p>
-            <p className="text-2xl font-extrabold leading-tight flex items-center gap-1.5">
-              {overallComp.status === "exceeded" ? (
-                <span className="text-amber-500 flex items-center gap-1">
-                  <AlertCircle className="h-5 w-5 shrink-0" /> {overallComp.diffText}
-                </span>
-              ) : overallComp.status === "exact" ? (
-                <span className="text-emerald-500 flex items-center gap-1">
-                  <CheckCircle2 className="h-5 w-5 shrink-0" /> ¡Completado!
-                </span>
-              ) : (
-                <span className="text-accent-foreground">{overallComp.diffText}</span>
-              )}
-            </p>
-          </div>
         </div>
 
         {/* Barra de Progreso General */}
@@ -724,7 +724,7 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
             <div className="flex justify-between text-xs font-extrabold">
               <span>Progreso general: {overallComp.percentage}%</span>
               <span>
-                {overallComp.addedText} / {overallComp.targetText}
+                {overallComp.addedText} / {overallComp.targetText} ({overallComp.diffText})
               </span>
             </div>
             <div className="relative h-3.5 w-full overflow-hidden rounded-full bg-secondary border border-ink/20">
@@ -743,18 +743,18 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
         )}
       </div>
 
-      {/* Pestañas de Selección de Pases */}
+      {/* Pestañas de Selección de Pases (tamaño reducido) */}
       {config.passes.length > 1 && (
-        <div className="comic-sm flex overflow-x-auto rounded-lg border bg-card p-1">
+        <div className="comic-sm flex overflow-x-auto rounded-lg border bg-card p-1 gap-1">
           <button
             onClick={() => setActivePassId("all")}
-            className={`flex-1 min-w-[100px] px-3 py-2 text-xs font-extrabold uppercase rounded-md transition-colors ${
+            className={`px-2.5 py-1 text-[11px] font-extrabold uppercase rounded transition-colors shrink-0 ${
               activePassId === "all"
                 ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
             }`}
           >
-            Todos los pases ({config.passes.length})
+            Todos ({config.passes.length})
           </button>
           {config.passes.map((p) => {
             const passItems = (items.data ?? []).filter(
@@ -768,10 +768,10 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
               <button
                 key={p.id}
                 onClick={() => setActivePassId(p.id)}
-                className={`flex-1 min-w-[120px] px-3 py-2 text-xs font-extrabold uppercase rounded-md transition-colors ${
+                className={`px-2.5 py-1 text-[11px] font-extrabold uppercase rounded transition-colors shrink-0 ${
                   activePassId === p.id
                     ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
                 {p.name} ({formatLongDuration(passSeconds)})
@@ -781,39 +781,63 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
         </div>
       )}
 
-      {/* Selector para añadir un arreglo al setlist */}
-      <div className="comic rounded-xl bg-card p-4 space-y-3">
-        <h3 className="text-sm font-extrabold uppercase text-muted-foreground flex items-center gap-1.5">
-          <Music2 className="h-4 w-4 text-primary" /> Añadir arreglo al setlist
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-2">
-          <div className="comic-sm flex items-center rounded-md bg-background px-3 py-2">
-            <Search className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
-            <select
-              value={selectedSongId}
-              onChange={(e) => setSelectedSongId(e.target.value)}
-              className="w-full bg-transparent text-base outline-none cursor-pointer"
+      {/* Bloque de Edición para añadir arreglos al setlist */}
+      {isEditingItems ? (
+        <div className="comic rounded-xl bg-card p-4 space-y-3 border-2 border-primary">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-extrabold uppercase text-primary flex items-center gap-1.5">
+              <Pencil className="h-4 w-4" /> Modo Edición: Añadir o Reordenar Arreglos
+            </h3>
+            <button
+              onClick={() => setIsEditingItems(false)}
+              className="comic-sm rounded bg-emerald-600 px-2.5 py-1 text-xs font-extrabold uppercase text-white hover:opacity-90"
             >
-              <option value="">Seleccionar canción del repertorio...</option>
-              {availableArrangements.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.title} ({formatDuration(a.duration_seconds)})
-                  {a.tags?.length ? ` · [${a.tags.join(", ")}]` : ""}
-                </option>
-              ))}
-            </select>
+              ✓ Concluir Edición
+            </button>
           </div>
 
-          <button
-            onClick={() => handleAddSong()}
-            disabled={!selectedSongId}
-            className="comic comic-press flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 font-extrabold uppercase text-primary-foreground disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" /> Añadir al setlist
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-2 pt-1 border-t">
+            <div className="comic-sm flex items-center rounded-md bg-background px-3 py-2">
+              <Search className="mr-2 h-4 w-4 text-muted-foreground shrink-0" />
+              <select
+                value={selectedSongId}
+                onChange={(e) => setSelectedSongId(e.target.value)}
+                className="w-full bg-transparent text-base outline-none cursor-pointer"
+              >
+                <option value="">Seleccionar canción del repertorio...</option>
+                {availableArrangements.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title} ({formatDuration(a.duration_seconds)})
+                    {a.tags?.length ? ` · [${a.tags.join(", ")}]` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={() => handleAddSong()}
+              disabled={!selectedSongId}
+              className="comic comic-press flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" /> Añadir
+            </button>
+          </div>
         </div>
-      </div>
+      ) : (
+        items.data?.length === 0 && (
+          <div className="comic rounded-xl bg-card p-6 text-center space-y-3">
+            <p className="text-sm font-bold text-muted-foreground">
+              Este setlist aún no tiene canciones. Pulsa en Editar para añadir temas.
+            </p>
+            <button
+              onClick={() => setIsEditingItems(true)}
+              className="comic comic-press inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-extrabold uppercase text-primary-foreground"
+            >
+              <Pencil className="h-4 w-4" /> Editar canciones del setlist
+            </button>
+          </div>
+        )
+      )}
 
       {/* Renderizado de Secciones por Pase */}
       <div className="space-y-6">
@@ -875,12 +899,12 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
                   </div>
                 )}
 
-                {/* Lista de arreglos del pase con Drag & Drop */}
+                {/* Lista de arreglos del pase (Lectura vs Edición) */}
                 {passItems.length === 0 ? (
                   <p className="comic-sm rounded-lg bg-background p-4 text-center text-xs font-bold text-muted-foreground">
-                    Este pase aún no tiene canciones. Añade algunas desde el buscador arriba.
+                    Este pase aún no tiene canciones.
                   </p>
-                ) : (
+                ) : isEditingItems ? (
                   <SortableList
                     items={passItems}
                     onReorder={(reordered) => handleReorderPassItems(reordered)}
@@ -934,6 +958,42 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
                       </SortableItem>
                     )}
                   </SortableList>
+                ) : (
+                  <div className="space-y-2">
+                    {passItems.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className="comic flex items-center justify-between gap-3 rounded-xl bg-background p-3.5"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="shrink-0 text-xl font-extrabold text-primary w-7 text-center">
+                            #{index + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-lg font-extrabold leading-tight">
+                              {item.arrangements?.title || "Cargando..."}
+                            </p>
+                            {!!item.arrangements?.tags?.length && (
+                              <div className="mt-0.5 flex flex-wrap gap-1">
+                                {item.arrangements.tags.map((t) => (
+                                  <span
+                                    key={t}
+                                    className="comic-sm rounded bg-secondary px-1.5 py-0.2 text-[9px] font-bold uppercase text-secondary-foreground"
+                                  >
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <span className="shrink-0 text-sm font-extrabold text-muted-foreground font-mono">
+                          {formatDuration(item.arrangements?.duration_seconds ?? 0)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             );
