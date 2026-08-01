@@ -175,6 +175,7 @@ function SetlistsPage() {
   const [targetMinutes, setTargetMinutes] = useState(90);
   const [numPasses, setNumPasses] = useState(2);
   const [passDurations, setPassDurations] = useState<number[]>([45, 45]);
+  const [newBreaks, setNewBreaks] = useState<BreakItem[]>([]);
 
   function handleNumPassesChange(n: number) {
     setNumPasses(n);
@@ -203,10 +204,18 @@ function SetlistsPage() {
       target_minutes: passDurations[i] || 0,
     }));
 
+    // Section order: all passes in order, breaks appended at end of each pass (simplified default)
+    const section_order: string[] = passes.map((p) => p.id);
+    // If there are breaks, insert them after the last pass by default
+    const breaks: BreakItem[] = newBreaks;
+    breaks.forEach((b) => section_order.push(b.id));
+
     const config: SetlistNotesConfig = {
       target_minutes: targetMinutes,
       passes,
       item_pass_map: {},
+      breaks,
+      section_order,
     };
 
     const { data, error } = await supabase
@@ -226,6 +235,7 @@ function SetlistsPage() {
 
     setName("");
     setDate("");
+    setNewBreaks([]);
     setCreating(false);
     invalidate("setlists");
     setSelected(data.id);
@@ -304,8 +314,8 @@ function SetlistsPage() {
 
       {/* Modal Nuevo Setlist */}
       {creating && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-ink/60 p-4">
-          <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+          <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4 mt-4">
             <div className="flex items-center justify-between border-b pb-2">
               <h2 className="text-2xl font-extrabold leading-none">Nuevo setlist</h2>
               <button onClick={() => setCreating(false)} aria-label="Cerrar">
@@ -402,6 +412,70 @@ function SetlistsPage() {
                 ))}
               </div>
             )}
+
+            {/* Descansos en la creación */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase flex items-center gap-1.5">
+                  <Coffee className="h-3.5 w-3.5 text-amber-500" /> Descansos
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewBreaks([
+                      ...newBreaks,
+                      { id: `b_${Date.now()}`, minutes: 15, title: "Descanso" },
+                    ]);
+                  }}
+                  className="comic-sm rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 text-xs font-bold uppercase border border-amber-500/30"
+                >
+                  + Añadir descanso
+                </button>
+              </div>
+
+              {newBreaks.length === 0 && (
+                <p className="text-xs text-muted-foreground font-bold text-center py-2">
+                  Sin descansos (opcional)
+                </p>
+              )}
+
+              {newBreaks.map((b, idx) => (
+                <div key={b.id} className="flex items-center gap-2 rounded bg-background p-2">
+                  <input
+                    value={b.title ?? "Descanso"}
+                    onChange={(e) => {
+                      const next = [...newBreaks];
+                      next[idx] = { ...next[idx]!, title: e.target.value };
+                      setNewBreaks(next);
+                    }}
+                    placeholder="Etiqueta"
+                    className="comic-sm min-w-0 flex-1 rounded bg-card px-2 py-1 text-xs font-bold outline-none"
+                  />
+                  <div className="flex items-center gap-1 shrink-0">
+                    <input
+                      type="number"
+                      min={1}
+                      max={180}
+                      value={b.minutes}
+                      onChange={(e) => {
+                        const next = [...newBreaks];
+                        next[idx] = { ...next[idx]!, minutes: Number(e.target.value) };
+                        setNewBreaks(next);
+                      }}
+                      className="comic-sm w-16 rounded bg-card px-2 py-1 text-xs font-bold text-center outline-none"
+                    />
+                    <span className="text-[10px] font-bold text-muted-foreground">min</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNewBreaks(newBreaks.filter((_, i) => i !== idx))}
+                    className="comic-sm rounded bg-destructive/10 p-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
 
             <button
               onClick={createSetlist}
@@ -953,11 +1027,15 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
   const [addingSongsPass, setAddingSongsPass] = useState<{ id: string; name: string } | null>(null);
   const [showBreakModal, setShowBreakModal] = useState(false);
 
+  // Confirmación de borrado de pase
+  const [confirmDeletePassId, setConfirmDeletePassId] = useState<string | null>(null);
+
   // Formulario de edición de configuración
   const [editName, setEditName] = useState(setlist?.name || "");
   const [editDate, setEditDate] = useState(setlist?.event_date || "");
   const [editTargetMinutes, setEditTargetMinutes] = useState(config.target_minutes);
   const [editPasses, setEditPasses] = useState<PassConfig[]>(config.passes);
+  const [editBreaks, setEditBreaks] = useState<BreakItem[]>(config.breaks ?? []);
 
   // Mapeo de canción -> pase
   const itemPassMap = config.item_pass_map || {};
@@ -986,14 +1064,61 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
 
   const overallComp = formatTimeComparison(totalSecondsSongs + totalSecondsBreaks, config.target_minutes);
 
+  // Eliminar un pase y todos sus arreglos asignados
+  async function handleDeletePass(passId: string) {
+    const updatedPasses = config.passes.filter((p) => p.id !== passId);
+    if (updatedPasses.length === 0) return; // siempre debe quedar al menos uno
+
+    // Reasignar ítems del pase eliminado al primer pase restante
+    const fallbackPassId = updatedPasses[0]!.id;
+    const newPassMap: Record<string, string> = {};
+    for (const [itemId, pid] of Object.entries(config.item_pass_map || {})) {
+      newPassMap[itemId] = pid === passId ? fallbackPassId : pid;
+    }
+
+    const currentOrder = config.section_order ?? config.passes.map((p) => p.id);
+    const updatedConfig: SetlistNotesConfig = {
+      ...config,
+      passes: updatedPasses,
+      item_pass_map: newPassMap,
+      section_order: currentOrder.filter((id) => id !== passId),
+    };
+
+    const { error } = await supabase
+      .from("setlists")
+      .update({ notes: serializeSetlistNotes(updatedConfig) })
+      .eq("id", setlistId);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    invalidate("setlists");
+    if (activePassId === passId) setActivePassId("all");
+    setConfirmDeletePassId(null);
+    toast.success("Pase eliminado");
+  }
+
   // Guardar configuración del setlist
   async function handleSaveConfig() {
     if (!setlist) return;
+
+    const currentOrder = config.section_order ?? config.passes.map((p) => p.id);
+    // Add IDs for new passes to section_order
+    const newPassIds = editPasses
+      .map((p) => p.id)
+      .filter((id) => !currentOrder.includes(id));
+    const filteredOrder = currentOrder.filter((id) =>
+      editPasses.some((p) => p.id === id) || (config.breaks ?? []).some((b) => b.id === id),
+    );
+    const newSectionOrder = [...filteredOrder, ...newPassIds];
 
     const newConfig: SetlistNotesConfig = {
       ...config,
       target_minutes: editTargetMinutes,
       passes: editPasses,
+      breaks: editBreaks,
+      section_order: newSectionOrder,
       item_pass_map: itemPassMap,
     };
 
@@ -1473,7 +1598,7 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
             onClick={() => setIsEditingItems(false)}
             className="comic-sm rounded bg-emerald-600 px-2.5 py-1.5 text-xs font-extrabold uppercase text-white hover:opacity-90 ml-auto"
           >
-            ✓ Concluir Edición
+            ✓ Guardar
           </button>
         </div>
       )}
@@ -1594,6 +1719,16 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
                           >
                             <Plus className="h-3.5 w-3.5" /> Añadir canciones
                           </button>
+                          {config.passes.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeletePassId(pass.id)}
+                              aria-label="Eliminar pase"
+                              className="comic-sm comic-press flex items-center gap-1 rounded-md bg-destructive/10 px-2.5 py-1.5 text-xs font-extrabold uppercase text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </>
                       ) : (
                         pass.target_minutes > 0 && (
@@ -1755,8 +1890,8 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
 
       {/* Modal Editar Configuración de Setlist y Pases */}
       {editingConfig && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-ink/60 p-4">
-          <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+          <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4 mt-4">
             <div className="flex items-center justify-between border-b pb-2">
               <h2 className="text-2xl font-extrabold leading-none">Configurar Setlist</h2>
               <button onClick={() => setEditingConfig(false)} aria-label="Cerrar">
@@ -1809,7 +1944,7 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
                 <button
                   type="button"
                   onClick={() => {
-                    const nextId = `p${editPasses.length + 1}`;
+                    const nextId = `p${Date.now()}`;
                     setEditPasses([
                       ...editPasses,
                       { id: nextId, name: `Pase ${editPasses.length + 1}`, target_minutes: 30 },
@@ -1862,6 +1997,72 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
               ))}
             </div>
 
+            {/* Descansos */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase flex items-center gap-1.5">
+                  <Coffee className="h-3.5 w-3.5 text-amber-500" /> Descansos
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newBreak: BreakItem = {
+                      id: `b_${Date.now()}`,
+                      minutes: 15,
+                      title: "Descanso",
+                    };
+                    setEditBreaks([...editBreaks, newBreak]);
+                  }}
+                  className="comic-sm rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2 py-0.5 text-xs font-bold uppercase border border-amber-500/30"
+                >
+                  + Añadir descanso
+                </button>
+              </div>
+
+              {editBreaks.length === 0 && (
+                <p className="text-xs text-muted-foreground font-bold text-center py-2">
+                  Sin descansos configurados
+                </p>
+              )}
+
+              {editBreaks.map((b, idx) => (
+                <div key={b.id} className="flex items-center gap-2 rounded bg-background p-2">
+                  <input
+                    value={b.title ?? "Descanso"}
+                    onChange={(e) => {
+                      const next = [...editBreaks];
+                      next[idx] = { ...next[idx]!, title: e.target.value };
+                      setEditBreaks(next);
+                    }}
+                    placeholder="Etiqueta"
+                    className="comic-sm min-w-0 flex-1 rounded bg-card px-2 py-1 text-xs font-bold outline-none"
+                  />
+                  <div className="flex items-center gap-1 shrink-0">
+                    <input
+                      type="number"
+                      min={1}
+                      max={180}
+                      value={b.minutes}
+                      onChange={(e) => {
+                        const next = [...editBreaks];
+                        next[idx] = { ...next[idx]!, minutes: Number(e.target.value) };
+                        setEditBreaks(next);
+                      }}
+                      className="comic-sm w-16 rounded bg-card px-2 py-1 text-xs font-bold text-center outline-none"
+                    />
+                    <span className="text-[10px] font-bold text-muted-foreground">min</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditBreaks(editBreaks.filter((_, i) => i !== idx))}
+                    className="comic-sm rounded bg-destructive/10 p-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
             <button
               onClick={handleSaveConfig}
               className="comic comic-press flex items-center justify-center gap-2 w-full rounded-md bg-primary py-3 font-extrabold uppercase text-primary-foreground"
@@ -1871,6 +2072,42 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
           </div>
         </div>
       )}
+
+      {/* Popup de confirmación de borrado de pase */}
+      {confirmDeletePassId && (() => {
+        const passToDelete = config.passes.find((p) => p.id === confirmDeletePassId);
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/70 p-4">
+            <div className="comic w-full max-w-xs rounded-xl bg-card p-6 space-y-4 shadow-2xl">
+              <div className="flex flex-col items-center gap-2 text-center">
+                <div className="rounded-full bg-destructive/10 p-3">
+                  <Trash2 className="h-7 w-7 text-destructive" />
+                </div>
+                <h2 className="text-xl font-extrabold leading-tight">
+                  ¿Eliminar {passToDelete?.name ?? "este pase"}?
+                </h2>
+                <p className="text-xs font-bold text-muted-foreground">
+                  Las canciones de este pase se reasignarán al primer pase restante. Esta acción no se puede deshacer.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmDeletePassId(null)}
+                  className="comic-sm flex-1 rounded-lg bg-accent py-2 text-sm font-extrabold uppercase hover:bg-muted"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => handleDeletePass(confirmDeletePassId)}
+                  className="comic comic-press flex-1 rounded-lg bg-destructive py-2 text-sm font-extrabold uppercase text-destructive-foreground"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
