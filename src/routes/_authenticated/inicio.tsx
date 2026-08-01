@@ -6,8 +6,7 @@ import { useArrangements, useStreetSongs, useSetlists, useLyrics } from "@/lib/q
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { GoogleDriveIcon, InstagramIcon } from "@/components/BrandIcons";
 
-const DRIVE_URL =
-  "https://drive.google.com/drive/folders/1SJs1eIj7suxJL_eD9W0_m5rCBdva5jUi?usp=share_link";
+const DRIVE_URL = "https://drive.google.com/drive/folders/1SJs1eIj7suxJL_eD9W0_m5rCBdva5jUi";
 const INSTAGRAM_URL = "https://www.instagram.com/showlabomba?igsh=MTIweG1tM2luN3Jjbw==";
 const GAME_URL = "https://aythor.itch.io/la-bomba-show-runner";
 
