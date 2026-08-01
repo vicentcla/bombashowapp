@@ -1,10 +1,10 @@
-import { Monitor, Moon, Sun } from "lucide-react";
+import { MonitorSmartphone, Moon, Sun } from "lucide-react";
 import { useTheme, type ThemeMode } from "@/lib/theme";
 
 const CYCLE: ThemeMode[] = ["auto", "light", "dark"];
 
 const META: Record<ThemeMode, { icon: typeof Sun; label: string }> = {
-  auto: { icon: Monitor, label: "Sistema" },
+  auto: { icon: MonitorSmartphone, label: "Sistema" },
   light: { icon: Sun, label: "Claro" },
   dark: { icon: Moon, label: "Oscuro" },
 };
