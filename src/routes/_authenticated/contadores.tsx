@@ -4,7 +4,7 @@ import { Clock, Megaphone, Drum, Search } from "lucide-react";
 import { Counters, useCurrentCounts } from "@/components/Counters";
 import { SortBar, type SortMode } from "@/components/SortBar";
 import { useStreetSongs, useArrangements, useReorder } from "@/lib/queries";
-import { formatDuration } from "@/lib/format";
+import { formatDuration, normalize } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/contadores")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -92,13 +92,22 @@ function ContadoresCalle() {
   const [sort, setSort] = useState<SortMode>("alfabetico");
 
   const allTags = useMemo(() => {
-    const set = new Set<string>();
-    for (const s of songs.data ?? []) for (const t of s.tags ?? []) set.add(t);
-    return [...set].sort();
+    const map = new Map<string, string>();
+    for (const s of songs.data ?? []) {
+      for (const t of s.tags ?? []) {
+        const norm = normalize(t);
+        if (norm && !map.has(norm)) {
+          map.set(norm, t);
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b, "es"));
   }, [songs.data]);
 
   const list = useMemo(() => {
-    const base = (songs.data ?? []).filter((s) => !tag || (s.tags ?? []).includes(tag));
+    const base = (songs.data ?? []).filter(
+      (s) => !tag || (s.tags ?? []).some((t) => normalize(t) === normalize(tag))
+    );
     const sorted = [...base];
     if (sort === "alfabetico") sorted.sort((a, b) => a.title.localeCompare(b.title, "es"));
     if (sort === "mas")
@@ -175,13 +184,22 @@ function ContadoresArreglos() {
   const [sort, setSort] = useState<SortMode>("alfabetico");
 
   const allTags = useMemo(() => {
-    const set = new Set<string>();
-    for (const a of arrangements.data ?? []) for (const t of a.tags ?? []) set.add(t);
-    return [...set].sort();
+    const map = new Map<string, string>();
+    for (const a of arrangements.data ?? []) {
+      for (const t of a.tags ?? []) {
+        const norm = normalize(t);
+        if (norm && !map.has(norm)) {
+          map.set(norm, t);
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b, "es"));
   }, [arrangements.data]);
 
   const list = useMemo(() => {
-    const base = (arrangements.data ?? []).filter((a) => !tag || (a.tags ?? []).includes(tag));
+    const base = (arrangements.data ?? []).filter(
+      (a) => !tag || (a.tags ?? []).some((t) => normalize(t) === normalize(tag))
+    );
     const sorted = [...base];
     if (sort === "alfabetico") sorted.sort((a, b) => a.title.localeCompare(b.title, "es"));
     if (sort === "duracion") sorted.sort((a, b) => b.duration_seconds - a.duration_seconds);

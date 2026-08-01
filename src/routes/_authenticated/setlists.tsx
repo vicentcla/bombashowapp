@@ -54,6 +54,7 @@ import {
   formatLongDuration,
   formatMinutesToHours,
   formatTimeComparison,
+  normalize,
 } from "@/lib/format";
 import { SortableList, SortableItem } from "@/components/SortableList";
 
@@ -710,19 +711,28 @@ function AddSongsToPassModal({
   const [busy, setBusy] = useState(false);
 
   const allTags = useMemo(() => {
-    const set = new Set<string>();
-    for (const a of arrangements) for (const t of a.tags ?? []) set.add(t);
-    return [...set].sort();
+    const map = new Map<string, string>();
+    for (const a of arrangements) {
+      for (const t of a.tags ?? []) {
+        const norm = normalize(t);
+        if (norm && !map.has(norm)) {
+          map.set(norm, t);
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b, "es"));
   }, [arrangements]);
 
   const filtered = useMemo(() => {
-    let list = arrangements.filter((a) => !tag || (a.tags ?? []).includes(tag));
+    let list = arrangements.filter(
+      (a) => !tag || (a.tags ?? []).some((t) => normalize(t) === normalize(tag))
+    );
     if (search.trim()) {
-      const q = search.toLowerCase().trim();
+      const q = normalize(search.trim());
       list = list.filter(
         (a) =>
-          a.title.toLowerCase().includes(q) ||
-          (a.tags ?? []).some((t) => t.toLowerCase().includes(q)),
+          normalize(a.title).includes(q) ||
+          (a.tags ?? []).some((t) => normalize(t).includes(q)),
       );
     }
     return list;

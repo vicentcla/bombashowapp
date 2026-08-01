@@ -17,7 +17,8 @@ import {
   type Arrangement,
   type StreetSong,
 } from "@/lib/queries";
-import { formatDuration, formatLongDuration } from "@/lib/format";
+import { formatDuration, formatLongDuration, normalize } from "@/lib/format";
+import { TagInput } from "@/components/TagInput";
 
 export const Route = createFileRoute("/_authenticated/repertorio")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -121,13 +122,22 @@ function RepertorioArreglos({ initialEditLyricId }: { initialEditLyricId?: strin
   }, [initialEditLyricId, arrangements.data]);
 
   const allTags = useMemo(() => {
-    const set = new Set<string>();
-    for (const a of arrangements.data ?? []) for (const t of a.tags ?? []) set.add(t);
-    return [...set].sort();
+    const map = new Map<string, string>();
+    for (const a of arrangements.data ?? []) {
+      for (const t of a.tags ?? []) {
+        const norm = normalize(t);
+        if (norm && !map.has(norm)) {
+          map.set(norm, t);
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b, "es"));
   }, [arrangements.data]);
 
   const list = useMemo(() => {
-    const sorted = (arrangements.data ?? []).filter((a) => !tag || (a.tags ?? []).includes(tag));
+    const sorted = (arrangements.data ?? []).filter(
+      (a) => !tag || (a.tags ?? []).some((t) => normalize(t) === normalize(tag))
+    );
     const copy = [...sorted];
     if (sort === "alfabetico") copy.sort((a, b) => a.title.localeCompare(b.title, "es"));
     if (sort === "duracion") copy.sort((a, b) => b.duration_seconds - a.duration_seconds);
@@ -366,17 +376,26 @@ function RepertorioCalle({ initialEditLyricId }: { initialEditLyricId?: string }
   }, [initialEditLyricId, songs.data]);
 
   const allTags = useMemo(() => {
-    const set = new Set<string>();
-    for (const s of songs.data ?? []) for (const t of s.tags ?? []) set.add(t);
-    return Array.from(set).sort();
+    const map = new Map<string, string>();
+    for (const s of songs.data ?? []) {
+      for (const t of s.tags ?? []) {
+        const norm = normalize(t);
+        if (norm && !map.has(norm)) {
+          map.set(norm, t);
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b, "es"));
   }, [songs.data]);
 
   const list = useMemo(() => {
-    let base = (songs.data ?? []).filter((s) => !tag || (s.tags ?? []).includes(tag));
+    let base = (songs.data ?? []).filter(
+      (s) => !tag || (s.tags ?? []).some((t) => normalize(t) === normalize(tag))
+    );
     if (search.trim()) {
-      const q = search.toLowerCase();
+      const q = normalize(search.trim());
       base = base.filter(
-        (s) => s.title.toLowerCase().includes(q) || (s.tags ?? []).some((t) => t.toLowerCase().includes(q))
+        (s) => normalize(s.title).includes(q) || (s.tags ?? []).some((t) => normalize(t).includes(q))
       );
     }
     const copy = [...base];
@@ -622,7 +641,7 @@ function StreetSongDialog({
   onSaved: () => void;
 }) {
   const [title, setTitle] = useState(song?.title ?? "");
-  const [tags, setTags] = useState((song?.tags ?? []).join(", "));
+  const [tags, setTags] = useState<string[]>(song?.tags ?? []);
   const [busy, setBusy] = useState(false);
 
   async function save() {
@@ -631,20 +650,14 @@ function StreetSongDialog({
       return;
     }
     setBusy(true);
-    const parsedTags = tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-
     const payload = {
       title: title.trim(),
-      tags: parsedTags,
+      tags: tags.map((t) => t.trim()).filter(Boolean),
     };
 
     const { error } = song?.id
       ? await supabase.from("street_songs").update(payload).eq("id", song.id)
       : await supabase.from("street_songs").insert(payload);
-
 
     setBusy(false);
     if (error) {
@@ -678,15 +691,10 @@ function StreetSongDialog({
           />
         </label>
 
-        <label className="mb-4 block text-sm font-bold uppercase">
-          Etiquetas (separadas por comas)
-          <input
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            placeholder="Starter, Arreglo, Pack"
-            className="comic-sm mt-1 w-full rounded-md bg-background px-3 py-2 text-base font-normal outline-none"
-          />
-        </label>
+        <div className="mb-4 block text-sm font-bold uppercase">
+          <span className="mb-1 block">Etiquetas</span>
+          <TagInput tags={tags} onChange={setTags} placeholder="Añadir etiqueta (ej. Pop + Intro)" />
+        </div>
 
         <button
           onClick={save}
@@ -714,7 +722,7 @@ function ArrangementDialog({
     String(Math.floor((arrangement.duration_seconds ?? 0) / 60)),
   );
   const [seconds, setSeconds] = useState(String((arrangement.duration_seconds ?? 0) % 60));
-  const [tags, setTags] = useState((arrangement.tags ?? []).join(", "));
+  const [tags, setTags] = useState<string[]>(arrangement.tags ?? []);
   const [busy, setBusy] = useState(false);
 
   async function save() {
@@ -727,10 +735,7 @@ function ArrangementDialog({
       title: title.trim(),
       duration_seconds:
         (parseInt(minutes || "0", 10) || 0) * 60 + (parseInt(seconds || "0", 10) || 0),
-      tags: tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
+      tags: tags.map((t) => t.trim()).filter(Boolean),
     };
     const { error } = arrangement.id
       ? await supabase.from("arrangements").update(payload).eq("id", arrangement.id)
@@ -790,15 +795,10 @@ function ArrangementDialog({
           </label>
         </div>
 
-        <label className="mb-4 block text-sm font-bold uppercase">
-          Etiquetas (separadas por comas)
-          <input
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            placeholder="pasodoble, rumba, lento"
-            className="comic-sm mt-1 w-full rounded-md bg-background px-3 py-2 text-base font-normal outline-none"
-          />
-        </label>
+        <div className="mb-4 block text-sm font-bold uppercase">
+          <span className="mb-1 block">Etiquetas</span>
+          <TagInput tags={tags} onChange={setTags} placeholder="Añadir etiqueta (ej. pasodoble + Intro)" />
+        </div>
 
         <button
           onClick={save}
