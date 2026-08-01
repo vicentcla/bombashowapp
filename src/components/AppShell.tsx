@@ -3,13 +3,13 @@ import {
   Home,
   FileText,
   Clock,
-  ListOrdered,
+  ListMusic,
   Library,
   LogOut,
   Gamepad2,
   Settings,
 } from "lucide-react";
-import { useState, useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -19,7 +19,7 @@ const NAV = [
   { to: "/inicio", label: "Inicio", icon: Home },
   { to: "/letras", label: "Letras", icon: FileText },
   { to: "/contadores", label: "Contadores", icon: Clock },
-  { to: "/setlists", label: "Setlists", icon: ListOrdered },
+  { to: "/setlists", label: "Setlists", icon: ListMusic },
   { to: "/repertorio", label: "Repertorio", icon: Library },
 ] as const;
 
@@ -29,30 +29,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Estado para la ocultación suave de la cabecera al hacer scroll hacia abajo en móvil
-  const [showHeader, setShowHeader] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-
-      if (currentScrollY <= 20) {
-        setShowHeader(true);
-      } else if (currentScrollY > lastScrollY && currentScrollY > 50) {
-        // Hacia abajo -> Ocultar cabecera superior en móvil
-        setShowHeader(false);
-      } else if (currentScrollY < lastScrollY) {
-        // Hacia arriba -> Mostrar cabecera
-        setShowHeader(true);
-      }
-      setLastScrollY(currentScrollY);
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
-
   async function signOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
@@ -61,13 +37,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-32 md:pb-6">
-      {/* Cabecera superior con efecto Glassmorphism y ocultación en scroll */}
-      <header
-        className={`fixed top-0 inset-x-0 z-40 border-b-[3px] border-ink bg-card/95 backdrop-blur-md transition-transform duration-300 ease-in-out md:sticky md:translate-y-0 ${
-          showHeader ? "translate-y-0" : "-translate-y-full"
-        }`}
-      >
+    <div className="min-h-screen bg-background pb-24 md:pb-6">
+      {/* Cabecera: fluye con la página en móvil, sticky en escritorio */}
+      <header className="border-b-[3px] border-ink bg-card/95 backdrop-blur-md md:sticky md:top-0 md:z-40">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-3 py-2 sm:px-4">
           <Link to="/inicio" className="shrink-0 min-w-0">
             <img
@@ -125,23 +97,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </header>
 
-      {/* Contenido principal con compensación de altura de cabecera fija en móvil */}
-      <main className="mx-auto max-w-5xl px-3 pt-16 sm:px-4 md:pt-6">{children}</main>
+      {/* Contenido principal */}
+      <main className="mx-auto max-w-5xl px-3 py-4 sm:px-4 md:py-6">{children}</main>
 
-      {/* Barra de navegación inferior móvil tipo App Nativa */}
+      {/* Barra de navegación inferior móvil — sin reborde en iconos */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t-[3px] border-ink bg-card/95 backdrop-blur-md shadow-2xl md:hidden">
-        <div className="grid grid-cols-5 items-center px-1 py-1.5">
+        <div className="grid grid-cols-5 items-center px-1 py-1">
           {NAV.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
-              activeProps={{ className: "text-primary scale-105" }}
+              activeProps={{ className: "text-primary" }}
               inactiveProps={{ className: "text-muted-foreground hover:text-foreground" }}
-              className="flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-xl transition-all duration-200 active:scale-95"
+              className="flex flex-col items-center justify-center gap-0.5 py-2 px-1 transition-all duration-200 active:scale-95"
             >
-              <div className="comic-sm flex items-center justify-center rounded-lg p-1">
-                <Icon className="h-5 w-5 shrink-0" />
-              </div>
+              <Icon className="h-5 w-5 shrink-0" />
               <span className="leading-none text-[10px] font-extrabold uppercase tracking-tight">
                 {label}
               </span>
