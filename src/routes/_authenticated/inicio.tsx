@@ -39,17 +39,17 @@ function Inicio() {
   return (
     <div>
       <div className="comic mb-6 flex items-center gap-4 rounded-xl bg-card p-4">
+        <img
+          src={aniversarioAsset.url}
+          alt="Sello 10 aniversario"
+          className="h-20 w-auto shrink-0"
+        />
         <div className="min-w-0 flex-1">
           <h1 className="text-3xl leading-none">¡Hola, xaranguer@!</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Bienvenid@!
           </p>
         </div>
-        <img
-          src={aniversarioAsset.url}
-          alt="Sello 10 aniversario"
-          className="h-20 w-auto shrink-0"
-        />
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
