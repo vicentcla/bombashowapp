@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, Pencil, X } from "lucide-react";
-import { useLyrics, type Lyric, type Scope } from "@/lib/queries";
+import { useLyrics, useArrangements, useStreetSongs, type Lyric, type Scope } from "@/lib/queries";
 import { normalize } from "@/lib/format";
 import { useIsAdmin } from "@/hooks/useAuth";
 
@@ -26,18 +26,60 @@ export const Route = createFileRoute("/_authenticated/letras")({
 function Letras() {
   const [kind, setKind] = useState<Scope>("calle");
   const [query, setQuery] = useState("");
+  const [tag, setTag] = useState("");
   const [activeLyric, setActiveLyric] = useState<Lyric | null>(null);
-  const lyrics = useLyrics();
 
+  const lyrics = useLyrics();
+  const arrangements = useArrangements();
+  const streetSongs = useStreetSongs();
+
+  // Mapear cada letra con sus etiquetas según la canción o arreglo correspondiente
+  const lyricsWithTags = useMemo(() => {
+    const arrMap = new Map((arrangements.data ?? []).map((a) => [a.id, a.tags ?? []]));
+    const streetMap = new Map((streetSongs.data ?? []).map((s) => [s.id, s.tags ?? []]));
+    const streetTitleMap = new Map((streetSongs.data ?? []).map((s) => [s.title.toUpperCase().trim(), s.tags ?? []]));
+
+    return (lyrics.data ?? []).map((l) => {
+      let lTags: string[] = [];
+      if (l.kind === "arreglo" && l.arrangement_id) {
+        lTags = arrMap.get(l.arrangement_id) ?? [];
+      } else if (l.kind === "calle") {
+        if (l.street_song_id) {
+          lTags = streetMap.get(l.street_song_id) ?? [];
+        } else {
+          lTags = streetTitleMap.get(l.title.toUpperCase().trim()) ?? [];
+        }
+      }
+      return { ...l, tags: lTags };
+    });
+  }, [lyrics.data, arrangements.data, streetSongs.data]);
+
+  // Lista de todas las etiquetas disponibles para la pestaña actual (calle o arreglo)
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    if (kind === "arreglo") {
+      for (const a of arrangements.data ?? []) for (const t of a.tags ?? []) set.add(t);
+    } else {
+      for (const s of streetSongs.data ?? []) for (const t of s.tags ?? []) set.add(t);
+    }
+    return Array.from(set).sort();
+  }, [kind, arrangements.data, streetSongs.data]);
+
+  // Filtrar la lista de letras por tipo, búsqueda y etiqueta seleccionada
   const list = useMemo(() => {
     const q = normalize(query.trim());
-    return (lyrics.data ?? [])
+    return lyricsWithTags
       .filter((l) => l.kind === kind)
+      .filter((l) => !tag || (l.tags ?? []).includes(tag))
       .filter(
-        (l) => !q || normalize(l.title).includes(q) || normalize(l.plain_text).includes(q),
+        (l) =>
+          !q ||
+          normalize(l.title).includes(q) ||
+          normalize(l.plain_text).includes(q) ||
+          (l.tags ?? []).some((t) => normalize(t).includes(q))
       )
       .sort((a, b) => a.title.localeCompare(b.title, "es"));
-  }, [lyrics.data, kind, query]);
+  }, [lyricsWithTags, kind, query, tag]);
 
   return (
     <div>
@@ -53,7 +95,10 @@ function Letras() {
           <button
             key={value}
             type="button"
-            onClick={() => setKind(value)}
+            onClick={() => {
+              setKind(value);
+              setTag("");
+            }}
             className={`flex-1 px-3 py-2 text-sm font-extrabold uppercase ${
               kind === value ? "bg-primary text-primary-foreground" : "bg-card"
             }`}
@@ -63,12 +108,38 @@ function Letras() {
         ))}
       </div>
 
+      {allTags.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setTag("")}
+            className={`comic-sm rounded px-2.5 py-1 text-xs font-extrabold uppercase ${
+              tag === "" ? "bg-primary text-primary-foreground" : "bg-card"
+            }`}
+          >
+            Todas ({lyricsWithTags.filter((l) => l.kind === kind).length})
+          </button>
+          {allTags.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTag(t === tag ? "" : t)}
+              className={`comic-sm rounded px-2.5 py-1 text-xs font-extrabold uppercase ${
+                tag === t ? "bg-primary text-primary-foreground" : "bg-card"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="comic-sm mb-3 flex items-center gap-2 rounded-md bg-card px-3">
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por título o por texto de la letra…"
+          placeholder="Buscar por título, texto o etiqueta…"
           className="w-full bg-transparent py-2 text-base outline-none"
         />
       </div>
@@ -89,9 +160,21 @@ function Letras() {
             <button
               type="button"
               onClick={() => setActiveLyric(l)}
-              className="w-full text-left text-xl font-bold leading-tight hover:text-primary transition-colors"
+              className="w-full text-left font-bold leading-tight hover:text-primary transition-colors"
             >
-              {l.title}
+              <span className="text-xl block">{l.title}</span>
+              {!!l.tags?.length && (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {l.tags.map((t) => (
+                    <span
+                      key={t}
+                      className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[10px] font-bold uppercase text-secondary-foreground"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
             </button>
           </div>
         ))}
