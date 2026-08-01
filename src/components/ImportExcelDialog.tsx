@@ -99,18 +99,25 @@ function parsePastedTable(text: string): ImportItem[] {
   for (const line of lines) {
     if (line.toLowerCase().includes("nombre del arreglo") || line.startsWith("| ---")) continue;
 
-    const parts = line.includes("|")
-      ? line.split("|").map((p) => p.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1)
-      : line.split("\t").map((p) => p.trim());
+    let parts: string[];
+    if (line.includes("|")) {
+      parts = line.split("|").map((p) => p.trim()).filter((p, idx, arr) => {
+        if ((idx === 0 || idx === arr.length - 1) && p === "") return false;
+        return true;
+      });
+    } else {
+      parts = line.split("\t").map((p) => p.trim());
+    }
 
     if (parts.length >= 1) {
       const title = parts[0];
       if (!title) continue;
 
       const durStr = parts[1] || "";
-      const alPuesto = parts[2] || "";
+      const alPuestoRaw = parts[2] ? parts[2].trim() : "";
+      const alPuesto = alPuestoRaw || "SÍ";
 
-      if (alPuesto.toUpperCase().trim() === "NO") continue;
+      if (alPuesto.toUpperCase() === "NO") continue;
 
       items.push({
         title: title.replace(/^"|"$/g, ""),
@@ -248,14 +255,14 @@ export function ImportExcelDialog({
             <label className="text-xs font-bold uppercase block">
               Pega aquí las filas de Excel o CSV:
             </label>
-            <p className="text-[11px] text-muted-foreground font-medium">
-              Copia directamente las celdas de tu Excel (o tabla con <code className="bg-muted px-1 rounded">|</code>). Columnas: <strong>Título | Duración (MM:SS) | Al puesto</strong>
+            <p className="text-[11px] text-muted-foreground font-medium leading-normal">
+              Copia directamente las celdas de tu Excel (o crea una tabla con | como separador). Columnas: <strong>| Título | Duración ( en MM:SS) | Al puesto (Opcional).</strong>
             </p>
             <textarea
               rows={4}
               value={pastedText}
               onChange={(e) => setPastedText(e.target.value)}
-              placeholder={`Ejemplo de filas copiadas de Excel:\n80'S DANCE\t04:30:00\tSÍ\nESTOPA\t04:30:00\t+ O -\nCLAVADO EN UN BAR\t03:00:00\tSÍ`}
+              placeholder={`Ejemplo de filas copiadas o escritas:\n| 80'S DANCE | 04:30:00 | SÍ |\n| ESTOPA | 04:30:00 | + O - |\n| CLAVADO EN UN BAR | 03:00:00 | |`}
               className="comic-sm w-full rounded-md bg-background p-2.5 text-xs outline-none font-mono placeholder:text-muted-foreground/60"
             />
           </div>
