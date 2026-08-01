@@ -887,7 +887,7 @@ function AddSongsToPassModal({
   );
 }
 
-// ─── Modal para Añadir Descanso (entre secciones) ────────────────────────────
+// ─── Modal para Añadir Descanso (entre pases) ────────────────────────────────
 function AddBreakModal({
   passes,
   sectionOrder,
@@ -901,26 +901,31 @@ function AddBreakModal({
 }) {
   const [minutes, setMinutes] = useState(15);
   const [title, setTitle] = useState("Descanso");
-  const [afterSectionId, setAfterSectionId] = useState(
-    sectionOrder.length > 0 ? sectionOrder[sectionOrder.length - 1] : passes[0]?.id ?? ""
-  );
   const [busy, setBusy] = useState(false);
+
+  // Filtrar pases que NO tienen ya un descanso inmediatamente después en sectionOrder
+  const availablePasses = useMemo(() => {
+    return passes.filter((p) => {
+      const idx = sectionOrder.indexOf(p.id);
+      if (idx === -1) return true;
+      const nextId = sectionOrder[idx + 1];
+      return !nextId || !nextId.startsWith("b_");
+    });
+  }, [passes, sectionOrder]);
+
+  const [afterSectionId, setAfterSectionId] = useState(
+    availablePasses.length > 0 ? availablePasses[0]!.id : ""
+  );
 
   const presets = [5, 10, 15, 20, 30, 45];
 
   async function handleConfirm() {
+    if (!afterSectionId) return;
     setBusy(true);
     await onAdd(minutes, afterSectionId, title);
     setBusy(false);
     onClose();
   }
-
-  // Build position options from sectionOrder
-  const positionOptions = sectionOrder.map((id, idx) => {
-    const pass = passes.find((p) => p.id === id);
-    const label = pass ? pass.name : `Sección ${idx + 1}`;
-    return { id, label };
-  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
@@ -929,7 +934,7 @@ function AddBreakModal({
           <div>
             <h2 className="text-2xl font-extrabold leading-none">Añadir descanso</h2>
             <p className="text-xs font-bold text-muted-foreground mt-1">
-              Inserta una pausa entre secciones
+              Inserta una pausa entre pases
             </p>
           </div>
           <button onClick={onClose} aria-label="Cerrar">
@@ -937,66 +942,73 @@ function AddBreakModal({
           </button>
         </div>
 
-        {positionOptions.length > 1 && (
-          <div>
-            <label className="mb-1 block text-xs font-bold uppercase">Insertar después de</label>
-            <select
-              value={afterSectionId}
-              onChange={(e) => setAfterSectionId(e.target.value)}
-              className="comic-sm w-full rounded-md bg-background px-3 py-2 text-base outline-none"
-            >
-              {positionOptions.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+        {availablePasses.length === 0 ? (
+          <div className="comic-sm rounded-lg bg-amber-500/10 border border-amber-500/30 p-4 text-amber-900 dark:text-amber-200 text-xs font-extrabold text-center space-y-2">
+            <p>Todos los pases ya tienen un descanso a continuación.</p>
+            <p className="text-[11px] font-bold opacity-80">No se pueden colocar dos descansos juntos.</p>
           </div>
-        )}
-
-        <div>
-          <label className="mb-1 block text-xs font-bold uppercase">Duración (minutos)</label>
-          <div className="grid grid-cols-3 gap-1.5 mb-2">
-            {presets.map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMinutes(m)}
-                className={`comic-sm py-2 rounded text-xs font-extrabold uppercase ${
-                  minutes === m ? "bg-primary text-primary-foreground" : "bg-background"
-                }`}
+        ) : (
+          <>
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase">Insertar después de</label>
+              <select
+                value={afterSectionId}
+                onChange={(e) => setAfterSectionId(e.target.value)}
+                className="comic-sm w-full rounded-md bg-background px-3 py-2 text-base outline-none font-bold"
               >
-                {m} min
-              </button>
-            ))}
-          </div>
-          <input
-            type="number"
-            min={1}
-            max={180}
-            value={minutes}
-            onChange={(e) => setMinutes(Number(e.target.value))}
-            className="comic-sm w-full rounded-md bg-background px-3 py-2 text-base font-bold outline-none"
-          />
-        </div>
+                {availablePasses.map((pass) => (
+                  <option key={pass.id} value={pass.id}>
+                    {pass.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-bold uppercase">Título / Etiqueta</label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Descanso, Pausa bocata..."
-            className="comic-sm w-full rounded-md bg-background px-3 py-2 text-base outline-none"
-          />
-        </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase">Duración (minutos)</label>
+              <div className="grid grid-cols-3 gap-1.5 mb-2">
+                {presets.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMinutes(m)}
+                    className={`comic-sm py-2 rounded text-xs font-extrabold uppercase ${
+                      minutes === m ? "bg-primary text-primary-foreground" : "bg-background"
+                    }`}
+                  >
+                    {m} min
+                  </button>
+                ))}
+              </div>
+              <input
+                type="number"
+                min={1}
+                max={180}
+                value={minutes}
+                onChange={(e) => setMinutes(Number(e.target.value))}
+                className="comic-sm w-full rounded-md bg-background px-3 py-2 text-base font-bold outline-none"
+              />
+            </div>
 
-        <button
-          onClick={handleConfirm}
-          disabled={busy || minutes <= 0}
-          className="comic comic-press flex items-center justify-center gap-2 w-full rounded-md bg-amber-500 text-ink py-3 font-extrabold uppercase disabled:opacity-50"
-        >
-          <Coffee className="h-5 w-5" /> Añadir Descanso ({minutes} min)
-        </button>
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase font-extrabold">Título / Etiqueta</label>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Descanso, Pausa bocata..."
+                className="comic-sm w-full rounded-md bg-background px-3 py-2 text-base outline-none"
+              />
+            </div>
+
+            <button
+              onClick={handleConfirm}
+              disabled={busy || minutes <= 0 || !afterSectionId}
+              className="comic comic-press flex items-center justify-center gap-2 w-full rounded-md bg-amber-500 text-ink py-3 font-extrabold uppercase disabled:opacity-50"
+            >
+              <Coffee className="h-5 w-5" /> Añadir Descanso ({minutes} min)
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1064,17 +1076,33 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
 
   const overallComp = formatTimeComparison(totalSecondsSongs + totalSecondsBreaks, config.target_minutes);
 
-  // Eliminar un pase y todos sus arreglos asignados
+  // Eliminar un pase y todas sus canciones asignadas
   async function handleDeletePass(passId: string) {
     const updatedPasses = config.passes.filter((p) => p.id !== passId);
     if (updatedPasses.length === 0) return; // siempre debe quedar al menos uno
 
-    // Reasignar ítems del pase eliminado al primer pase restante
-    const fallbackPassId = updatedPasses[0]!.id;
-    const newPassMap: Record<string, string> = {};
-    for (const [itemId, pid] of Object.entries(config.item_pass_map || {})) {
-      newPassMap[itemId] = pid === passId ? fallbackPassId : pid;
+    // Encontrar e eliminar todas las canciones pertenecientes a este pase
+    const itemsToDelete = (items.data ?? [])
+      .filter((i) => (itemPassMap[i.id] || config.passes[0]?.id) === passId)
+      .map((i) => i.id);
+
+    if (itemsToDelete.length > 0) {
+      const { error: delError } = await supabase
+        .from("setlist_items")
+        .delete()
+        .in("id", itemsToDelete);
+
+      if (delError) {
+        toast.error(delError.message);
+        return;
+      }
     }
+
+    // Limpiar el itemPassMap removiendo las entradas de las canciones eliminadas
+    const newPassMap: Record<string, string> = { ...config.item_pass_map };
+    itemsToDelete.forEach((itemId) => {
+      delete newPassMap[itemId];
+    });
 
     const currentOrder = config.section_order ?? config.passes.map((p) => p.id);
     const updatedConfig: SetlistNotesConfig = {
@@ -1093,10 +1121,14 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
       toast.error(error.message);
       return;
     }
-    invalidate("setlists");
+    invalidate("setlist_items", "setlists");
     if (activePassId === passId) setActivePassId("all");
     setConfirmDeletePassId(null);
-    toast.success("Pase eliminado");
+    toast.success(
+      itemsToDelete.length > 0
+        ? `Pase eliminado junto a sus ${itemsToDelete.length} canciones`
+        : "Pase eliminado"
+    );
   }
 
   // Guardar configuración del setlist
@@ -1212,6 +1244,15 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
 
   // Añadir descanso (insertado DESPUÉS de un pase específico en el timeline)
   async function handleAddBreak(minutes: number, afterSectionId: string, title?: string) {
+    const currentOrder = config.section_order ?? config.passes.map((p) => p.id);
+    const insertIdx = currentOrder.indexOf(afterSectionId);
+
+    // Evitar poner 2 descansos juntos
+    if (insertIdx >= 0 && currentOrder[insertIdx + 1]?.startsWith("b_")) {
+      toast.error("No se pueden colocar dos descansos juntos");
+      return;
+    }
+
     const newBreak: BreakItem = {
       id: `b_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       minutes: Math.max(1, minutes),
@@ -1219,10 +1260,8 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
     };
 
     const currentBreaks = config.breaks || [];
-    const currentOrder = config.section_order ?? config.passes.map((p) => p.id);
 
     // Insertar en section_order justo después de afterSectionId
-    const insertIdx = currentOrder.indexOf(afterSectionId);
     const newOrder = [...currentOrder];
     if (insertIdx >= 0) {
       newOrder.splice(insertIdx + 1, 0, newBreak.id);
@@ -2087,7 +2126,7 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
                   ¿Eliminar {passToDelete?.name ?? "este pase"}?
                 </h2>
                 <p className="text-xs font-bold text-muted-foreground">
-                  Las canciones de este pase se reasignarán al primer pase restante. Esta acción no se puede deshacer.
+                  Se eliminarán el pase y todas las canciones asignadas a él. Esta acción no se puede deshacer.
                 </p>
               </div>
               <div className="flex gap-2">
