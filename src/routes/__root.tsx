@@ -88,11 +88,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "La Bomba Show — App de la xaranga" },
       {
         property: "og:description",
-        content: "Letras, repertorio, setlists y contadores de La Bomba Show Xaranga.",
+        content: "Letras, repertorio, setlists y contadores de canciones de La Bomba Show Xaranga.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "theme-color", content: "#1BA0DF" },
+      { name: "twitter:title", content: "La Bomba Show — App de la xaranga" },
+      { name: "twitter:description", content: "Letras, repertorio, setlists y contadores de canciones de La Bomba Show Xaranga." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4b8b0f80-9f54-4ff9-a294-38d0d7fa0be2/id-preview-0f0873f3--60005ef4-fa07-4d4e-8132-531a977c1439.lovable.app-1785548554392.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4b8b0f80-9f54-4ff9-a294-38d0d7fa0be2/id-preview-0f0873f3--60005ef4-fa07-4d4e-8132-531a977c1439.lovable.app-1785548554392.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
