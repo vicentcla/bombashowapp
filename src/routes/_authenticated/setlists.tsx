@@ -185,6 +185,7 @@ function SetlistsPage() {
   const setlists = useSetlists();
   const invalidate = useInvalidate();
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectedToConfig, setSelectedToConfig] = useState(false);
   const [creating, setCreating] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [showNewMenu, setShowNewMenu] = useState(false);
@@ -335,7 +336,7 @@ function SetlistsPage() {
     const { data, error } = await supabase
       .from("setlists")
       .insert({
-        name: "",
+        name: `Copia de ${source.name || "setlist"}`,
         event_date: null,
         notes: serializeSetlistNotes(newConfig),
       })
@@ -348,6 +349,7 @@ function SetlistsPage() {
     }
 
     invalidate("setlists");
+    setSelectedToConfig(true);
     setSelected(data.id);
     toast.success(`Copia de "${source.name}" creada — ponle un nombre`);
   }
@@ -380,7 +382,13 @@ function SetlistsPage() {
   }
 
   if (selected) {
-    return <SetlistDetail setlistId={selected} onBack={() => setSelected(null)} />;
+    return (
+      <SetlistDetail
+        setlistId={selected}
+        onBack={() => { setSelected(null); setSelectedToConfig(false); }}
+        initialTab={selectedToConfig ? "config" : undefined}
+      />
+    );
   }
 
   const allSetlists = setlists.data ?? [];
@@ -1475,7 +1483,15 @@ function ConfigSectionRow({
   );
 }
 
-function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () => void }) {
+function SetlistDetail({
+  setlistId,
+  onBack,
+  initialTab,
+}: {
+  setlistId: string;
+  onBack: () => void;
+  initialTab?: "config";
+}) {
   const setlists = useSetlists();
   const items = useSetlistItems(setlistId);
   const arrangements = useArrangements();
@@ -1489,7 +1505,7 @@ function SetlistDetail({ setlistId, onBack }: { setlistId: string; onBack: () =>
   const [activePassId, setActivePassId] = useState<string>("all");
   const [searchSong, setSearchSong] = useState("");
   const [selectedSongId, setSelectedSongId] = useState("");
-  const [editingConfig, setEditingConfig] = useState(false);
+  const [editingConfig, setEditingConfig] = useState(initialTab === "config");
   const [isEditingItems, setIsEditingItems] = useState(false);
   // Para el lyric modal en modo lectura
   const [activeLyric, setActiveLyric] = useState<Lyric | null>(null);
