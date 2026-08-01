@@ -6,8 +6,9 @@ import { formatLyricsWithSubtitles, htmlToPlainText } from "@/lib/format";
 
 type ImportStreetItem = {
   title: string;
-  lyric?: string;
+  lyric?: string | undefined;
 };
+
 
 function parseStreetSongsText(text: string): ImportStreetItem[] {
   if (!text || !text.trim()) return [];
