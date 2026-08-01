@@ -1,14 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import {
-  Home,
-  FileText,
-  Clock,
-  ListMusic,
-  Library,
-  LogOut,
-  Gamepad2,
-  Settings,
-} from "lucide-react";
+import { Home, FileText, Clock, ListMusic, Library, LogOut, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,8 +13,6 @@ const NAV = [
   { to: "/setlists", label: "Setlists", icon: ListMusic },
   { to: "/repertorio", label: "Repertorio", icon: Library },
 ] as const;
-
-const GAME_URL = "https://aythor.itch.io/la-bomba-show-runner";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -50,16 +39,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <a
-              href={GAME_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-accent px-2.5 py-2 text-xs font-extrabold uppercase text-accent-foreground"
-            >
-              <Gamepad2 className="h-5 w-5 shrink-0" />
-              <span className="hidden sm:inline">Juego</span>
-            </a>
-
             <ThemeToggle />
 
             <Link

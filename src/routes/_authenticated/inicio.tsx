@@ -1,13 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { FileText, Clock, ListMusic, Library, FolderOpen, Camera, Link2 } from "lucide-react";
+import { FileText, Clock, ListMusic, Library, Gamepad2, Link2 } from "lucide-react";
 const ANIVERSARIO_SRC = "/logo-x-final-3.png";
 import { useArrangements, useStreetSongs, useSetlists, useLyrics } from "@/lib/queries";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { GoogleDriveIcon, InstagramIcon } from "@/components/BrandIcons";
 
 const DRIVE_URL =
   "https://drive.google.com/drive/folders/1SJs1eIj7suxJL_eD9W0_m5rCBdva5jUi?usp=share_link";
 const INSTAGRAM_URL = "https://www.instagram.com/showlabomba?igsh=MTIweG1tM2luN3Jjbw==";
+const GAME_URL = "https://aythor.itch.io/la-bomba-show-runner";
 
 export const Route = createFileRoute("/_authenticated/inicio")({
   head: () => ({
@@ -95,21 +97,31 @@ function Inicio() {
       </div>
 
       {/* Accesos del grupo (desplegable, solo iconos) */}
-      <div className="mt-20 flex justify-center">
+      <div className="mt-20 flex justify-center gap-3">
+        <a
+          href={GAME_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Juego"
+          title="Juego"
+          className="comic-sm comic-press flex items-center justify-center rounded-lg bg-accent p-2 text-accent-foreground"
+        >
+          <Gamepad2 className="h-5 w-5 shrink-0" />
+        </a>
         <div className="relative">
           <button
             type="button"
             onClick={() => setLinksOpen((v) => !v)}
             aria-label="Enlaces del grupo"
             aria-expanded={linksOpen}
-            className="comic-sm comic-press flex items-center justify-center rounded-lg bg-accent p-2 text-accent-foreground"
+            className="comic-sm comic-press flex items-center justify-center rounded-lg bg-secondary p-2 text-secondary-foreground"
           >
             <Link2 className="h-5 w-5 shrink-0" />
           </button>
           {linksOpen && (
             <>
               <div className="fixed inset-0" onClick={() => setLinksOpen(false)} />
-              <div className="comic absolute left-1/2 top-full z-10 mt-2 flex -translate-x-1/2 gap-1.5 rounded-lg border-2 border-ink bg-card p-1.5 shadow-2xl">
+              <div className="comic absolute bottom-full left-1/2 z-10 mb-2 flex -translate-x-1/2 gap-1.5 rounded-lg border-2 border-ink bg-card p-1.5 shadow-2xl">
                 <a
                   href={DRIVE_URL}
                   target="_blank"
@@ -119,7 +131,7 @@ function Inicio() {
                   onClick={() => setLinksOpen(false)}
                   className="comic-sm comic-press flex items-center justify-center rounded-md bg-secondary p-2 text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
                 >
-                  <FolderOpen className="h-5 w-5" />
+                  <GoogleDriveIcon className="h-5 w-5" />
                 </a>
                 <a
                   href={INSTAGRAM_URL}
@@ -130,7 +142,7 @@ function Inicio() {
                   onClick={() => setLinksOpen(false)}
                   className="comic-sm comic-press flex items-center justify-center rounded-md bg-secondary p-2 text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
                 >
-                  <Camera className="h-5 w-5" />
+                  <InstagramIcon className="h-5 w-5" />
                 </a>
               </div>
             </>
