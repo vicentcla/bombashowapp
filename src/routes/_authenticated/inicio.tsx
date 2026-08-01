@@ -1,9 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { FileText, Clock, ListMusic, Library, FolderOpen, Camera, ChevronDown } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FileText, Clock, ListMusic, Library, FolderOpen, Camera, Link2 } from "lucide-react";
 const ANIVERSARIO_SRC = "/logo-x-final-3.png";
 import { useArrangements, useStreetSongs, useSetlists, useLyrics } from "@/lib/queries";
 import { GlobalSearch } from "@/components/GlobalSearch";
+
+const DRIVE_URL =
+  "https://drive.google.com/drive/folders/1SJs1eIj7suxJL_eD9W0_m5rCBdva5jUi?usp=share_link";
+const INSTAGRAM_URL = "https://www.instagram.com/showlabomba?igsh=MTIweG1tM2luN3Jjbw==";
 
 export const Route = createFileRoute("/_authenticated/inicio")({
   head: () => ({
@@ -25,6 +29,16 @@ export const Route = createFileRoute("/_authenticated/inicio")({
 
 function Inicio() {
   const [linksOpen, setLinksOpen] = useState(false);
+
+  useEffect(() => {
+    if (!linksOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLinksOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [linksOpen]);
+
   const arrangements = useArrangements();
   const street = useStreetSongs();
   const setlists = useSetlists();
@@ -80,45 +94,48 @@ function Inicio() {
         ))}
       </div>
 
-      {/* Accesos del grupo (desplegable) */}
-      <div className="comic mt-6 overflow-hidden rounded-xl bg-card">
-        <button
-          type="button"
-          onClick={() => setLinksOpen((v) => !v)}
-          aria-expanded={linksOpen}
-          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-        >
-          <span className="text-sm font-extrabold uppercase text-muted-foreground">
-            Accesos del grupo
-          </span>
-          <ChevronDown
-            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
-              linksOpen ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-        {linksOpen && (
-          <div className="grid grid-cols-1 gap-3 border-t border-border p-4 sm:grid-cols-2">
-            <a
-              href="https://drive.google.com/drive/folders/1SJs1eIj7suxJL_eD9W0_m5rCBdva5jUi?usp=share_link"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="comic comic-press flex items-center gap-2.5 rounded-lg bg-secondary px-4 py-3 text-secondary-foreground"
-            >
-              <FolderOpen className="h-5 w-5 shrink-0" />
-              <span className="text-sm font-extrabold uppercase">Google Drive</span>
-            </a>
-            <a
-              href="https://www.instagram.com/showlabomba?igsh=MTIweG1tM2luN3Jjbw=="
-              target="_blank"
-              rel="noopener noreferrer"
-              className="comic comic-press flex items-center gap-2.5 rounded-lg bg-secondary px-4 py-3 text-secondary-foreground"
-            >
-              <Camera className="h-5 w-5 shrink-0" />
-              <span className="text-sm font-extrabold uppercase">instagram</span>
-            </a>
-          </div>
-        )}
+      {/* Accesos del grupo (desplegable, solo iconos) */}
+      <div className="mt-20 flex justify-center">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setLinksOpen((v) => !v)}
+            aria-label="Enlaces del grupo"
+            aria-expanded={linksOpen}
+            className="comic-sm comic-press flex items-center justify-center rounded-lg bg-accent p-2 text-accent-foreground"
+          >
+            <Link2 className="h-5 w-5 shrink-0" />
+          </button>
+          {linksOpen && (
+            <>
+              <div className="fixed inset-0" onClick={() => setLinksOpen(false)} />
+              <div className="comic absolute left-1/2 top-full z-10 mt-2 flex -translate-x-1/2 gap-1.5 rounded-lg border-2 border-ink bg-card p-1.5 shadow-2xl">
+                <a
+                  href={DRIVE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Google Drive"
+                  title="Google Drive"
+                  onClick={() => setLinksOpen(false)}
+                  className="comic-sm comic-press flex items-center justify-center rounded-md bg-secondary p-2 text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
+                >
+                  <FolderOpen className="h-5 w-5" />
+                </a>
+                <a
+                  href={INSTAGRAM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Instagram"
+                  title="Instagram"
+                  onClick={() => setLinksOpen(false)}
+                  className="comic-sm comic-press flex items-center justify-center rounded-md bg-secondary p-2 text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
+                >
+                  <Camera className="h-5 w-5" />
+                </a>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
