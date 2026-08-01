@@ -2,7 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { User, Shield, Music, Drum, Check, X, Clock, Settings, Mail, Save, Waves, Wind } from "lucide-react";
+import { User, Shield, Music, Check, X, Clock, Settings, Mail, Save } from "lucide-react";
+import {
+  PercusionIcon,
+  TrombonIcon,
+  TrompetaIcon,
+  SaxoIcon,
+  SousaphoneIcon,
+} from "@/components/InstrumentIcons";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { useRoleRequests, useInvalidate } from "@/lib/queries";
@@ -21,11 +28,11 @@ const INSTRUMENTS = ["Percusión", "Trombón", "Trompeta", "Saxo", "Sousaphone"]
 type Instrument = (typeof INSTRUMENTS)[number];
 
 const INSTRUMENT_ICONS: Record<string, React.ElementType> = {
-  "Percusión": Drum,
-  "Trombón": Wind,
-  "Trompeta": Wind,
-  "Saxo": Music,
-  "Sousaphone": Waves,
+  "Percusión": PercusionIcon,
+  "Trombón": TrombonIcon,
+  "Trompeta": TrompetaIcon,
+  "Saxo": SaxoIcon,
+  "Sousaphone": SousaphoneIcon,
 };
 
 function Ajustes() {
