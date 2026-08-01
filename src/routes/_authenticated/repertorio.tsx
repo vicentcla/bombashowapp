@@ -636,29 +636,15 @@ function StreetSongDialog({
       .map((t) => t.trim())
       .filter(Boolean);
 
-    const payload: Record<string, any> = {
+    const payload = {
       title: title.trim(),
       tags: parsedTags,
     };
 
-    let { error } = song?.id
+    const { error } = song?.id
       ? await supabase.from("street_songs").update(payload).eq("id", song.id)
       : await supabase.from("street_songs").insert(payload);
 
-    // Fallback por si la columna 'tags' no existe aún en el esquema remoto de Supabase
-    if (error && error.message?.toLowerCase().includes("tags")) {
-      const fallbackPayload = { title: title.trim() };
-      const fallbackRes = song?.id
-        ? await supabase.from("street_songs").update(fallbackPayload).eq("id", song.id)
-        : await supabase.from("street_songs").insert(fallbackPayload);
-      if (!fallbackRes.error) {
-        toast.warning("Se guardó el título. Aplica la migración en Supabase para habilitar las etiquetas.");
-        onSaved();
-        setBusy(false);
-        return;
-      }
-      error = fallbackRes.error;
-    }
 
     setBusy(false);
     if (error) {

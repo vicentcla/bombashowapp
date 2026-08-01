@@ -7,7 +7,7 @@ import { formatLyricsWithSubtitles, htmlToPlainText } from "@/lib/format";
 type ImportStreetItem = {
   title: string;
   lyric?: string | undefined;
-  tags?: string[];
+  tags?: string[] | undefined;
 };
 
 function parseStreetSongsText(text: string): ImportStreetItem[] {
@@ -68,7 +68,7 @@ function parseStreetSongsText(text: string): ImportStreetItem[] {
       // Detección de etiquetas entre comillas: "Starter, Trios" o “Starter, Trios”
       const quoteTagsMatch = trimmed.match(/^["“]([^"”]+)["”]$/);
       if (quoteTagsMatch) {
-        const extracted = quoteTagsMatch[1]
+        const extracted = (quoteTagsMatch[1] ?? "")
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean);
@@ -120,12 +120,12 @@ function parseStreetSongsText(text: string): ImportStreetItem[] {
       if (parts[2]) {
         const qm = parts[2].match(/^["“]?([^"”]+)["”]?$/);
         if (qm) {
-          tags = qm[1].split(",").map((t) => t.trim()).filter(Boolean);
+          tags = (qm[1] ?? "").split(",").map((t) => t.trim()).filter(Boolean);
         }
       } else if (lyric) {
         const qm = lyric.match(/^["“]([^"”]+)["”]$/);
         if (qm) {
-          tags = qm[1].split(",").map((t) => t.trim()).filter(Boolean);
+          tags = (qm[1] ?? "").split(",").map((t) => t.trim()).filter(Boolean);
           lyric = undefined;
         }
       }
