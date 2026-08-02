@@ -32,9 +32,9 @@ import {
 import { cleanUnicodeStyle, toUnicodeStyle, type UnicodeStyle } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/social")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    open: typeof search["open"] === "string" ? search["open"] : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { open?: string } =>
+    typeof search["open"] === "string" ? { open: search["open"] } : {},
+
   head: () => ({
     meta: [
       { title: "Redes Sociales — La Bomba Show" },
