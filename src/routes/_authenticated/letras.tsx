@@ -5,6 +5,8 @@ import { useLyrics, useArrangements, useStreetSongs, type Lyric } from "@/lib/qu
 import { normalize, formatDuration, formatLongDuration } from "@/lib/format";
 import { SortBar, type SortMode } from "@/components/SortBar";
 import { LyricViewerModal } from "@/components/LyricViewerModal";
+import { TabStrip } from "@/components/TabStrip";
+import { useTabSwipe } from "@/hooks/useTabSwipe";
 
 export const Route = createFileRoute("/_authenticated/letras")({
   head: () => ({
@@ -34,6 +36,18 @@ function Letras() {
     kind: "calle" | "arreglo";
     lyric: Lyric | null;
   } | null>(null);
+
+  function switchKind(next: "calle" | "arreglos") {
+    setKind(next);
+    setTag("");
+    setSort("alfabetico");
+  }
+
+  const swipe = useTabSwipe((dir) => {
+    const order: ("calle" | "arreglos")[] = ["calle", "arreglos"];
+    const next = order[order.indexOf(kind) + dir];
+    if (next) switchKind(next);
+  });
 
   const lyrics = useLyrics();
   const arrangements = useArrangements();
@@ -139,189 +153,167 @@ function Letras() {
       </div>
 
       {/* Pestañas Calle / Arreglos */}
-      <div className="comic-sm flex overflow-hidden rounded-md bg-card p-1">
-        <button
-          type="button"
-          onClick={() => {
-            setKind("calle");
-            setTag("");
-            setSort("alfabetico");
-          }}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
-            kind === "calle"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:bg-muted/50"
-          }`}
-        >
-          <Megaphone className="h-4 w-4" /> Calle
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setKind("arreglos");
-            setTag("");
-            setSort("alfabetico");
-          }}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
-            kind === "arreglos"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:bg-muted/50"
-          }`}
-        >
-          <Drum className="h-4 w-4" /> Arreglos
-        </button>
-      </div>
-
-      {/* Contador */}
-      <p className="text-sm font-bold text-muted-foreground">
-        {kind === "arreglos"
-          ? `${arrangements.data?.length ?? 0} arreglos · ${formatLongDuration(totalArreglos)} en total`
-          : `${streetSongs.data?.length ?? 0} canciones de calle`}
-      </p>
-
-      {/* SortBar */}
-      <SortBar
-        value={sort}
-        onChange={setSort}
-        options={
-          kind === "arreglos" ? ["alfabetico", "duracion", "manual"] : ["alfabetico", "manual"]
-        }
+      <TabStrip
+        tabs={[
+          { id: "calle", label: "Calle", icon: <Megaphone className="h-4 w-4" /> },
+          { id: "arreglos", label: "Arreglos", icon: <Drum className="h-4 w-4" /> },
+        ]}
+        active={kind}
+        onChange={switchKind}
       />
 
-      {/* Filtros por tag */}
-      {allTags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => setTag("")}
-            className={`comic-sm rounded px-2.5 py-1 text-xs font-extrabold uppercase ${
-              tag === "" ? "bg-primary text-primary-foreground" : "bg-card"
-            }`}
-          >
-            Todas (
-            {kind === "arreglos"
-              ? (arrangements.data?.length ?? 0)
-              : (streetSongs.data?.length ?? 0)}
-            )
-          </button>
-          {allTags.map((t) => (
+      <div {...swipe} className="space-y-4">
+        {/* Contador */}
+        <p className="text-sm font-bold text-muted-foreground">
+          {kind === "arreglos"
+            ? `${arrangements.data?.length ?? 0} arreglos · ${formatLongDuration(totalArreglos)} en total`
+            : `${streetSongs.data?.length ?? 0} canciones de calle`}
+        </p>
+
+        {/* SortBar */}
+        <SortBar
+          value={sort}
+          onChange={setSort}
+          options={
+            kind === "arreglos" ? ["alfabetico", "duracion", "manual"] : ["alfabetico", "manual"]
+          }
+        />
+
+        {/* Filtros por tag */}
+        {allTags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
             <button
-              key={t}
               type="button"
-              onClick={() => setTag(t === tag ? "" : t)}
+              onClick={() => setTag("")}
               className={`comic-sm rounded px-2.5 py-1 text-xs font-extrabold uppercase ${
-                tag === t ? "bg-primary text-primary-foreground" : "bg-card"
+                tag === "" ? "bg-primary text-primary-foreground" : "bg-card"
               }`}
             >
-              {t}
+              Todas (
+              {kind === "arreglos"
+                ? (arrangements.data?.length ?? 0)
+                : (streetSongs.data?.length ?? 0)}
+              )
             </button>
-          ))}
-        </div>
-      )}
+            {allTags.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTag(t === tag ? "" : t)}
+                className={`comic-sm rounded px-2.5 py-1 text-xs font-extrabold uppercase ${
+                  tag === t ? "bg-primary text-primary-foreground" : "bg-card"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
 
-      {/* Buscador */}
-      <div className="comic-sm flex items-center gap-2 rounded-md bg-card px-3">
-        <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por título o etiqueta…"
-          className="w-full bg-transparent py-2 text-base outline-none"
-        />
+        {/* Buscador */}
+        <div className="comic-sm flex items-center gap-2 rounded-md bg-card px-3">
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar por título o etiqueta…"
+            className="w-full bg-transparent py-2 text-base outline-none"
+          />
+        </div>
+
+        {/* Lista de ARREGLOS */}
+        {kind === "arreglos" && (
+          <div className="space-y-2">
+            {listArreglos.length === 0 && (
+              <p className="comic rounded-xl bg-card p-4 text-muted-foreground">
+                No hay arreglos que coincidan con la búsqueda.
+              </p>
+            )}
+            {listArreglos.map((a) => {
+              const lyric = getLyricForArrangement(a.id, a.title);
+              return (
+                <div
+                  key={a.id}
+                  onClick={() => setActiveSong({ title: a.title, kind: "arreglo", lyric })}
+                  className={`comic rounded-xl bg-card p-4 transition-colors cursor-pointer hover:bg-primary/5 ${
+                    !lyric ? "opacity-75" : ""
+                  }`}
+                  title={lyric ? "Ver letra" : "Sin letra registrada"}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-xl font-extrabold leading-tight">{a.title}</p>
+                      <p className="mt-0.5 text-xs font-bold text-muted-foreground">
+                        {formatDuration(a.duration_seconds)}
+                        {lyric ? " · Con letra" : " · Sin letra"}
+                      </p>
+                      {!!a.tags?.length && (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {a.tags.map((t) => (
+                            <span
+                              key={t}
+                              className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[10px] font-bold uppercase text-secondary-foreground"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {lyric && <FileText className="mt-1 h-5 w-5 shrink-0 text-primary/70" />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Lista de CALLE */}
+        {kind === "calle" && (
+          <div className="space-y-2">
+            {listCalle.length === 0 && (
+              <p className="comic rounded-xl bg-card p-4 text-muted-foreground">
+                No hay canciones que coincidan con la búsqueda.
+              </p>
+            )}
+            {listCalle.map((s) => {
+              const lyric = getLyricForStreetSong(s.id, s.title);
+              return (
+                <div
+                  key={s.id}
+                  onClick={() => setActiveSong({ title: s.title, kind: "calle", lyric })}
+                  className={`comic rounded-xl bg-card p-4 transition-colors cursor-pointer hover:bg-primary/5 ${
+                    !lyric ? "opacity-75" : ""
+                  }`}
+                  title={lyric ? "Ver letra" : "Sin letra registrada"}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-xl font-extrabold leading-tight">{s.title}</p>
+                      <p className="mt-0.5 text-xs font-bold text-muted-foreground">
+                        {lyric ? "Con letra" : "Sin letra"}
+                      </p>
+                      {!!s.tags?.length && (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {s.tags.map((t) => (
+                            <span
+                              key={t}
+                              className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[10px] font-bold uppercase text-secondary-foreground"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {lyric && <FileText className="mt-1 h-5 w-5 shrink-0 text-primary/70" />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
-
-      {/* Lista de ARREGLOS */}
-      {kind === "arreglos" && (
-        <div className="space-y-2">
-          {listArreglos.length === 0 && (
-            <p className="comic rounded-xl bg-card p-4 text-muted-foreground">
-              No hay arreglos que coincidan con la búsqueda.
-            </p>
-          )}
-          {listArreglos.map((a) => {
-            const lyric = getLyricForArrangement(a.id, a.title);
-            return (
-              <div
-                key={a.id}
-                onClick={() => setActiveSong({ title: a.title, kind: "arreglo", lyric })}
-                className={`comic rounded-xl bg-card p-4 transition-colors cursor-pointer hover:bg-primary/5 ${
-                  !lyric ? "opacity-75" : ""
-                }`}
-                title={lyric ? "Ver letra" : "Sin letra registrada"}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-xl font-extrabold leading-tight">{a.title}</p>
-                    <p className="mt-0.5 text-xs font-bold text-muted-foreground">
-                      {formatDuration(a.duration_seconds)}
-                      {lyric ? " · Con letra" : " · Sin letra"}
-                    </p>
-                    {!!a.tags?.length && (
-                      <div className="mt-1.5 flex flex-wrap gap-1">
-                        {a.tags.map((t) => (
-                          <span
-                            key={t}
-                            className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[10px] font-bold uppercase text-secondary-foreground"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {lyric && <FileText className="mt-1 h-5 w-5 shrink-0 text-primary/70" />}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Lista de CALLE */}
-      {kind === "calle" && (
-        <div className="space-y-2">
-          {listCalle.length === 0 && (
-            <p className="comic rounded-xl bg-card p-4 text-muted-foreground">
-              No hay canciones que coincidan con la búsqueda.
-            </p>
-          )}
-          {listCalle.map((s) => {
-            const lyric = getLyricForStreetSong(s.id, s.title);
-            return (
-              <div
-                key={s.id}
-                onClick={() => setActiveSong({ title: s.title, kind: "calle", lyric })}
-                className={`comic rounded-xl bg-card p-4 transition-colors cursor-pointer hover:bg-primary/5 ${
-                  !lyric ? "opacity-75" : ""
-                }`}
-                title={lyric ? "Ver letra" : "Sin letra registrada"}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-xl font-extrabold leading-tight">{s.title}</p>
-                    <p className="mt-0.5 text-xs font-bold text-muted-foreground">
-                      {lyric ? "Con letra" : "Sin letra"}
-                    </p>
-                    {!!s.tags?.length && (
-                      <div className="mt-1.5 flex flex-wrap gap-1">
-                        {s.tags.map((t) => (
-                          <span
-                            key={t}
-                            className="comic-sm rounded bg-secondary px-1.5 py-0.5 text-[10px] font-bold uppercase text-secondary-foreground"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {lyric && <FileText className="mt-1 h-5 w-5 shrink-0 text-primary/70" />}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
 
       {/* Modal de letra */}
       {activeSong && (

@@ -20,6 +20,8 @@ import { ImportExcelDialog } from "@/components/ImportExcelDialog";
 import { ImportCalleDialog } from "@/components/ImportCalleDialog";
 import { SortBar, type SortMode } from "@/components/SortBar";
 import { SortableList, SortableItem } from "@/components/SortableList";
+import { TabStrip } from "@/components/TabStrip";
+import { useTabSwipe } from "@/hooks/useTabSwipe";
 import {
   useArrangements,
   useStreetSongs,
@@ -78,6 +80,12 @@ function Repertorio() {
     }
   };
 
+  const swipe = useTabSwipe((dir) => {
+    const order: ("arreglos" | "calle")[] = ["calle", "arreglos"];
+    const next = order[order.indexOf(activeTab) + dir];
+    if (next) handleTabChange(next);
+  });
+
   return (
     <div>
       <div className="mb-4 flex items-center gap-3">
@@ -90,44 +98,29 @@ function Repertorio() {
         </div>
       </div>
 
-      <div className="comic-sm mb-4 flex overflow-hidden rounded-md bg-card p-1">
-        <button
-          type="button"
-          onClick={() => handleTabChange("calle")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
-            activeTab === "calle"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:bg-muted/50"
-          }`}
-        >
-          <Megaphone className="h-4 w-4" />
-          Calle
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabChange("arreglos")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
-            activeTab === "arreglos"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:bg-muted/50"
-          }`}
-        >
-          <Drum className="h-4 w-4" />
-          Arreglos
-        </button>
-      </div>
+      <TabStrip
+        className="mb-4"
+        tabs={[
+          { id: "calle", label: "Calle", icon: <Megaphone className="h-4 w-4" /> },
+          { id: "arreglos", label: "Arreglos", icon: <Drum className="h-4 w-4" /> },
+        ]}
+        active={activeTab}
+        onChange={handleTabChange}
+      />
 
-      {activeTab === "arreglos" ? (
-        search["editLyricId"] ? (
-          <RepertorioArreglos initialEditLyricId={search["editLyricId"]} />
+      <div {...swipe}>
+        {activeTab === "arreglos" ? (
+          search["editLyricId"] ? (
+            <RepertorioArreglos initialEditLyricId={search["editLyricId"]} />
+          ) : (
+            <RepertorioArreglos />
+          )
+        ) : search["editLyricId"] ? (
+          <RepertorioCalle initialEditLyricId={search["editLyricId"]} />
         ) : (
-          <RepertorioArreglos />
-        )
-      ) : search["editLyricId"] ? (
-        <RepertorioCalle initialEditLyricId={search["editLyricId"]} />
-      ) : (
-        <RepertorioCalle />
-      )}
+          <RepertorioCalle />
+        )}
+      </div>
     </div>
   );
 }

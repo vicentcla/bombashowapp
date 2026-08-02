@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { Clock, Megaphone, Drum, Search } from "lucide-react";
 import { Counters, useCurrentCounts } from "@/components/Counters";
 import { SortBar, type SortMode } from "@/components/SortBar";
+import { TabStrip } from "@/components/TabStrip";
+import { useTabSwipe } from "@/hooks/useTabSwipe";
 import { useStreetSongs, useArrangements, useReorder } from "@/lib/queries";
 import { formatDuration, normalize } from "@/lib/format";
 
@@ -44,6 +46,12 @@ function Contadores() {
     }
   };
 
+  const swipe = useTabSwipe((dir) => {
+    const order: ("calle" | "arreglos")[] = ["calle", "arreglos"];
+    const next = order[order.indexOf(activeTab) + dir];
+    if (next) handleTabChange(next);
+  });
+
   return (
     <div>
       <div className="mb-4 flex items-center gap-3">
@@ -56,34 +64,17 @@ function Contadores() {
         </div>
       </div>
 
-      <div className="comic-sm mb-4 flex overflow-hidden rounded-md bg-card p-1">
-        <button
-          type="button"
-          onClick={() => handleTabChange("calle")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
-            activeTab === "calle"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:bg-muted/50"
-          }`}
-        >
-          <Megaphone className="h-4 w-4" />
-          Calle
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTabChange("arreglos")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
-            activeTab === "arreglos"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:bg-muted/50"
-          }`}
-        >
-          <Drum className="h-4 w-4" />
-          Arreglos
-        </button>
-      </div>
+      <TabStrip
+        className="mb-4"
+        tabs={[
+          { id: "calle", label: "Calle", icon: <Megaphone className="h-4 w-4" /> },
+          { id: "arreglos", label: "Arreglos", icon: <Drum className="h-4 w-4" /> },
+        ]}
+        active={activeTab}
+        onChange={handleTabChange}
+      />
 
-      {activeTab === "calle" ? <ContadoresCalle /> : <ContadoresArreglos />}
+      <div {...swipe}>{activeTab === "calle" ? <ContadoresCalle /> : <ContadoresArreglos />}</div>
     </div>
   );
 }

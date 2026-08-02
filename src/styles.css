@@ -210,3 +210,11 @@
   opacity: 1;
 }
 
+/* Ocultar la barra de scroll manteniendo el desplazamiento */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+

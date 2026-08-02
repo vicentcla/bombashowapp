@@ -63,7 +63,7 @@ function Inicio() {
       <NoticeBoard />
 
       {/* Accesos del grupo (desplegable, solo iconos) */}
-      <div className="mt-10 flex justify-center gap-3">
+      <div className="mt-6 flex justify-center gap-3">
         <a
           href={GAME_URL}
           target="_blank"
