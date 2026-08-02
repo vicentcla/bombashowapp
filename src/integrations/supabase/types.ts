@@ -224,23 +224,29 @@ export type Database = {
       }
       setlist_items: {
         Row: {
-          arrangement_id: string
+          arrangement_id: string | null
           created_at: string
           id: string
+          manual_duration_seconds: number | null
+          manual_title: string | null
           position: number
           setlist_id: string
         }
         Insert: {
-          arrangement_id: string
+          arrangement_id?: string | null
           created_at?: string
           id?: string
+          manual_duration_seconds?: number | null
+          manual_title?: string | null
           position?: number
           setlist_id: string
         }
         Update: {
-          arrangement_id?: string
+          arrangement_id?: string | null
           created_at?: string
           id?: string
+          manual_duration_seconds?: number | null
+          manual_title?: string | null
           position?: number
           setlist_id?: string
         }
