@@ -1,8 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Home, FileText, Clock, ListMusic, Library, Gamepad2, Link2 } from "lucide-react";
+import { Home, Gamepad2, Link2 } from "lucide-react";
 const ANIVERSARIO_SRC = "/logo-x-final-3.png";
-import { useArrangements, useStreetSongs, useSetlists, useLyrics } from "@/lib/queries";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { GoogleDriveIcon, InstagramIcon } from "@/components/BrandIcons";
 
@@ -40,35 +39,6 @@ function Inicio() {
     return () => window.removeEventListener("keydown", onKey);
   }, [linksOpen]);
 
-  const arrangements = useArrangements();
-  const street = useStreetSongs();
-  const setlists = useSetlists();
-  const lyrics = useLyrics();
-
-  const totalContadores = (street.data?.length ?? 0) + (arrangements.data?.length ?? 0);
-
-  const cards = [
-    {
-      to: "/letras",
-      label: "Letras",
-      icon: FileText,
-      count: `${lyrics.data?.length ?? 0} registros`,
-    },
-    { to: "/contadores", label: "Contadores", icon: Clock, count: `${totalContadores} registros` },
-    {
-      to: "/setlists",
-      label: "Setlists",
-      icon: ListMusic,
-      count: `${setlists.data?.length ?? 0} registros`,
-    },
-    {
-      to: "/repertorio",
-      label: "Repertorio",
-      icon: Library,
-      count: `${arrangements.data?.length ?? 0} arreglos`,
-    },
-  ] as const;
-
   return (
     <div>
       <div className="comic mb-6 flex items-center gap-4 rounded-xl bg-card p-4">
@@ -82,22 +52,8 @@ function Inicio() {
 
       <GlobalSearch />
 
-      <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {cards.map(({ to, label, icon: Icon, count }) => (
-          <Link
-            key={to}
-            to={to}
-            className="comic comic-press flex flex-col gap-2 rounded-xl bg-card p-4"
-          >
-            <Icon className="h-7 w-7 text-primary" />
-            <span className="text-2xl leading-none">{label}</span>
-            <span className="text-sm font-bold text-muted-foreground">{count}</span>
-          </Link>
-        ))}
-      </div>
-
       {/* Accesos del grupo (desplegable, solo iconos) */}
-      <div className="mt-20 flex justify-center gap-3">
+      <div className="mt-10 flex justify-center gap-3">
         <a
           href={GAME_URL}
           target="_blank"
