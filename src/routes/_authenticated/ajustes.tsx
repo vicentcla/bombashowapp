@@ -246,8 +246,8 @@ function Ajustes() {
     }
   }
 
-  async function handleChangePassword(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleChangePassword(e?: React.FormEvent) {
+    e?.preventDefault();
     if (!user?.email) return;
     if (!oldPassword) {
       toast.error("Escribe tu contraseña actual");
