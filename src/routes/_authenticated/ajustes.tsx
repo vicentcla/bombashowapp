@@ -661,7 +661,7 @@ function Ajustes() {
                 Cambiar contraseña
               </h2>
 
-              <form onSubmit={handleChangePassword} className="mt-3 space-y-4">
+              <div className="mt-3 space-y-4">
                 <div>
                   <label className="mb-1 block text-sm font-bold uppercase">
                     Contraseña actual
