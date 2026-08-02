@@ -246,8 +246,8 @@ function Ajustes() {
     }
   }
 
-  async function handleChangePassword(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleChangePassword(e?: React.FormEvent) {
+    e?.preventDefault();
     if (!user?.email) return;
     if (!oldPassword) {
       toast.error("Escribe tu contraseña actual");
@@ -661,7 +661,7 @@ function Ajustes() {
                 Cambiar contraseña
               </h2>
 
-              <form onSubmit={handleChangePassword} className="mt-3 space-y-4">
+              <div className="mt-3 space-y-4">
                 <div>
                   <label className="mb-1 block text-sm font-bold uppercase">
                     Contraseña actual
@@ -717,14 +717,15 @@ function Ajustes() {
                 </div>
 
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={() => handleChangePassword()}
                   disabled={changingPassword}
                   className="comic comic-press flex w-full items-center justify-center gap-2 rounded-lg bg-secondary py-3 font-extrabold uppercase text-secondary-foreground disabled:opacity-50"
                 >
                   <KeyRound className="h-5 w-5" />
                   {changingPassword ? "Cambiando..." : "Cambiar contraseña"}
                 </button>
-              </form>
+              </div>
 
               <div className="mt-3 text-center">
                 <button
