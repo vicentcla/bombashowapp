@@ -431,3 +431,57 @@ export function useDeleteComment() {
     onSuccess: () => invalidate("social_posts", "social_comments"),
   });
 }
+
+export type Notice = {
+  id: string;
+  title: string;
+  body: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export function useNotices() {
+  return useQuery({
+    queryKey: ["notices"],
+    queryFn: async (): Promise<Notice[]> => {
+      const { data, error } = await supabase
+        .from("notices")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as Notice[];
+    },
+  });
+}
+
+export function useSaveNotice() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (input: { id?: string; title: string; body: string }) => {
+      const { id, ...rest } = input;
+      if (id) {
+        const { error } = await supabase
+          .from("notices")
+          .update({ ...rest, updated_at: new Date().toISOString() })
+          .eq("id", id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("notices").insert({ ...rest });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => invalidate("notices"),
+  });
+}
+
+export function useDeleteNotice() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("notices").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("notices"),
+  });
+}

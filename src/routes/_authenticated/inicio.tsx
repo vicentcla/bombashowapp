@@ -1,9 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Gamepad2, Link2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Gamepad2, Link2, Megaphone, Pencil, Plus, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 const ANIVERSARIO_SRC = "/logo-x-final-3.png";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { GoogleDriveIcon, InstagramIcon } from "@/components/BrandIcons";
+import { useIsAdmin } from "@/hooks/useAuth";
+import {
+  useDeleteNotice,
+  useNotices,
+  useProfiles,
+  useSaveNotice,
+  type Notice,
+} from "@/lib/queries";
 
 const DRIVE_URL = "https://drive.google.com/drive/folders/1SJs1eIj7suxJL_eD9W0_m5rCBdva5jUi";
 const INSTAGRAM_URL = "https://www.instagram.com/showlabomba?igsh=MTIweG1tM2luN3Jjbw==";
@@ -50,6 +59,8 @@ function Inicio() {
       </div>
 
       <GlobalSearch />
+
+      <NoticeBoard />
 
       {/* Accesos del grupo (desplegable, solo iconos) */}
       <div className="mt-10 flex justify-center gap-3">
@@ -105,5 +116,201 @@ function Inicio() {
         </div>
       </div>
     </div>
+  );
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  if (d.toDateString() === today.toDateString()) {
+    return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+  }
+  return d.toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function NoticeModal({
+  open,
+  notice,
+  onClose,
+}: {
+  open: boolean;
+  notice: Notice | null;
+  onClose: () => void;
+}) {
+  const save = useSaveNotice();
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setTitle(notice?.title ?? "");
+    setBody(notice?.body ?? "");
+  }, [open, notice]);
+
+  if (!open) return null;
+
+  function submit() {
+    if (!title.trim()) {
+      toast.error("El título no puede estar vacío");
+      return;
+    }
+    const payload: { id?: string; title: string; body: string } = {
+      title: title.trim(),
+      body: body.trim(),
+    };
+    if (notice?.id) payload.id = notice.id;
+    save.mutate(payload, {
+      onSuccess: () => {
+        toast.success(notice ? "Aviso actualizado" : "Aviso publicado");
+        onClose();
+      },
+      onError: () => toast.error("No se pudo guardar el aviso"),
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+      <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4 mt-4">
+        <div className="flex items-center justify-between border-b pb-2">
+          <h2 className="text-2xl font-extrabold leading-none">
+            {notice ? "Editar aviso" : "Nuevo aviso"}
+          </h2>
+          <button onClick={onClose} aria-label="Cerrar">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Título del aviso"
+            className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
+            autoFocus
+          />
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="Contenido del aviso..."
+            rows={4}
+            className="w-full resize-none rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="comic-sm rounded-lg bg-secondary px-3 py-2 text-xs font-extrabold uppercase text-secondary-foreground"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={submit}
+            disabled={save.isPending}
+            className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            {notice ? "Guardar" : "Publicar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NoticeBoard() {
+  const { isAdmin } = useIsAdmin();
+  const notices = useNotices();
+  const profiles = useProfiles();
+  const deleteNotice = useDeleteNotice();
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<Notice | null>(null);
+
+  const nameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of profiles.data ?? []) map[p.id] = p.display_name ?? "Miembro";
+    return map;
+  }, [profiles.data]);
+
+  function handleDelete(n: Notice) {
+    if (!confirm(`¿Eliminar el aviso "${n.title}"?`)) return;
+    deleteNotice.mutate(n.id, {
+      onSuccess: () => toast.success("Aviso eliminado"),
+      onError: () => toast.error("No se pudo eliminar el aviso"),
+    });
+  }
+
+  return (
+    <section className="comic mt-8 rounded-xl bg-card p-4 space-y-4 sm:p-5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Megaphone className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-extrabold leading-none">Tablón de avisos</h2>
+        </div>
+        {isAdmin && (
+          <button
+            onClick={() => setCreating(true)}
+            className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-extrabold uppercase text-primary-foreground"
+          >
+            <Plus className="h-3.5 w-3.5" /> Nuevo aviso
+          </button>
+        )}
+      </div>
+
+      {notices.data && notices.data.length === 0 && (
+        <p className="text-sm font-bold text-muted-foreground">No hay avisos publicados.</p>
+      )}
+
+      <div className="space-y-3">
+        {notices.data?.map((n) => (
+          <article key={n.id} className="rounded-lg border border-border/40 bg-background p-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="font-extrabold leading-tight">{n.title}</h3>
+                <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">
+                  {nameMap[n.created_by] ?? "Admin"} · {formatDate(n.updated_at)}
+                </p>
+              </div>
+              {isAdmin && (
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    onClick={() => setEditing(n)}
+                    aria-label="Editar aviso"
+                    title="Editar aviso"
+                    className="p-1 text-muted-foreground transition-colors hover:text-primary"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(n)}
+                    aria-label="Eliminar aviso"
+                    title="Eliminar aviso"
+                    className="p-1 text-muted-foreground transition-colors hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+            {n.body && (
+              <p className="mt-2 whitespace-pre-line break-words text-sm font-medium">{n.body}</p>
+            )}
+          </article>
+        ))}
+      </div>
+
+      <NoticeModal
+        open={creating || !!editing}
+        notice={editing}
+        onClose={() => {
+          setCreating(false);
+          setEditing(null);
+        }}
+      />
+    </section>
   );
 }
