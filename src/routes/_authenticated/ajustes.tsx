@@ -717,14 +717,16 @@ function Ajustes() {
                 </div>
 
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={() => handleChangePassword()}
                   disabled={changingPassword}
                   className="comic comic-press flex w-full items-center justify-center gap-2 rounded-lg bg-secondary py-3 font-extrabold uppercase text-secondary-foreground disabled:opacity-50"
                 >
                   <KeyRound className="h-5 w-5" />
                   {changingPassword ? "Cambiando..." : "Cambiar contraseña"}
                 </button>
-              </form>
+              </div>
+
 
               <div className="mt-3 text-center">
                 <button
