@@ -13,7 +13,6 @@ import {
   Music2,
   Save,
   Send,
-  Share2,
   Sparkles,
   User,
 } from "lucide-react";
@@ -163,10 +162,10 @@ function SocialPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="comic-sm rounded-lg bg-primary p-2.5 text-primary-foreground">
-            <Share2 className="h-6 w-6" />
+            <Instagram className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold leading-none">Redes Sociales</h1>
+            <h1 className="text-3xl font-extrabold leading-none">Redes</h1>
             <p className="text-xs font-bold text-muted-foreground">
               Escribe y revisa los textos para Instagram, TikTok y WhatsApp
             </p>

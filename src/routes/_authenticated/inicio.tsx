@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { FileText, Clock, ListMusic, Library, Gamepad2, Link2 } from "lucide-react";
+import { Home, FileText, Clock, ListMusic, Library, Gamepad2, Link2 } from "lucide-react";
 const ANIVERSARIO_SRC = "/logo-x-final-3.png";
 import { useArrangements, useStreetSongs, useSetlists, useLyrics } from "@/lib/queries";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -72,11 +72,14 @@ function Inicio() {
   return (
     <div>
       <div className="comic mb-6 flex items-center gap-4 rounded-xl bg-card p-4">
-        <img src={ANIVERSARIO_SRC} alt="Sello 10 aniversario" className="h-20 w-auto shrink-0" />
-        <div className="min-w-0 flex-1">
-          <h1 className="text-3xl leading-none">¡Hola, xaranguer@!</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Bienvenid@!</p>
+        <div className="comic-sm rounded-lg bg-primary p-2.5 text-primary-foreground">
+          <Home className="h-6 w-6" />
         </div>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-3xl font-extrabold leading-none">Inicio</h1>
+          <p className="text-xs font-bold text-muted-foreground">¡Hola, xaranguer@!</p>
+        </div>
+        <img src={ANIVERSARIO_SRC} alt="Sello 10 aniversario" className="h-16 w-auto shrink-0" />
       </div>
 
       <GlobalSearch />

@@ -6,6 +6,7 @@ import {
   X,
   Pencil,
   FileText,
+  Library,
   Drum,
   Megaphone,
   Search,
@@ -79,10 +80,17 @@ function Repertorio() {
 
   return (
     <div>
-      <h1 className="mb-1 text-4xl leading-none">Repertorio</h1>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Aquí se construye todo: arreglos, canciones de calle, duraciones, etiquetas y letras.
-      </p>
+      <div className="mb-4 flex items-center gap-3">
+        <div className="comic-sm rounded-lg bg-primary p-2.5 text-primary-foreground">
+          <Library className="h-6 w-6" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-extrabold leading-none">Repertorio</h1>
+          <p className="text-xs font-bold text-muted-foreground">
+            Aquí se construye todo: arreglos, canciones de calle, duraciones, etiquetas y letras.
+          </p>
+        </div>
+      </div>
 
       <div className="comic-sm mb-4 flex overflow-hidden rounded-md bg-card p-1">
         <button

@@ -7,6 +7,7 @@ import {
   Clock,
   Calendar,
   Layers,
+  ListMusic,
   Settings,
   Pencil,
   CheckCircle2,
@@ -694,10 +695,10 @@ function SetlistsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="comic-sm rounded-lg bg-primary p-2.5 text-primary-foreground">
-            <Layers className="h-6 w-6" />
+            <ListMusic className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold leading-none">Setlists del show</h1>
+            <h1 className="text-3xl font-extrabold leading-none">Setlists</h1>
             <p className="text-xs font-bold text-muted-foreground">
               Planifica pases, compara duraciones y controla los tiempos en vivo
             </p>

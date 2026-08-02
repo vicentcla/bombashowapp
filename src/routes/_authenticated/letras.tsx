@@ -128,11 +128,16 @@ function Letras() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-4xl leading-none font-extrabold">Letras</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Consulta letras sincronizadas con Repertorio. Para editar ve a Repertorio.
-        </p>
+      <div className="flex items-center gap-3">
+        <div className="comic-sm rounded-lg bg-primary p-2.5 text-primary-foreground">
+          <FileText className="h-6 w-6" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-extrabold leading-none">Letras</h1>
+          <p className="text-xs font-bold text-muted-foreground">
+            Consulta letras sincronizadas con Repertorio. Para editar ve a Repertorio.
+          </p>
+        </div>
       </div>
 
       {/* Pestañas Arreglos / Calle */}

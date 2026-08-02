@@ -46,10 +46,15 @@ function Contadores() {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <Clock className="h-8 w-8 text-primary" />
-          <h1 className="text-4xl leading-none">Contadores</h1>
+      <div className="mb-4 flex items-center gap-3">
+        <div className="comic-sm rounded-lg bg-primary p-2.5 text-primary-foreground">
+          <Clock className="h-6 w-6" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-extrabold leading-none">Contadores</h1>
+          <p className="text-xs font-bold text-muted-foreground">
+            Registra las canciones tocadas en directo
+          </p>
         </div>
       </div>
 
