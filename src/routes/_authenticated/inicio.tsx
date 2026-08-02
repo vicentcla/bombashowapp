@@ -72,9 +72,7 @@ function Inicio() {
   return (
     <div>
       <div className="comic mb-6 flex items-center gap-4 rounded-xl bg-card p-4">
-        <div className="comic-sm rounded-lg bg-primary p-2.5 text-primary-foreground">
-          <Home className="h-6 w-6" />
-        </div>
+        <Home className="h-7 w-7 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
           <h1 className="text-3xl font-extrabold leading-none">Inicio</h1>
           <p className="text-xs font-bold text-muted-foreground">¡Hola, xaranguer@!</p>

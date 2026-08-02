@@ -483,9 +483,7 @@ function Ajustes() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="comic-sm rounded-lg bg-primary p-2.5 text-primary-foreground">
-          <Settings className="h-6 w-6" />
-        </div>
+        <Settings className="h-7 w-7 shrink-0 text-muted-foreground" />
         <div>
           <h1 className="text-3xl font-extrabold leading-none">Ajustes de usuario</h1>
           <p className="text-xs font-bold text-muted-foreground">
