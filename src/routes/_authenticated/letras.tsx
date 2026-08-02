@@ -140,23 +140,8 @@ function Letras() {
         </div>
       </div>
 
-      {/* Pestañas Arreglos / Calle */}
+      {/* Pestañas Calle / Arreglos */}
       <div className="comic-sm flex overflow-hidden rounded-md bg-card p-1">
-        <button
-          type="button"
-          onClick={() => {
-            setKind("arreglos");
-            setTag("");
-            setSort("alfabetico");
-          }}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
-            kind === "arreglos"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:bg-muted/50"
-          }`}
-        >
-          <Drum className="h-4 w-4" /> Arreglos
-        </button>
         <button
           type="button"
           onClick={() => {
@@ -171,6 +156,21 @@ function Letras() {
           }`}
         >
           <Megaphone className="h-4 w-4" /> Calle
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setKind("arreglos");
+            setTag("");
+            setSort("alfabetico");
+          }}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
+            kind === "arreglos"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-muted/50"
+          }`}
+        >
+          <Drum className="h-4 w-4" /> Arreglos
         </button>
       </div>
 

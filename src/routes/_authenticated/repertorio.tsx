@@ -42,7 +42,7 @@ import { TagInput } from "@/components/TagInput";
 
 export const Route = createFileRoute("/_authenticated/repertorio")({
   validateSearch: (search: Record<string, unknown>) => ({
-    tab: search["tab"] === "calle" ? "calle" : ("arreglos" as "arreglos" | "calle"),
+    tab: search["tab"] === "arreglos" ? "arreglos" : ("calle" as "arreglos" | "calle"),
     editLyricId: typeof search["editLyricId"] === "string" ? search["editLyricId"] : undefined,
   }),
   head: () => ({
@@ -65,7 +65,7 @@ export const Route = createFileRoute("/_authenticated/repertorio")({
 function Repertorio() {
   const search = Route.useSearch();
   const [activeTab, setActiveTab] = useState<"arreglos" | "calle">(
-    search["tab"] === "calle" ? "calle" : "arreglos",
+    search["tab"] === "arreglos" ? "arreglos" : "calle",
   );
 
   const handleTabChange = (newTab: "arreglos" | "calle") => {
@@ -95,18 +95,6 @@ function Repertorio() {
       <div className="comic-sm mb-4 flex overflow-hidden rounded-md bg-card p-1">
         <button
           type="button"
-          onClick={() => handleTabChange("arreglos")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
-            activeTab === "arreglos"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:bg-muted/50"
-          }`}
-        >
-          <Drum className="h-4 w-4" />
-          Arreglos
-        </button>
-        <button
-          type="button"
           onClick={() => handleTabChange("calle")}
           className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
             activeTab === "calle"
@@ -116,6 +104,18 @@ function Repertorio() {
         >
           <Megaphone className="h-4 w-4" />
           Calle
+        </button>
+        <button
+          type="button"
+          onClick={() => handleTabChange("arreglos")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-sm font-extrabold uppercase transition-colors ${
+            activeTab === "arreglos"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-muted/50"
+          }`}
+        >
+          <Drum className="h-4 w-4" />
+          Arreglos
         </button>
       </div>
 
