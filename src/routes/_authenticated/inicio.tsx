@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Home, Gamepad2, Link2 } from "lucide-react";
+import { Gamepad2, Link2 } from "lucide-react";
 const ANIVERSARIO_SRC = "/logo-x-final-3.png";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { GoogleDriveIcon, InstagramIcon } from "@/components/BrandIcons";
@@ -42,12 +42,11 @@ function Inicio() {
   return (
     <div>
       <div className="comic mb-6 flex items-center gap-4 rounded-xl bg-card p-4">
-        <Home className="h-7 w-7 shrink-0 text-muted-foreground" />
+        <img src={ANIVERSARIO_SRC} alt="Sello 10 aniversario" className="h-20 w-auto shrink-0" />
         <div className="min-w-0 flex-1">
-          <h1 className="text-3xl font-extrabold leading-none">Inicio</h1>
-          <p className="text-xs font-bold text-muted-foreground">¡Hola, xaranguer@!</p>
+          <h1 className="text-3xl leading-none">¡Hola, xaranguer@!</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Bienvenid@!</p>
         </div>
-        <img src={ANIVERSARIO_SRC} alt="Sello 10 aniversario" className="h-16 w-auto shrink-0" />
       </div>
 
       <GlobalSearch />
