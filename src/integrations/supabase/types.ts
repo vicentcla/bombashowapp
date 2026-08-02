@@ -153,18 +153,21 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          status: string
         }
         Insert: {
           created_at?: string
           display_name?: string | null
           email?: string | null
           id: string
+          status?: string
         }
         Update: {
           created_at?: string
           display_name?: string | null
           email?: string | null
           id?: string
+          status?: string
         }
         Relationships: []
       }
@@ -291,6 +294,71 @@ export type Database = {
         }
         Relationships: []
       }
+      social_comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_posts: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          network: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          network?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          network?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       street_songs: {
         Row: {
           created_at: string
@@ -341,7 +409,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_profile_email: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "miembro" | "superadmin"
