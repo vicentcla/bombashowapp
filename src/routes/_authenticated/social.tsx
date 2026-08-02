@@ -128,8 +128,9 @@ function SocialPage() {
 
   function closePost() {
     setSelected(null);
-    navigate({ to: "/social", search: { open: undefined } });
+    navigate({ to: "/social", search: {} });
   }
+
 
   function startCreating() {
     setCreating(true);
