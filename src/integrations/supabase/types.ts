@@ -380,6 +380,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      social_templates: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          id: string;
+          name: string;
+          network: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          name: string;
+          network?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          name?: string;
+          network?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       street_songs: {
         Row: {
           created_at: string;

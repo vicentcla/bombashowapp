@@ -12,9 +12,14 @@ import {
   MessageSquare,
   Music2,
   Save,
+  Search,
   Send,
   Sparkles,
   User,
+  Archive,
+  ChevronDown,
+  LayoutTemplate,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -23,13 +28,17 @@ import {
   useDeleteSocialPost,
   useProfiles,
   useSaveSocialPost,
+  useSaveSocialTemplate,
   useSocialComments,
   useSocialPosts,
+  useSocialTemplates,
   type SocialNetwork,
   type SocialPost,
   type SocialPostStatus,
+  type SocialTemplate,
 } from "@/lib/queries";
 import { cleanUnicodeStyle, toUnicodeStyle, type UnicodeStyle } from "@/lib/format";
+import { TabStrip } from "@/components/TabStrip";
 
 export const Route = createFileRoute("/_authenticated/social")({
   validateSearch: (search: Record<string, unknown>): { open?: string } =>
@@ -47,10 +56,11 @@ export const Route = createFileRoute("/_authenticated/social")({
   component: SocialPage,
 });
 
-const NETWORKS: { value: SocialNetwork; label: string; icon: typeof Instagram }[] = [
+type NetworkMeta = { value: string; label: string; icon: typeof Instagram };
+
+const NETWORKS: NetworkMeta[] = [
   { value: "instagram", label: "Instagram", icon: Instagram },
   { value: "tiktok", label: "TikTok", icon: Music2 },
-  { value: "whatsapp", label: "WhatsApp", icon: MessageCircle },
 ];
 
 const STATUSES: { value: SocialPostStatus; label: string; className: string }[] = [
@@ -79,7 +89,8 @@ const STYLES: { value: UnicodeStyle; label: string; className: string; title: st
   { value: "mono", label: "A", className: "font-mono", title: "Monoespaciada" },
 ];
 
-function networkMetaOf(value: SocialNetwork): (typeof NETWORKS)[number] {
+function networkMetaOf(value: string): NetworkMeta {
+  if (value === "whatsapp") return { value, label: "WhatsApp", icon: MessageCircle };
   return (
     NETWORKS.find((n) => n.value === value) ?? {
       value,
@@ -112,12 +123,21 @@ function formatDate(iso: string): string {
 
 function SocialPage() {
   const posts = useSocialPosts();
+  const templates = useSocialTemplates();
   const navigate = useNavigate();
   const search = Route.useSearch();
   const [selected, setSelected] = useState<string | null>(search.open ?? null);
   const [creating, setCreating] = useState(false);
+  const [draft, setDraft] = useState<{
+    title: string;
+    content: string;
+    network: SocialNetwork;
+  } | null>(null);
   const [networkFilter, setNetworkFilter] = useState<"todas" | SocialNetwork>("todas");
   const [statusFilter, setStatusFilter] = useState<"todos" | SocialPostStatus>("todos");
+  const [showNewMenu, setShowNewMenu] = useState(false);
+  const [showCopyFrom, setShowCopyFrom] = useState(false);
+  const [showCreateTemplate, setShowCreateTemplate] = useState(false);
 
   const deletePost = useDeleteSocialPost();
 
@@ -132,11 +152,26 @@ function SocialPage() {
   }
 
   function startCreating() {
+    setDraft(null);
+    setCreating(true);
+  }
+
+  function startFromPost(post: SocialPost) {
+    const network = NETWORKS.some((n) => n.value === post.network)
+      ? (post.network as SocialNetwork)
+      : "instagram";
+    setDraft({ title: post.title, content: post.content, network });
+    setCreating(true);
+  }
+
+  function startFromTemplate(t: SocialTemplate) {
+    setDraft({ title: t.name, content: "", network: t.network });
     setCreating(true);
   }
 
   function stopCreating() {
     setCreating(false);
+    setDraft(null);
   }
 
   function removePost(post: SocialPost) {
@@ -148,7 +183,13 @@ function SocialPage() {
   }
 
   if (selected) return <SocialDetail postId={selected} onBack={closePost} />;
-  if (creating) return <SocialDetail postId={null} onBack={stopCreating} />;
+  if (creating) {
+    return draft ? (
+      <SocialDetail postId={null} onBack={stopCreating} initialDraft={draft} />
+    ) : (
+      <SocialDetail postId={null} onBack={stopCreating} />
+    );
+  }
 
   const all = posts.data ?? [];
   const visible = all.filter((p) => {
@@ -162,51 +203,90 @@ function SocialPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Instagram className="h-7 w-7 shrink-0 text-muted-foreground" />
-          <div>
-            <h1 className="text-3xl font-extrabold leading-none">Redes</h1>
-            <p className="text-xs font-bold text-muted-foreground">
-              Escribe y revisa los textos para Instagram, TikTok y WhatsApp
-            </p>
-          </div>
+          <h1 className="text-3xl font-extrabold leading-none">Redes</h1>
         </div>
 
-        <button
-          onClick={startCreating}
-          className="comic comic-press flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-extrabold uppercase text-primary-foreground"
-        >
-          <Plus className="h-4 w-4" /> Nuevo texto
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowNewMenu((v) => !v)}
+            className="comic comic-press flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-extrabold uppercase text-primary-foreground"
+          >
+            <Plus className="h-4 w-4" /> Nuevo texto <ChevronDown className="h-4 w-4" />
+          </button>
+
+          {showNewMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowNewMenu(false)} />
+              <div className="comic absolute right-0 top-full z-50 mt-1.5 w-60 overflow-hidden rounded-xl border border-ink/10 bg-card shadow-lg">
+                <button
+                  onClick={() => {
+                    setShowNewMenu(false);
+                    startCreating();
+                  }}
+                  className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-extrabold uppercase transition-colors hover:bg-accent"
+                >
+                  <Plus className="h-4 w-4 text-primary" /> Nuevo
+                </button>
+                <button
+                  onClick={() => {
+                    setShowNewMenu(false);
+                    setShowCopyFrom(true);
+                  }}
+                  className="flex w-full items-center gap-2.5 border-t border-ink/10 px-4 py-3 text-left text-sm font-extrabold uppercase transition-colors hover:bg-accent"
+                >
+                  <Archive className="h-4 w-4 text-primary" /> A partir de...
+                </button>
+
+                <div className="border-t border-ink/10">
+                  <p className="flex items-center gap-2 px-4 pt-3 text-[10px] font-extrabold uppercase text-muted-foreground">
+                    <LayoutTemplate className="h-3.5 w-3.5" /> Plantillas
+                  </p>
+                  <div className="max-h-44 overflow-y-auto">
+                    {templates.data?.map((t) => {
+                      const meta = networkMetaOf(t.network);
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => {
+                            setShowNewMenu(false);
+                            startFromTemplate(t);
+                          }}
+                          className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm font-bold transition-colors hover:bg-accent"
+                        >
+                          <meta.icon className="h-4 w-4 shrink-0 text-primary" /> {t.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowNewMenu(false);
+                      setShowCreateTemplate(true);
+                    }}
+                    className="flex w-full items-center gap-2.5 border-t border-ink/10 px-4 py-3 text-left text-sm font-extrabold uppercase text-primary transition-colors hover:bg-accent"
+                  >
+                    <Plus className="h-4 w-4" /> Crear plantilla
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Filtros por red */}
+      {/* Sub-pestañas por red */}
+      <TabStrip
+        tabs={[
+          { id: "todas", label: "Todas" },
+          { id: "instagram", label: "Instagram", icon: <Instagram className="h-4 w-4" /> },
+          { id: "tiktok", label: "TikTok", icon: <Music2 className="h-4 w-4" /> },
+        ]}
+        active={networkFilter}
+        onChange={setNetworkFilter}
+      />
+
+      {/* Filtros por estado */}
       <div className="flex flex-wrap items-center gap-1.5">
-        <button
-          onClick={() => setNetworkFilter("todas")}
-          className={`comic-sm comic-press rounded-lg px-3 py-1.5 text-xs font-extrabold uppercase transition-colors ${
-            networkFilter === "todas"
-              ? "bg-primary text-primary-foreground"
-              : "bg-secondary text-secondary-foreground hover:bg-accent"
-          }`}
-        >
-          Todas
-        </button>
-        {NETWORKS.map((n) => (
-          <button
-            key={n.value}
-            onClick={() => setNetworkFilter((v) => (v === n.value ? "todas" : n.value))}
-            className={`comic-sm comic-press flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-extrabold uppercase transition-colors ${
-              networkFilter === n.value
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground hover:bg-accent"
-            }`}
-          >
-            <n.icon className="h-3.5 w-3.5" /> {n.label}
-          </button>
-        ))}
-
-        <span className="mx-1 h-5 w-px bg-border" />
-
-        {/* Filtros por estado */}
         <button
           onClick={() => setStatusFilter("todos")}
           className={`comic-sm comic-press rounded-lg px-3 py-1.5 text-xs font-extrabold uppercase transition-colors ${
@@ -258,6 +338,11 @@ function SocialPage() {
           />
         ))}
       </div>
+
+      {showCopyFrom && (
+        <CopyFromModal onPick={startFromPost} onClose={() => setShowCopyFrom(false)} />
+      )}
+      {showCreateTemplate && <CreateTemplateModal onClose={() => setShowCreateTemplate(false)} />}
     </div>
   );
 }
@@ -367,7 +452,15 @@ function SocialCard({
 
 // ─── Detalle / Editor de texto ──────────────────────────────────────────────────
 
-function SocialDetail({ postId, onBack }: { postId: string | null; onBack: () => void }) {
+function SocialDetail({
+  postId,
+  onBack,
+  initialDraft,
+}: {
+  postId: string | null;
+  onBack: () => void;
+  initialDraft?: { title: string; content: string; network: SocialNetwork };
+}) {
   const posts = useSocialPosts();
   const comments = useSocialComments(postId);
   const profiles = useProfiles();
@@ -379,9 +472,9 @@ function SocialDetail({ postId, onBack }: { postId: string | null; onBack: () =>
   const isNew = postId === null;
   const post = isNew ? undefined : posts.data?.find((p) => p.id === postId);
 
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [network, setNetwork] = useState<SocialNetwork>("instagram");
+  const [title, setTitle] = useState(initialDraft?.title ?? "");
+  const [content, setContent] = useState(initialDraft?.content ?? "");
+  const [network, setNetwork] = useState<SocialNetwork>(initialDraft?.network ?? "instagram");
   const [status, setStatus] = useState<SocialPostStatus>("borrador");
   const [comment, setComment] = useState("");
   const [copied, setCopied] = useState(false);
@@ -581,18 +674,19 @@ function SocialDetail({ postId, onBack }: { postId: string | null; onBack: () =>
             <label className="text-[11px] font-extrabold uppercase text-muted-foreground">
               Red social
             </label>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex gap-1.5">
               {NETWORKS.map((n) => (
                 <button
                   key={n.value}
-                  onClick={() => setNetwork(n.value)}
-                  className={`comic-sm comic-press flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-extrabold uppercase transition-colors ${
+                  type="button"
+                  onClick={() => setNetwork(n.value as SocialNetwork)}
+                  className={`comic-sm comic-press flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-extrabold uppercase transition-colors ${
                     network === n.value
                       ? "bg-primary text-primary-foreground"
                       : "bg-secondary text-secondary-foreground hover:bg-accent"
                   }`}
                 >
-                  <n.icon className="h-3.5 w-3.5" /> {n.label}
+                  <n.icon className="h-4 w-4" /> {n.label}
                 </button>
               ))}
             </div>
@@ -759,6 +853,168 @@ function SocialDetail({ postId, onBack }: { postId: string | null; onBack: () =>
             className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
           >
             <Send className="h-3.5 w-3.5" /> Enviar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal "A partir de..." – copiar un texto existente ─────────────────────────
+
+function CopyFromModal({
+  onPick,
+  onClose,
+}: {
+  onPick: (post: SocialPost) => void;
+  onClose: () => void;
+}) {
+  const posts = useSocialPosts();
+  const [search, setSearch] = useState("");
+  const q = search.toLowerCase().trim();
+  const filtered = q
+    ? (posts.data ?? []).filter((p) => (p.title ?? "").toLowerCase().includes(q))
+    : (posts.data ?? []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+      <div className="comic mt-4 w-full max-w-md space-y-4 rounded-xl bg-card p-5">
+        <div className="flex items-center justify-between border-b pb-2">
+          <h2 className="text-2xl font-extrabold leading-none">A partir de...</h2>
+          <button onClick={onClose} aria-label="Cerrar">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <p className="text-xs font-medium text-muted-foreground">
+          Selecciona un texto para copiar su título y contenido como punto de partida.
+        </p>
+
+        <div className="flex items-center gap-2 rounded-lg border border-ink/10 bg-background px-3 py-2">
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar texto..."
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+            autoFocus
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
+          {filtered.length === 0 && (
+            <p className="py-2 text-center text-xs font-bold text-muted-foreground">
+              No hay textos que coincidan.
+            </p>
+          )}
+          {filtered.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => onPick(p)}
+              className="w-full rounded-lg border border-ink/10 bg-background px-4 py-3 text-left transition-all hover:border-primary/60 hover:bg-primary/5"
+            >
+              <p className="truncate text-sm font-extrabold">{p.title || "(sin título)"}</p>
+              <p className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-muted-foreground">
+                {networkMetaOf(p.network).label}
+              </p>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal crear plantilla (nombre + red) ───────────────────────────────────────
+
+function CreateTemplateModal({ onClose }: { onClose: () => void }) {
+  const save = useSaveSocialTemplate();
+  const [name, setName] = useState("");
+  const [network, setNetwork] = useState<SocialNetwork>("instagram");
+
+  function submit() {
+    if (!name.trim()) {
+      toast.error("Ponle un nombre a la plantilla");
+      return;
+    }
+    save.mutate(
+      { name: name.trim(), network },
+      {
+        onSuccess: () => {
+          toast.success("Plantilla creada");
+          onClose();
+        },
+        onError: () => toast.error("No se pudo crear la plantilla"),
+      },
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+      <div className="comic mt-4 w-full max-w-sm space-y-4 rounded-xl bg-card p-5">
+        <div className="flex items-center justify-between border-b pb-2">
+          <h2 className="text-2xl font-extrabold leading-none">Crear plantilla</h2>
+          <button onClick={onClose} aria-label="Cerrar">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-extrabold uppercase text-muted-foreground">
+            Nombre
+          </label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="P. ej. Concierto"
+            autoFocus
+            className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-extrabold uppercase text-muted-foreground">
+            Red social
+          </label>
+          <div className="flex gap-1.5">
+            {NETWORKS.map((n) => (
+              <button
+                key={n.value}
+                type="button"
+                onClick={() => setNetwork(n.value as SocialNetwork)}
+                className={`comic-sm comic-press flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-extrabold uppercase transition-colors ${
+                  network === n.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground hover:bg-accent"
+                }`}
+              >
+                <n.icon className="h-4 w-4" /> {n.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="comic-sm rounded-lg bg-secondary px-3 py-2 text-xs font-extrabold uppercase text-secondary-foreground"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={submit}
+            disabled={save.isPending}
+            className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+          >
+            <Save className="h-3.5 w-3.5" /> Crear
           </button>
         </div>
       </div>

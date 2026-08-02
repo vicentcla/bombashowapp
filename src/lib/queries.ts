@@ -300,7 +300,7 @@ export function useRoleRequests() {
   });
 }
 
-export type SocialNetwork = "instagram" | "tiktok" | "whatsapp";
+export type SocialNetwork = "instagram" | "tiktok";
 
 export type SocialPostStatus = "borrador" | "en_revision" | "aprobado";
 
@@ -429,6 +429,60 @@ export function useDeleteComment() {
       if (error) throw error;
     },
     onSuccess: () => invalidate("social_posts", "social_comments"),
+  });
+}
+
+export type SocialTemplate = {
+  id: string;
+  name: string;
+  network: SocialNetwork;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export function useSocialTemplates() {
+  return useQuery({
+    queryKey: ["social_templates"],
+    queryFn: async (): Promise<SocialTemplate[]> => {
+      const { data, error } = await supabase
+        .from("social_templates")
+        .select("*")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as SocialTemplate[];
+    },
+  });
+}
+
+export function useSaveSocialTemplate() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (input: { id?: string; name: string; network: SocialNetwork }) => {
+      const { id, ...rest } = input;
+      if (id) {
+        const { error } = await supabase
+          .from("social_templates")
+          .update({ ...rest, updated_at: new Date().toISOString() })
+          .eq("id", id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("social_templates").insert({ ...rest });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => invalidate("social_templates"),
+  });
+}
+
+export function useDeleteSocialTemplate() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("social_templates").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("social_templates"),
   });
 }
 
