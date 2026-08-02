@@ -203,7 +203,12 @@ function SocialPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Instagram className="h-7 w-7 shrink-0 text-muted-foreground" />
-          <h1 className="text-3xl font-extrabold leading-none">Redes</h1>
+          <div>
+            <h1 className="text-3xl font-extrabold leading-none">Redes</h1>
+            <p className="text-xs font-bold text-muted-foreground">
+              Construye el texto de los posts editando la tipografía (negrita, cursiva...)
+            </p>
+          </div>
         </div>
 
         <div className="relative">
