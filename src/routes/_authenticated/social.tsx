@@ -19,6 +19,7 @@ import {
   Archive,
   ChevronDown,
   LayoutTemplate,
+  Type,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -77,16 +78,22 @@ const STATUSES: { value: SocialPostStatus; label: string; className: string }[] 
   },
 ];
 
-const STYLES: { value: UnicodeStyle; label: string; className: string; title: string }[] = [
-  { value: "bold", label: "B", className: "font-extrabold", title: "Negrita" },
-  { value: "italic", label: "I", className: "italic", title: "Cursiva" },
-  {
-    value: "boldItalic",
-    label: "B I",
-    className: "font-extrabold italic",
-    title: "Negrita cursiva",
-  },
-  { value: "mono", label: "A", className: "font-mono", title: "Monoespaciada" },
+const FONT_STYLES: { value: UnicodeStyle; name: string }[] = [
+  { value: "bold", name: "Negrita" },
+  { value: "italic", name: "Cursiva" },
+  { value: "boldItalic", name: "Negrita cursiva" },
+  { value: "mono", name: "Monoespaciada" },
+  { value: "sans", name: "Sans serif" },
+  { value: "sansBold", name: "Sans serif negrita" },
+  { value: "sansItalic", name: "Sans serif cursiva" },
+  { value: "sansBoldItalic", name: "Sans serif cursiva negrita" },
+  { value: "script", name: "Escritura a mano" },
+  { value: "fraktur", name: "Gótica" },
+  { value: "doubleStruck", name: "Doble trazo" },
+  { value: "circled", name: "Círculos" },
+  { value: "squared", name: "Cuadrados" },
+  { value: "squaredNegative", name: "Cuadrados negros" },
+  { value: "parenthesized", name: "Paréntesis" },
 ];
 
 function networkMetaOf(value: string): NetworkMeta {
@@ -484,6 +491,7 @@ function SocialDetail({
   const [comment, setComment] = useState("");
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showStyleMenu, setShowStyleMenu] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -727,21 +735,49 @@ function SocialDetail({
             ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Escribe aquí el texto... Selecciona una parte y aplica negrita/cursiva con los botones de abajo."
+            placeholder="Escribe aquí el texto... Selecciona una parte y aplica un estilo llamativo con el botón Estilo."
             rows={6}
             className="w-full resize-y rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
           />
           <div className="flex flex-wrap items-center gap-1.5">
-            {STYLES.map((s) => (
+            <div className="relative">
               <button
-                key={s.value}
-                onClick={() => applyStyle(s.value)}
-                title={s.title}
-                className={`comic-sm comic-press flex h-8 w-8 items-center justify-center rounded-md bg-secondary text-sm font-bold text-secondary-foreground hover:bg-accent ${s.className}`}
+                onClick={() => setShowStyleMenu((v) => !v)}
+                className={`comic-sm comic-press flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-extrabold uppercase transition-colors ${
+                  showStyleMenu
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground hover:bg-accent"
+                }`}
               >
-                {s.label}
+                <Type className="h-3.5 w-3.5" /> Estilo <ChevronDown className="h-3 w-3" />
               </button>
-            ))}
+
+              {showStyleMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowStyleMenu(false)} />
+                  <div className="comic absolute left-0 top-full z-50 mt-1.5 max-h-72 w-64 overflow-y-auto rounded-xl border border-ink/10 bg-card py-1 shadow-lg">
+                    {FONT_STYLES.map((f) => (
+                      <button
+                        key={f.value}
+                        onClick={() => {
+                          setShowStyleMenu(false);
+                          applyStyle(f.value);
+                        }}
+                        className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-accent"
+                      >
+                        <span className="w-32 shrink-0 text-[10px] font-extrabold uppercase text-muted-foreground">
+                          {f.name}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-base leading-tight">
+                          {toUnicodeStyle("Aa 01", f.value)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
             <button
               onClick={cleanFormat}
               title="Quitar formato"
