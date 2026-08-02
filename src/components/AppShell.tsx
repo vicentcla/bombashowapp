@@ -1,5 +1,14 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Home, FileText, Clock, ListMusic, Library, LogOut, Settings } from "lucide-react";
+import {
+  Home,
+  FileText,
+  Clock,
+  ListMusic,
+  Library,
+  Instagram,
+  LogOut,
+  Settings,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +20,7 @@ const NAV = [
   { to: "/letras", label: "Letras", icon: FileText },
   { to: "/contadores", label: "Contadores", icon: Clock },
   { to: "/setlists", label: "Setlists", icon: ListMusic },
+  { to: "/social", label: "Redes", icon: Instagram },
   { to: "/repertorio", label: "Repertorio", icon: Library },
 ] as const;
 

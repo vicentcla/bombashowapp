@@ -21,6 +21,7 @@ import { Route as AuthenticatedLetrasRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedMiembrosRouteImport } from './routes/_authenticated/miembros'
 import { Route as AuthenticatedRepertorioRouteImport } from './routes/_authenticated/repertorio'
 import { Route as AuthenticatedSetlistsRouteImport } from './routes/_authenticated/setlists'
+import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -81,6 +82,11 @@ const AuthenticatedSetlistsRoute = AuthenticatedSetlistsRouteImport.update({
   path: '/setlists',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSocialRoute = AuthenticatedSocialRouteImport.update({
+  id: '/social',
+  path: '/social',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/miembros': typeof AuthenticatedMiembrosRoute
   '/repertorio': typeof AuthenticatedRepertorioRoute
   '/setlists': typeof AuthenticatedSetlistsRoute
+  '/social': typeof AuthenticatedSocialRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/miembros': typeof AuthenticatedMiembrosRoute
   '/repertorio': typeof AuthenticatedRepertorioRoute
   '/setlists': typeof AuthenticatedSetlistsRoute
+  '/social': typeof AuthenticatedSocialRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/_authenticated/miembros': typeof AuthenticatedMiembrosRoute
   '/_authenticated/repertorio': typeof AuthenticatedRepertorioRoute
   '/_authenticated/setlists': typeof AuthenticatedSetlistsRoute
+  '/_authenticated/social': typeof AuthenticatedSocialRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/miembros'
     | '/repertorio'
     | '/setlists'
+    | '/social'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/miembros'
     | '/repertorio'
     | '/setlists'
+    | '/social'
   id:
     | '__root__'
     | '/'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/_authenticated/miembros'
     | '/_authenticated/repertorio'
     | '/_authenticated/setlists'
+    | '/_authenticated/social'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -258,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSetlistsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/social': {
+      id: '/_authenticated/social'
+      path: '/social'
+      fullPath: '/social'
+      preLoaderRoute: typeof AuthenticatedSocialRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -271,6 +290,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMiembrosRoute: typeof AuthenticatedMiembrosRoute
   AuthenticatedRepertorioRoute: typeof AuthenticatedRepertorioRoute
   AuthenticatedSetlistsRoute: typeof AuthenticatedSetlistsRoute
+  AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -283,6 +303,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMiembrosRoute: AuthenticatedMiembrosRoute,
   AuthenticatedRepertorioRoute: AuthenticatedRepertorioRoute,
   AuthenticatedSetlistsRoute: AuthenticatedSetlistsRoute,
+  AuthenticatedSocialRoute: AuthenticatedSocialRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

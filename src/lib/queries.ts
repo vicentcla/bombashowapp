@@ -299,3 +299,135 @@ export function useRoleRequests() {
     },
   });
 }
+
+export type SocialNetwork = "instagram" | "tiktok" | "whatsapp";
+
+export type SocialPostStatus = "borrador" | "en_revision" | "aprobado";
+
+export type SocialPost = {
+  id: string;
+  title: string;
+  content: string;
+  network: SocialNetwork;
+  status: SocialPostStatus;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  comments: { count: number }[] | null;
+};
+
+export type SocialComment = {
+  id: string;
+  post_id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
+};
+
+export type Profile = {
+  id: string;
+  display_name: string | null;
+};
+
+export function useProfiles() {
+  return useQuery({
+    queryKey: ["profiles"],
+    queryFn: async (): Promise<Profile[]> => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .order("display_name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as Profile[];
+    },
+  });
+}
+
+export function useSocialPosts() {
+  return useQuery({
+    queryKey: ["social_posts"],
+    queryFn: async (): Promise<SocialPost[]> => {
+      const { data, error } = await supabase
+        .from("social_posts")
+        .select("*, comments(count)")
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as SocialPost[];
+    },
+  });
+}
+
+export function useSocialComments(postId: string | null) {
+  return useQuery({
+    queryKey: ["social_comments", postId],
+    enabled: !!postId,
+    queryFn: async (): Promise<SocialComment[]> => {
+      const { data, error } = await supabase
+        .from("social_comments")
+        .select("*")
+        .eq("post_id", postId!)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as SocialComment[];
+    },
+  });
+}
+
+export function useSaveSocialPost() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (input: {
+      id?: string;
+      title: string;
+      content: string;
+      network: SocialNetwork;
+      status: SocialPostStatus;
+    }) => {
+      const { id, ...rest } = input;
+      if (id) {
+        const { error } = await supabase
+          .from("social_posts")
+          .update({ ...rest, updated_at: new Date().toISOString() })
+          .eq("id", id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("social_posts").insert({ ...rest });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => invalidate("social_posts"),
+  });
+}
+
+export function useDeleteSocialPost() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("social_posts").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("social_posts", "social_comments"),
+  });
+}
+
+export function useAddComment() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async ({ postId, body }: { postId: string; body: string }) => {
+      const { error } = await supabase.from("social_comments").insert({ post_id: postId, body });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("social_posts", "social_comments"),
+  });
+}
+
+export function useDeleteComment() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async ({ id, postId }: { id: string; postId: string }) => {
+      const { error } = await supabase.from("social_comments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("social_posts", "social_comments"),
+  });
+}

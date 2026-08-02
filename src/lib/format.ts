@@ -158,3 +158,61 @@ export function normalize(value: string): string {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 }
+
+export type UnicodeStyle = "bold" | "italic" | "boldItalic" | "mono";
+
+type UnicodeRanges = {
+  upper: [number, number];
+  lower: [number, number];
+  digits?: [number, number];
+};
+
+const UNICODE_STYLE_RANGES: Record<UnicodeStyle, UnicodeRanges> = {
+  bold: { upper: [0x1d400, 0x1d419], lower: [0x1d41a, 0x1d433], digits: [0x1d7ce, 0x1d7d7] },
+  italic: { upper: [0x1d434, 0x1d44d], lower: [0x1d44e, 0x1d467] },
+  boldItalic: { upper: [0x1d468, 0x1d481], lower: [0x1d482, 0x1d49b] },
+  mono: { upper: [0x1d670, 0x1d689], lower: [0x1d68a, 0x1d6a3], digits: [0x1d7f6, 0x1d7ff] },
+};
+
+// La 'h' minúscula en itálica (U+1D455) no está asignada en este bloque Unicode.
+const ITALIC_LOWER_H_GAP = 0x1d455;
+
+/** Convierte un texto a una tipografía Unicode (negrita, cursiva, etc.). */
+export function toUnicodeStyle(text: string, style: UnicodeStyle): string {
+  const ranges = UNICODE_STYLE_RANGES[style];
+  return Array.from(text)
+    .map((char) => {
+      const cp = char.codePointAt(0)!;
+      if (cp >= 0x41 && cp <= 0x5a) return String.fromCodePoint(ranges.upper[0] + (cp - 0x41));
+      if (cp >= 0x61 && cp <= 0x7a) {
+        const target = ranges.lower[0] + (cp - 0x61);
+        if (style === "italic" && target === ITALIC_LOWER_H_GAP) return char;
+        return String.fromCodePoint(target);
+      }
+      if (cp >= 0x30 && cp <= 0x39 && ranges.digits) {
+        return String.fromCodePoint(ranges.digits[0] + (cp - 0x30));
+      }
+      return char;
+    })
+    .join("");
+}
+
+/** Convierte de vuelta a texto plano las tipografías Unicode (quita negrita/cursiva/mono). */
+export function cleanUnicodeStyle(text: string): string {
+  const reverse = new Map<number, string>();
+  for (const style of Object.keys(UNICODE_STYLE_RANGES) as UnicodeStyle[]) {
+    const r = UNICODE_STYLE_RANGES[style];
+    const add = (start: number, base: number, count: number) => {
+      for (let i = 0; i < count; i++) reverse.set(start + i, String.fromCharCode(base + i));
+    };
+    add(r.upper[0], 0x41, 26);
+    add(r.lower[0], 0x61, 26);
+    if (r.digits) add(r.digits[0], 0x30, 10);
+  }
+  return Array.from(text)
+    .map((char) => {
+      const cp = char.codePointAt(0)!;
+      return reverse.get(cp) ?? char;
+    })
+    .join("");
+}
