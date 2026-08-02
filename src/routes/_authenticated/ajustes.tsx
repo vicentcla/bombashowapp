@@ -727,7 +727,6 @@ function Ajustes() {
                 </button>
               </div>
 
-
               <div className="mt-3 text-center">
                 <button
                   type="button"

@@ -131,7 +131,6 @@ function SocialPage() {
     navigate({ to: "/social", search: {} });
   }
 
-
   function startCreating() {
     setCreating(true);
   }
