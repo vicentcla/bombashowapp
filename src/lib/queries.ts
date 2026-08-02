@@ -313,6 +313,7 @@ export type SocialPost = {
   created_by: string;
   created_at: string;
   updated_at: string;
+  updated_by?: string | null;
   comments: { count: number }[] | null;
 };
 
@@ -321,6 +322,9 @@ export type SocialComment = {
   post_id: string;
   user_id: string;
   body: string;
+  start_offset: number | null;
+  end_offset: number | null;
+  snippet: string | null;
   created_at: string;
 };
 
@@ -382,7 +386,7 @@ export function useSaveSocialPost() {
       content: string;
       network: SocialNetwork;
       status: SocialPostStatus;
-    }) => {
+    }): Promise<string> => {
       const { id, ...rest } = input;
       if (id) {
         const { error } = await supabase
@@ -390,10 +394,15 @@ export function useSaveSocialPost() {
           .update({ ...rest, updated_at: new Date().toISOString() })
           .eq("id", id);
         if (error) throw error;
-      } else {
-        const { error } = await supabase.from("social_posts").insert({ ...rest });
-        if (error) throw error;
+        return id;
       }
+      const { data, error } = await supabase
+        .from("social_posts")
+        .insert({ ...rest })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return data.id;
     },
     onSuccess: () => invalidate("social_posts"),
   });
@@ -413,8 +422,18 @@ export function useDeleteSocialPost() {
 export function useAddComment() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: async ({ postId, body }: { postId: string; body: string }) => {
-      const { error } = await supabase.from("social_comments").insert({ post_id: postId, body });
+    mutationFn: async ({
+      postId,
+      body,
+      anchor,
+    }: {
+      postId: string;
+      body: string;
+      anchor?: { start_offset: number; end_offset: number; snippet: string };
+    }) => {
+      const { error } = await supabase
+        .from("social_comments")
+        .insert({ post_id: postId, body, ...anchor });
       if (error) throw error;
     },
     onSuccess: () => invalidate("social_posts", "social_comments"),

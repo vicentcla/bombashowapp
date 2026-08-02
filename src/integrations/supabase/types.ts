@@ -319,22 +319,31 @@ export type Database = {
         Row: {
           body: string;
           created_at: string;
+          end_offset: number | null;
           id: string;
           post_id: string;
+          snippet: string | null;
+          start_offset: number | null;
           user_id: string;
         };
         Insert: {
           body: string;
           created_at?: string;
+          end_offset?: number | null;
           id?: string;
           post_id: string;
+          snippet?: string | null;
+          start_offset?: number | null;
           user_id?: string;
         };
         Update: {
           body?: string;
           created_at?: string;
+          end_offset?: number | null;
           id?: string;
           post_id?: string;
+          snippet?: string | null;
+          start_offset?: number | null;
           user_id?: string;
         };
         Relationships: [
@@ -357,6 +366,7 @@ export type Database = {
           status: string;
           title: string;
           updated_at: string;
+          updated_by: string | null;
         };
         Insert: {
           content?: string;
@@ -367,6 +377,7 @@ export type Database = {
           status?: string;
           title: string;
           updated_at?: string;
+          updated_by?: string | null;
         };
         Update: {
           content?: string;
@@ -377,6 +388,7 @@ export type Database = {
           status?: string;
           title?: string;
           updated_at?: string;
+          updated_by?: string | null;
         };
         Relationships: [];
       };

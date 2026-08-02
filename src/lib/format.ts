@@ -170,6 +170,7 @@ export type UnicodeStyle =
   | "sansBoldItalic"
   | "script"
   | "fraktur"
+  | "frakturBold"
   | "doubleStruck"
   | "circled"
   | "squared"
@@ -232,6 +233,10 @@ const UNICODE_STYLES: Record<UnicodeStyle, UnicodeFont> = {
   fraktur: {
     upper: "𝔄𝔅ℭ𝔇𝔈𝔉𝔊ℌℑ𝔍𝔎𝔏𝔐𝔑𝔒𝔓𝔔ℜ𝔖𝔗𝔘𝔙𝔚𝔛𝔜ℨ",
     lower: "𝔞𝔟𝔠𝔡𝔢𝔣𝔤𝔥𝔦𝔧𝔨𝔩𝔪𝔫𝔬𝔭𝔮𝔯𝔰𝔱𝔲𝔳𝔴𝔵𝔶𝔷",
+  },
+  frakturBold: {
+    upper: "𝕬𝕭𝕮𝕯𝕰𝕱𝕲𝕳𝕴𝕵𝕶𝕷𝕸𝕹𝕺𝕻𝕼𝕽𝕾𝕿𝖀𝖁𝖂𝖃𝖄𝖅",
+    lower: "𝖆𝖇𝖈𝖉𝖊𝖋𝖌𝖍𝖎𝖏𝖐𝖑𝖒𝖓𝖔𝖕𝖖𝖗𝖘𝖙𝖚𝖛𝖜𝖝𝖞𝖟",
   },
   doubleStruck: {
     upper: "𝔸𝔹ℂ𝔻𝔼𝔽𝔾ℍ𝕀𝕁𝕂𝕃𝕄ℕ𝕆ℙℚℝ𝕊𝕋𝕌𝕍𝕎𝕏𝕐ℤ",
@@ -297,4 +302,49 @@ export function cleanUnicodeStyle(text: string): string {
   return Array.from(text)
     .map((char) => reverse.get(char) ?? char)
     .join("");
+}
+
+/** Familia tipográfica: elegida de forma independiente al estilo. */
+export type UnicodeFontFamily =
+  | "normal"
+  | "sans"
+  | "mono"
+  | "script"
+  | "fraktur"
+  | "doubleStruck"
+  | "circled"
+  | "squared"
+  | "squaredNegative"
+  | "parenthesized";
+
+/** Estilo (peso/inclinación) aplicable a una familia. */
+export type UnicodeFontStyle = "normal" | "bold" | "italic" | "boldItalic";
+
+const FAMILY_STYLE_COMPOSITION: Record<
+  UnicodeFontFamily,
+  Partial<Record<UnicodeFontStyle, UnicodeStyle | null>>
+> = {
+  normal: { normal: null, bold: "bold", italic: "italic", boldItalic: "boldItalic" },
+  sans: { normal: "sans", bold: "sansBold", italic: "sansItalic", boldItalic: "sansBoldItalic" },
+  mono: { normal: "mono" },
+  script: { normal: "script" },
+  fraktur: { normal: "fraktur", bold: "frakturBold" },
+  doubleStruck: { normal: "doubleStruck" },
+  circled: { normal: "circled" },
+  squared: { normal: "squared" },
+  squaredNegative: { normal: "squaredNegative" },
+  parenthesized: { normal: "parenthesized" },
+};
+
+/** Devuelve true si una familia soporta un estilo dado (ej. Círculos no tiene negrita). */
+export function supportsUnicodeStyle(family: UnicodeFontFamily, style: UnicodeFontStyle): boolean {
+  return style in FAMILY_STYLE_COMPOSITION[family];
+}
+
+/** Combina familia + estilo en el estilo Unicode concreto (null = texto plano). */
+export function composeUnicodeStyle(
+  family: UnicodeFontFamily,
+  style: UnicodeFontStyle,
+): UnicodeStyle | null {
+  return FAMILY_STYLE_COMPOSITION[family][style] ?? null;
 }

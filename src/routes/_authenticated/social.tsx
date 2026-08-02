@@ -21,8 +21,14 @@ import {
   LayoutTemplate,
   Type,
   X,
+  Heart,
+  Bookmark,
+  Loader2,
+  Quote,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useAddComment,
   useDeleteComment,
@@ -33,12 +39,23 @@ import {
   useSocialComments,
   useSocialPosts,
   useSocialTemplates,
+  type SocialComment,
   type SocialNetwork,
   type SocialPost,
   type SocialPostStatus,
   type SocialTemplate,
 } from "@/lib/queries";
-import { cleanUnicodeStyle, toUnicodeStyle, type UnicodeStyle } from "@/lib/format";
+import {
+  cleanUnicodeStyle,
+  composeUnicodeStyle,
+  supportsUnicodeStyle,
+  toUnicodeStyle,
+  type UnicodeFontFamily,
+  type UnicodeFontStyle,
+} from "@/lib/format";
+import { useAuth } from "@/hooks/useAuth";
+import { useSocialPostChanges, useSocialPresence } from "@/hooks/useSocialRealtime";
+import { supabase } from "@/integrations/supabase/client";
 import { TabStrip } from "@/components/TabStrip";
 
 export const Route = createFileRoute("/_authenticated/social")({
@@ -78,15 +95,10 @@ const STATUSES: { value: SocialPostStatus; label: string; className: string }[] 
   },
 ];
 
-const FONT_STYLES: { value: UnicodeStyle; name: string }[] = [
-  { value: "bold", name: "Negrita" },
-  { value: "italic", name: "Cursiva" },
-  { value: "boldItalic", name: "Negrita cursiva" },
-  { value: "mono", name: "Monoespaciada" },
+const FONT_FAMILIES: { value: UnicodeFontFamily; name: string }[] = [
+  { value: "normal", name: "Normal" },
   { value: "sans", name: "Sans serif" },
-  { value: "sansBold", name: "Sans serif negrita" },
-  { value: "sansItalic", name: "Sans serif cursiva" },
-  { value: "sansBoldItalic", name: "Sans serif cursiva negrita" },
+  { value: "mono", name: "Monoespaciada" },
   { value: "script", name: "Escritura a mano" },
   { value: "fraktur", name: "Gótica" },
   { value: "doubleStruck", name: "Doble trazo" },
@@ -95,6 +107,18 @@ const FONT_STYLES: { value: UnicodeStyle; name: string }[] = [
   { value: "squaredNegative", name: "Cuadrados negros" },
   { value: "parenthesized", name: "Paréntesis" },
 ];
+
+const FONT_STYLES: { value: UnicodeFontStyle; name: string }[] = [
+  { value: "normal", name: "Normal" },
+  { value: "bold", name: "Negrita" },
+  { value: "italic", name: "Cursiva" },
+  { value: "boldItalic", name: "Negrita cursiva" },
+];
+
+function familySample(family: UnicodeFontFamily): string {
+  const style = composeUnicodeStyle(family, "normal");
+  return style ? toUnicodeStyle("Aa 01", style) : "Aa 01";
+}
 
 function networkMetaOf(value: string): NetworkMeta {
   if (value === "whatsapp") return { value, label: "WhatsApp", icon: MessageCircle };
@@ -126,9 +150,65 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
 }
 
+type Highlight = { start: number; end: number; active: boolean };
+type Segment = { text: string; state: 0 | 1 | 2 };
+
+function buildHighlightSegments(content: string, highlights: Highlight[]): Segment[] {
+  const segs: Segment[] = [];
+  let state: 0 | 1 | 2 = 0;
+  let buf = "";
+  let offset = 0;
+  const push = () => {
+    if (buf) {
+      segs.push({ text: buf, state });
+      buf = "";
+    }
+  };
+  for (const ch of content) {
+    let next: 0 | 1 | 2 = 0;
+    for (const h of highlights) {
+      if (offset >= h.start && offset < h.end) {
+        next = h.active ? 2 : 1;
+        break;
+      }
+    }
+    if (next === state) {
+      buf += ch;
+    } else {
+      push();
+      state = next;
+      buf = ch;
+    }
+    offset += ch.length;
+  }
+  push();
+  return segs;
+}
+
+function HighlightRuns({ segments }: { segments: Segment[] }) {
+  return (
+    <>
+      {segments.map((s, i) =>
+        s.state === 2 ? (
+          <mark key={i} className="rounded bg-amber-300/60 px-0.5">
+            {s.text}
+          </mark>
+        ) : s.state === 1 ? (
+          <mark key={i} className="rounded bg-primary/10 px-0.5">
+            {s.text}
+          </mark>
+        ) : (
+          <span key={i}>{s.text}</span>
+        ),
+      )}
+    </>
+  );
+}
+
 // ─── Componente Principal SocialPage ────────────────────────────────────────────
 
 function SocialPage() {
+  const queryClient = useQueryClient();
   const posts = useSocialPosts();
   const templates = useSocialTemplates();
   const navigate = useNavigate();
@@ -147,6 +227,21 @@ function SocialPage() {
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
 
   const deletePost = useDeleteSocialPost();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("social-list")
+      .on("postgres_changes", { event: "*", schema: "public", table: "social_posts" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["social_posts"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "social_comments" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["social_posts"] });
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   function openPost(id: string) {
     setSelected(id);
@@ -462,10 +557,10 @@ function SocialCard({
   );
 }
 
-// ─── Detalle / Editor de texto ──────────────────────────────────────────────────
+// ─── Detalle / Editor colaborativo ──────────────────────────────────────────────
 
 function SocialDetail({
-  postId,
+  postId: initialPostId,
   onBack,
   initialDraft,
 }: {
@@ -473,34 +568,59 @@ function SocialDetail({
   onBack: () => void;
   initialDraft?: { title: string; content: string; network: SocialNetwork };
 }) {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const posts = useSocialPosts();
-  const comments = useSocialComments(postId);
-  const profiles = useProfiles();
   const savePost = useSaveSocialPost();
   const deletePost = useDeleteSocialPost();
   const addComment = useAddComment();
   const deleteComment = useDeleteComment();
+  const profiles = useProfiles();
 
-  const isNew = postId === null;
-  const post = isNew ? undefined : posts.data?.find((p) => p.id === postId);
+  const [currentId, setCurrentId] = useState<string | null>(initialPostId);
+  const isNew = currentId === null;
+  const comments = useSocialComments(currentId);
+  const post = isNew ? undefined : posts.data?.find((p) => p.id === currentId);
 
   const [title, setTitle] = useState(initialDraft?.title ?? "");
   const [content, setContent] = useState(initialDraft?.content ?? "");
   const [network, setNetwork] = useState<SocialNetwork>(initialDraft?.network ?? "instagram");
   const [status, setStatus] = useState<SocialPostStatus>("borrador");
-  const [comment, setComment] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
+  const [fontFamily, setFontFamily] = useState<UnicodeFontFamily>("normal");
+  const [fontStyle, setFontStyle] = useState<UnicodeFontStyle>("normal");
+  const [showFamilyMenu, setShowFamilyMenu] = useState(false);
   const [showStyleMenu, setShowStyleMenu] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [comment, setComment] = useState("");
+  const [anchorComment, setAnchorComment] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [pendingRemote, setPendingRemote] = useState<Partial<SocialPost> | null>(null);
+  const [anchor, setAnchor] = useState<{ start: number; end: number; snippet: string } | null>(
+    null,
+  );
+  const [activeHighlight, setActiveHighlight] = useState<{ start: number; end: number } | null>(
+    null,
+  );
 
-  useEffect(() => {
-    if (!post) return;
-    setTitle(post.title);
-    setContent(post.content);
-    setNetwork(post.network);
-    setStatus(post.status);
-  }, [post]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const pendingEditRef = useRef<Set<"title" | "content">>(new Set());
+  const lastSavedSnapshotRef = useRef<{
+    title: string;
+    content: string;
+    network: SocialNetwork;
+    status: SocialPostStatus;
+  } | null>(null);
+  const myLastSaveRef = useRef<{
+    title: string;
+    content: string;
+    network: SocialNetwork;
+    status: SocialPostStatus;
+  } | null>(null);
+  const loadedRef = useRef(false);
+  const justCreatedRef = useRef(false);
 
   const nameMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -510,7 +630,140 @@ function SocialDetail({
 
   const networkMeta = networkMetaOf(network);
 
-  function applyStyle(style: UnicodeStyle) {
+  const self = useMemo(
+    () => (user ? { user_id: user.id, name: nameMap[user.id] ?? "Miembro" } : null),
+    [user, nameMap],
+  );
+  const { users, setEditing } = useSocialPresence(currentId, self);
+  const presenceOthers = users.filter((u) => u.user_id !== user?.id);
+
+  // Carga inicial: sincroniza el editor con el post (solo la primera vez)
+  useEffect(() => {
+    if (!post || loadedRef.current) return;
+    loadedRef.current = true;
+    justCreatedRef.current = false;
+    setTitle(post.title);
+    setContent(post.content);
+    setNetwork(post.network);
+    setStatus(post.status);
+    const snapshot = {
+      title: post.title,
+      content: post.content,
+      network: post.network,
+      status: post.status,
+    };
+    lastSavedSnapshotRef.current = snapshot;
+    myLastSaveRef.current = snapshot;
+  }, [post]);
+
+  // Realtime: cambios del post y de sus comentarios
+  useSocialPostChanges({
+    postId: currentId,
+    onPostUpdate: (row) => {
+      const last = myLastSaveRef.current;
+      const isOwnEcho =
+        last &&
+        row.title === last.title &&
+        row.content === last.content &&
+        row.network === last.network &&
+        row.status === last.status;
+      if (isOwnEcho) return;
+
+      const patch: Partial<SocialPost> = {};
+      if (row.title !== undefined && !pendingEditRef.current.has("title")) {
+        setTitle(row.title);
+      } else if (row.title !== undefined) {
+        patch.title = row.title;
+      }
+      if (row.content !== undefined && !pendingEditRef.current.has("content")) {
+        setContent(row.content);
+      } else if (row.content !== undefined) {
+        patch.content = row.content;
+      }
+      if (row.network !== undefined) setNetwork(row.network);
+      if (row.status !== undefined) setStatus(row.status);
+      if (patch.title !== undefined || patch.content !== undefined) {
+        setPendingRemote((p) => ({ ...p, ...patch }));
+      }
+    },
+    onCommentsChanged: () => {
+      queryClient.invalidateQueries({ queryKey: ["social_comments", currentId] });
+      queryClient.invalidateQueries({ queryKey: ["social_posts"] });
+    },
+  });
+
+  // Autoguardado con debounce
+  useEffect(() => {
+    if (isNew || !post) return;
+    const current = { title, content, network, status };
+    const last = lastSavedSnapshotRef.current;
+    if (
+      last &&
+      last.title === current.title &&
+      last.content === current.content &&
+      last.network === current.network &&
+      last.status === current.status
+    ) {
+      return;
+    }
+    const t = setTimeout(() => {
+      lastSavedSnapshotRef.current = current;
+      setSaveState("saving");
+      savePost.mutate(
+        { id: post.id, ...current },
+        {
+          onSuccess: () => {
+            myLastSaveRef.current = current;
+            setSaveState("saved");
+            setLastSavedAt(new Date());
+          },
+          onError: () => {
+            lastSavedSnapshotRef.current = last;
+            setSaveState("idle");
+            toast.error("No se pudo guardar el texto");
+          },
+        },
+      );
+    }, 800);
+    return () => clearTimeout(t);
+  }, [title, content, network, status, isNew, post, savePost]);
+
+  function handleCreate() {
+    if (!title.trim()) {
+      toast.error("Escribe un título");
+      return;
+    }
+    if (!content.trim()) {
+      toast.error("Escribe el texto");
+      return;
+    }
+    const payload = { title: title.trim(), content, network, status };
+    savePost.mutate(payload, {
+      onSuccess: (id) => {
+        toast.success("Texto creado");
+        justCreatedRef.current = true;
+        lastSavedSnapshotRef.current = payload;
+        myLastSaveRef.current = payload;
+        setCurrentId(id);
+        navigate({ to: "/social", search: { open: id } });
+      },
+      onError: () => toast.error("No se pudo crear el texto"),
+    });
+  }
+
+  function handleDelete() {
+    if (!post) return;
+    if (!confirm(`¿Eliminar el texto "${post.title}"?`)) return;
+    deletePost.mutate(post.id, {
+      onSuccess: () => {
+        toast.success("Texto eliminado");
+        onBack();
+      },
+      onError: () => toast.error("No se pudo eliminar el texto"),
+    });
+  }
+
+  function applyTypography() {
     const el = textareaRef.current;
     if (!el) return;
     const start = el.selectionStart;
@@ -520,12 +773,18 @@ function SocialDetail({
       toast("Selecciona parte del texto para aplicar el estilo");
       return;
     }
-    const styled = toUnicodeStyle(selected, style);
+    const composed = composeUnicodeStyle(fontFamily, fontStyle);
+    const styled = composed ? toUnicodeStyle(selected, composed) : cleanUnicodeStyle(selected);
     setContent(content.slice(0, start) + styled + content.slice(end));
     requestAnimationFrame(() => {
       el.focus();
       el.setSelectionRange(start, start + styled.length);
     });
+  }
+
+  function changeFamily(family: UnicodeFontFamily) {
+    setFontFamily(family);
+    if (!supportsUnicodeStyle(family, fontStyle)) setFontStyle("normal");
   }
 
   function cleanFormat() {
@@ -543,55 +802,48 @@ function SocialDetail({
     });
   }
 
-  async function copyContent() {
-    try {
-      await navigator.clipboard.writeText(content);
-      setCopied(true);
-      toast.success("Texto copiado");
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      toast.error("No se pudo copiar el texto");
-    }
-  }
-
-  function handleSave() {
-    if (!title.trim()) {
-      toast.error("Escribe un título");
+  function trackSelection() {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    if (start === end) {
+      setAnchor(null);
       return;
     }
-    if (!content.trim()) {
-      toast.error("Escribe el texto");
+    const snippet = content.slice(start, end).slice(0, 120);
+    if (!snippet.trim()) {
+      setAnchor(null);
       return;
     }
-    const payload = post
-      ? { id: post.id, title: title.trim(), content, network, status }
-      : { title: title.trim(), content, network, status };
-    savePost.mutate(payload, {
-      onSuccess: () => {
-        toast.success(isNew ? "Texto creado" : "Texto guardado");
-        onBack();
-      },
-      onError: () => toast.error("No se pudo guardar el texto"),
-    });
+    setAnchor({ start, end, snippet });
   }
 
-  function handleDelete() {
-    if (!post) return;
-    if (!confirm(`¿Eliminar el texto "${post.title}"?`)) return;
-    deletePost.mutate(post.id, {
-      onSuccess: () => {
-        toast.success("Texto eliminado");
-        onBack();
+  function submitAnchoredComment() {
+    const body = anchorComment.trim();
+    if (!body || !currentId || !anchor) return;
+    addComment.mutate(
+      {
+        postId: currentId,
+        body,
+        anchor: { start_offset: anchor.start, end_offset: anchor.end, snippet: anchor.snippet },
       },
-      onError: () => toast.error("No se pudo eliminar el texto"),
-    });
+      {
+        onSuccess: () => {
+          setAnchorComment("");
+          setAnchor(null);
+          toast.success("Comentario añadido");
+        },
+        onError: () => toast.error("No se pudo añadir el comentario"),
+      },
+    );
   }
 
   function handleAddComment() {
     const body = comment.trim();
-    if (!body || !postId) return;
+    if (!body || !currentId) return;
     addComment.mutate(
-      { postId, body },
+      { postId: currentId, body },
       {
         onSuccess: () => {
           setComment("");
@@ -603,10 +855,10 @@ function SocialDetail({
   }
 
   function handleDeleteComment(id: string) {
-    if (!postId) return;
+    if (!currentId) return;
     if (!confirm("¿Eliminar este comentario?")) return;
     deleteComment.mutate(
-      { id, postId },
+      { id, postId: currentId },
       {
         onSuccess: () => toast.success("Comentario eliminado"),
         onError: () => toast.error("No se pudo eliminar el comentario"),
@@ -614,7 +866,36 @@ function SocialDetail({
     );
   }
 
-  if (postId && posts.isLoading) {
+  function applyPendingRemote() {
+    if (!pendingRemote) return;
+    if (pendingRemote.title !== undefined) setTitle(pendingRemote.title);
+    if (pendingRemote.content !== undefined) setContent(pendingRemote.content);
+    pendingEditRef.current.clear();
+    setPendingRemote(null);
+  }
+
+  function toggleHighlight(c: SocialComment) {
+    if (c.start_offset == null || c.end_offset == null) return;
+    const isActive =
+      activeHighlight?.start === c.start_offset && activeHighlight?.end === c.end_offset;
+    setActiveHighlight(isActive ? null : { start: c.start_offset, end: c.end_offset });
+    if (!isActive) {
+      previewRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
+  async function copyContent() {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      toast.success("Texto copiado");
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("No se pudo copiar el texto");
+    }
+  }
+
+  if (currentId && posts.isLoading) {
     return (
       <div className="comic rounded-xl bg-card p-8 text-center text-sm font-bold text-muted-foreground">
         Cargando...
@@ -622,7 +903,7 @@ function SocialDetail({
     );
   }
 
-  if (postId && !post) {
+  if (currentId && !post && posts.data && !justCreatedRef.current) {
     return (
       <div className="space-y-6">
         <button
@@ -638,9 +919,24 @@ function SocialDetail({
     );
   }
 
+  const highlights: Highlight[] = [];
+  for (const c of comments.data ?? []) {
+    if (c.start_offset == null || c.end_offset == null) continue;
+    if (c.start_offset >= 0 && c.end_offset <= content.length && c.start_offset < c.end_offset) {
+      highlights.push({
+        start: c.start_offset,
+        end: c.end_offset,
+        active: activeHighlight?.start === c.start_offset && activeHighlight?.end === c.end_offset,
+      });
+    }
+  }
+
+  const lastEditorName =
+    post?.updated_by && post.updated_by !== user?.id ? nameMap[post.updated_by] : null;
+
   return (
     <div className="space-y-6">
-      {/* Cabecera: volver + acciones */}
+      {/* Cabecera: volver + presencia + acciones */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button
           onClick={onBack}
@@ -649,7 +945,49 @@ function SocialDetail({
           ← Volver a Redes
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {!isNew && saveState !== "idle" && (
+            <span className="text-[10px] font-extrabold uppercase text-muted-foreground">
+              {saveState === "saving" ? (
+                <span className="flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Guardando…
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                  <Check className="h-3 w-3" /> Guardado
+                  {lastSavedAt ? ` ${formatDate(lastSavedAt.toISOString())}` : ""}
+                </span>
+              )}
+            </span>
+          )}
+          {lastEditorName && (
+            <span
+              className="comic-sm rounded bg-secondary px-2 py-1 text-[10px] font-extrabold uppercase text-secondary-foreground"
+              title="Última edición"
+            >
+              Editado por {lastEditorName}
+            </span>
+          )}
+          {presenceOthers.length > 0 && (
+            <div
+              className="flex -space-x-1.5"
+              title={`Editando ahora: ${presenceOthers.map((u) => u.name).join(", ")}`}
+            >
+              {presenceOthers.slice(0, 3).map((u) => (
+                <span
+                  key={u.user_id}
+                  className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-secondary text-[8px] font-extrabold uppercase"
+                >
+                  {u.name.slice(0, 2)}
+                </span>
+              ))}
+              {presenceOthers.length > 3 && (
+                <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-accent text-[8px] font-extrabold">
+                  +{presenceOthers.length - 3}
+                </span>
+              )}
+            </div>
+          )}
           {!isNew && (
             <button
               onClick={handleDelete}
@@ -658,243 +996,452 @@ function SocialDetail({
               <Trash2 className="h-3.5 w-3.5" /> Eliminar
             </button>
           )}
-          <button
-            onClick={handleSave}
-            disabled={savePost.isPending}
-            className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
-          >
-            <Save className="h-3.5 w-3.5" /> {isNew ? "Crear" : "Guardar"}
-          </button>
+          {isNew && (
+            <button
+              onClick={handleCreate}
+              disabled={savePost.isPending}
+              className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+            >
+              <Save className="h-3.5 w-3.5" /> Crear
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Editor */}
-      <div className="comic rounded-xl bg-card p-4 sm:p-5 space-y-4">
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-extrabold uppercase text-muted-foreground">
-            Título
-          </label>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="P. ej. Concierto en las fiestas de..."
-            className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
-          />
+      {/* Aviso de versión remota más reciente */}
+      {pendingRemote && (
+        <div className="comic flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-500/15 px-3 py-2 text-xs font-extrabold text-amber-700 dark:text-amber-300">
+          <span>Alguien ha actualizado este texto mientras lo editabas.</span>
+          <button
+            onClick={applyPendingRemote}
+            className="comic-sm comic-press flex items-center gap-1 rounded-md bg-amber-500/20 px-2 py-1 uppercase"
+          >
+            <RefreshCw className="h-3 w-3" /> Cargar cambios
+          </button>
         </div>
+      )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-extrabold uppercase text-muted-foreground">
-              Red social
-            </label>
-            <div className="flex gap-1.5">
-              {NETWORKS.map((n) => (
-                <button
-                  key={n.value}
-                  type="button"
-                  onClick={() => setNetwork(n.value as SocialNetwork)}
-                  className={`comic-sm comic-press flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-extrabold uppercase transition-colors ${
-                    network === n.value
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-secondary-foreground hover:bg-accent"
-                  }`}
-                >
-                  <n.icon className="h-4 w-4" /> {n.label}
-                </button>
-              ))}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        {/* Editor */}
+        <div className="order-1 space-y-4 lg:order-none lg:col-start-1 lg:row-start-1">
+          <div className="comic rounded-xl bg-card p-4 sm:p-5 space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-extrabold uppercase text-muted-foreground">
+                Título
+              </label>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onFocus={() => {
+                  pendingEditRef.current.add("title");
+                  setEditing(true);
+                }}
+                onBlur={() => {
+                  pendingEditRef.current.delete("title");
+                  setEditing(false);
+                }}
+                placeholder="P. ej. Concierto en las fiestas de..."
+                className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
+              />
             </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-extrabold uppercase text-muted-foreground">
-              Estado
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {STATUSES.map((s) => (
-                <button
-                  key={s.value}
-                  onClick={() => setStatus(s.value)}
-                  className={`comic-sm comic-press rounded-lg px-3 py-1.5 text-xs font-extrabold uppercase transition-colors ${
-                    status === s.value
-                      ? s.className + " ring-2 ring-ink/40"
-                      : "bg-secondary text-secondary-foreground hover:bg-accent"
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-extrabold uppercase text-muted-foreground">
+                  Red social
+                </label>
+                <div className="flex gap-1.5">
+                  {NETWORKS.map((n) => (
+                    <button
+                      key={n.value}
+                      type="button"
+                      onClick={() => setNetwork(n.value as SocialNetwork)}
+                      className={`comic-sm comic-press flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-extrabold uppercase transition-colors ${
+                        network === n.value
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-secondary-foreground hover:bg-accent"
+                      }`}
+                    >
+                      <n.icon className="h-4 w-4" /> {n.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-extrabold uppercase text-muted-foreground">
+                  Estado
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {STATUSES.map((s) => (
+                    <button
+                      key={s.value}
+                      onClick={() => setStatus(s.value)}
+                      className={`comic-sm comic-press rounded-lg px-3 py-1.5 text-xs font-extrabold uppercase transition-colors ${
+                        status === s.value
+                          ? s.className + " ring-2 ring-ink/40"
+                          : "bg-secondary text-secondary-foreground hover:bg-accent"
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-extrabold uppercase text-muted-foreground">
-            Texto del copy
-          </label>
-          <textarea
-            ref={textareaRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Escribe aquí el texto... Selecciona una parte y aplica un estilo llamativo con el botón Estilo."
-            rows={6}
-            className="w-full resize-y rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
-          />
-          <div className="flex flex-wrap items-center gap-1.5">
-            <div className="relative">
-              <button
-                onClick={() => setShowStyleMenu((v) => !v)}
-                className={`comic-sm comic-press flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-extrabold uppercase transition-colors ${
-                  showStyleMenu
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground hover:bg-accent"
-                }`}
-              >
-                <Type className="h-3.5 w-3.5" /> Estilo <ChevronDown className="h-3 w-3" />
-              </button>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-extrabold uppercase text-muted-foreground">
+                Texto del copy
+              </label>
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                onFocus={() => {
+                  pendingEditRef.current.add("content");
+                  setEditing(true);
+                }}
+                onBlur={() => {
+                  pendingEditRef.current.delete("content");
+                  setEditing(false);
+                }}
+                onMouseUp={trackSelection}
+                onKeyUp={trackSelection}
+                placeholder="Escribe aquí el texto... Selecciona una parte y elige una tipografía y un estilo llamativo."
+                rows={7}
+                className="w-full resize-y rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
+              />
 
-              {showStyleMenu && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowStyleMenu(false)} />
-                  <div className="comic absolute left-0 top-full z-50 mt-1.5 max-h-72 w-64 overflow-y-auto rounded-xl border border-ink/10 bg-card py-1 shadow-lg">
-                    {FONT_STYLES.map((f) => (
-                      <button
-                        key={f.value}
-                        onClick={() => {
-                          setShowStyleMenu(false);
-                          applyStyle(f.value);
-                        }}
-                        className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-accent"
-                      >
-                        <span className="w-32 shrink-0 text-[10px] font-extrabold uppercase text-muted-foreground">
-                          {f.name}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-base leading-tight">
-                          {toUnicodeStyle("Aa 01", f.value)}
-                        </span>
-                      </button>
-                    ))}
+              {/* Selectores tipografía + estilo */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setShowFamilyMenu((v) => !v);
+                      setShowStyleMenu(false);
+                    }}
+                    className={`comic-sm comic-press flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-extrabold uppercase transition-colors ${
+                      showFamilyMenu
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-secondary-foreground hover:bg-accent"
+                    }`}
+                  >
+                    <Type className="h-3.5 w-3.5" /> Tipografía <ChevronDown className="h-3 w-3" />
+                  </button>
+
+                  {showFamilyMenu && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setShowFamilyMenu(false)}
+                      />
+                      <div className="comic absolute left-0 top-full z-50 mt-1.5 max-h-72 w-64 overflow-y-auto rounded-xl border border-ink/10 bg-card py-1 shadow-lg">
+                        {FONT_FAMILIES.map((f) => (
+                          <button
+                            key={f.value}
+                            onClick={() => {
+                              setShowFamilyMenu(false);
+                              changeFamily(f.value);
+                            }}
+                            className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-accent"
+                          >
+                            <span className="w-36 shrink-0 text-[10px] font-extrabold uppercase text-muted-foreground">
+                              {f.name}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-base leading-tight">
+                              {familySample(f.value)}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setShowStyleMenu((v) => !v);
+                      setShowFamilyMenu(false);
+                    }}
+                    className={`comic-sm comic-press flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-extrabold uppercase transition-colors ${
+                      showStyleMenu
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-secondary-foreground hover:bg-accent"
+                    }`}
+                  >
+                    <span>{FONT_STYLES.find((s) => s.value === fontStyle)?.name ?? "Estilo"}</span>{" "}
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+
+                  {showStyleMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowStyleMenu(false)} />
+                      <div className="comic absolute left-0 top-full z-50 mt-1.5 w-48 overflow-hidden rounded-xl border border-ink/10 bg-card py-1 shadow-lg">
+                        {FONT_STYLES.map((s) => {
+                          const supported = supportsUnicodeStyle(fontFamily, s.value);
+                          return (
+                            <button
+                              key={s.value}
+                              disabled={!supported}
+                              onClick={() => {
+                                setShowStyleMenu(false);
+                                setFontStyle(s.value);
+                              }}
+                              title={supported ? undefined : "No disponible para esta tipografía"}
+                              className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-bold transition-colors hover:bg-accent ${
+                                supported ? "" : "cursor-not-allowed opacity-40"
+                              }`}
+                            >
+                              {s.name}
+                              {!supported && <X className="h-3 w-3 text-muted-foreground" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <button
+                  onClick={applyTypography}
+                  title="Aplicar tipografía y estilo a la selección"
+                  className="comic-sm comic-press rounded-md bg-primary px-2.5 py-1.5 text-[11px] font-extrabold uppercase text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  Aplicar
+                </button>
+
+                <button
+                  onClick={cleanFormat}
+                  title="Quitar formato"
+                  className="comic-sm comic-press flex h-8 w-8 items-center justify-center rounded-md bg-secondary text-secondary-foreground hover:bg-accent"
+                >
+                  <Eraser className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Comentario anclado a la selección */}
+              {anchor && (
+                <div className="comic space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="min-w-0 flex-1 text-[11px] italic text-muted-foreground line-clamp-2">
+                      <Quote className="mr-1 inline h-3 w-3 text-primary" />
+                      {anchor.snippet}
+                    </p>
+                    <button onClick={() => setAnchor(null)} aria-label="Cancelar ancla">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                </>
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={anchorComment}
+                      onChange={(e) => setAnchorComment(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") submitAnchoredComment();
+                      }}
+                      placeholder="Comenta este fragmento..."
+                      className="min-w-0 flex-1 rounded-lg border-2 border-border bg-background px-2.5 py-1.5 text-sm font-medium focus:border-primary focus:outline-none"
+                    />
+                    <button
+                      onClick={submitAnchoredComment}
+                      disabled={addComment.isPending || !anchorComment.trim()}
+                      className="comic-sm comic-press flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
+          </div>
+        </div>
 
-            <button
-              onClick={cleanFormat}
-              title="Quitar formato"
-              className="comic-sm comic-press flex h-8 w-8 items-center justify-center rounded-md bg-secondary text-secondary-foreground hover:bg-accent"
-            >
-              <Eraser className="h-4 w-4" />
-            </button>
-
-            <span className="mx-1 h-5 w-px bg-border" />
-
-            <button
-              onClick={() => setShowPreview((v) => !v)}
-              className={`comic-sm comic-press flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-extrabold uppercase transition-colors ${
-                showPreview
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-secondary-foreground hover:bg-accent"
-              }`}
-            >
-              <Eye className="h-3.5 w-3.5" /> Vista previa
-            </button>
+        {/* Vista previa en vivo */}
+        <div
+          ref={previewRef}
+          className="order-2 space-y-3 lg:order-none lg:col-start-2 lg:row-start-1 lg:sticky lg:top-6 lg:self-start"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-extrabold uppercase">Vista previa</h2>
             <button
               onClick={copyContent}
-              className="comic-sm comic-press flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-extrabold uppercase bg-secondary text-secondary-foreground hover:bg-accent transition-colors"
+              className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-extrabold uppercase text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               {copied ? (
-                <Check className="h-3.5 w-3.5 text-emerald-500" />
+                <Check className="h-3.5 w-3.5 text-emerald-200" />
               ) : (
                 <Copy className="h-3.5 w-3.5" />
               )}
               Copiar
             </button>
           </div>
+          <PhonePreview network={network} title={title} content={content} highlights={highlights} />
+          <p className="text-center text-[10px] font-bold text-muted-foreground">
+            El texto copiado conserva los estilos al pegarlo en redes.
+          </p>
         </div>
 
-        {showPreview && (
-          <div className="rounded-xl border-2 border-border bg-background p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <networkMeta.icon className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-extrabold leading-tight">
-                  {title.trim() ? title : "Sin título"}
-                </p>
-                <p className="text-[11px] font-bold text-muted-foreground">La Bomba Show</p>
-              </div>
+        {/* Comentarios */}
+        <div className="order-3 space-y-3 lg:order-none lg:col-start-1 lg:row-start-2">
+          <div className="comic rounded-xl bg-card p-4 sm:p-5 space-y-3">
+            <div className="flex items-center gap-2 border-b border-border/40 pb-2">
+              <MessageSquare className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-extrabold uppercase">
+                Comentarios ({comments.data?.length ?? 0})
+              </h2>
             </div>
-            <p className="whitespace-pre-line break-words text-sm font-medium">
-              {content || "Sin contenido"}
-            </p>
-          </div>
-        )}
-      </div>
 
-      {/* Comentarios */}
-      <div className="comic rounded-xl bg-card p-4 sm:p-5 space-y-3">
-        <div className="flex items-center gap-2 border-b border-border/40 pb-2">
-          <MessageSquare className="h-4 w-4 text-primary" />
-          <h2 className="text-sm font-extrabold uppercase">
-            Comentarios ({comments.data?.length ?? 0})
-          </h2>
-        </div>
+            <div className="max-h-64 space-y-2.5 overflow-y-auto pr-1">
+              {(comments.data ?? []).map((c) => {
+                const hasAnchor = c.start_offset != null && c.end_offset != null;
+                return (
+                  <div
+                    key={c.id}
+                    className="flex items-start gap-2 rounded-lg border border-border/40 bg-background p-2.5"
+                  >
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-extrabold uppercase">
+                      {(nameMap[c.user_id] ?? "?").slice(0, 2)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-extrabold uppercase text-muted-foreground">
+                          {nameMap[c.user_id] ?? "Miembro"}
+                        </span>
+                        <span className="text-[10px] font-bold text-muted-foreground/70">
+                          {formatDate(c.created_at)}
+                        </span>
+                      </div>
+                      {c.snippet && (
+                        <div className="mt-1 rounded border-l-2 border-primary/50 bg-primary/5 px-2 py-1 text-[11px] italic text-muted-foreground line-clamp-2">
+                          {c.snippet}
+                        </div>
+                      )}
+                      <p className="whitespace-pre-line break-words text-sm font-medium mt-1">
+                        {c.body}
+                      </p>
+                      {hasAnchor && (
+                        <button
+                          onClick={() => toggleHighlight(c)}
+                          className="mt-1 flex items-center gap-1 text-[10px] font-extrabold uppercase text-primary"
+                        >
+                          <Eye className="h-3 w-3" />
+                          {activeHighlight?.start === c.start_offset
+                            ? "Quitar resaltado"
+                            : "Ver en el texto"}
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleDeleteComment(c.id)}
+                      aria-label="Eliminar comentario"
+                      title="Eliminar comentario"
+                      className="shrink-0 p-1 text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+              {comments.data && comments.data.length === 0 && (
+                <p className="py-2 text-center text-xs font-bold text-muted-foreground">
+                  Sin comentarios todavía. Selecciona un trozo del texto para comentarlo.
+                </p>
+              )}
+            </div>
 
-        <div className="max-h-64 space-y-2.5 overflow-y-auto pr-1">
-          {(comments.data ?? []).map((c) => (
-            <div
-              key={c.id}
-              className="flex items-start gap-2 rounded-lg border border-border/40 bg-background p-2.5"
-            >
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-extrabold uppercase">
-                {(nameMap[c.user_id] ?? "?").slice(0, 2)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-extrabold uppercase text-muted-foreground">
-                    {nameMap[c.user_id] ?? "Miembro"}
-                  </span>
-                  <span className="text-[10px] font-bold text-muted-foreground/70">
-                    {formatDate(c.created_at)}
-                  </span>
-                </div>
-                <p className="whitespace-pre-line break-words text-sm font-medium">{c.body}</p>
-              </div>
+            <div className="flex items-center gap-2">
+              <input
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddComment();
+                }}
+                placeholder="Añade un comentario general..."
+                className="flex-1 rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
+              />
               <button
-                onClick={() => handleDeleteComment(c.id)}
-                aria-label="Eliminar comentario"
-                title="Eliminar comentario"
-                className="shrink-0 p-1 text-muted-foreground hover:text-destructive transition-colors"
+                onClick={handleAddComment}
+                disabled={addComment.isPending || !comment.trim()}
+                className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Send className="h-3.5 w-3.5" /> Enviar
               </button>
             </div>
-          ))}
-          {comments.data && comments.data.length === 0 && (
-            <p className="py-2 text-center text-xs font-bold text-muted-foreground">
-              Sin comentarios todavía.
-            </p>
-          )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Vista previa estilo móvil ──────────────────────────────────────────────────
+
+function PhonePreview({
+  network,
+  title,
+  content,
+  highlights,
+}: {
+  network: SocialNetwork;
+  title: string;
+  content: string;
+  highlights: Highlight[];
+}) {
+  const meta = networkMetaOf(network);
+  const segments = buildHighlightSegments(content, highlights);
+
+  return (
+    <div className="mx-auto w-full max-w-[340px]">
+      <div className="comic rounded-[2rem] border-[6px] border-ink/20 bg-card p-3 shadow-xl">
+        <div className="mb-2 flex justify-center">
+          <div className="h-1.5 w-20 rounded-full bg-border" />
         </div>
 
-        <div className="flex items-center gap-2">
-          <input
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleAddComment();
-            }}
-            placeholder="Añade un comentario..."
-            className="flex-1 rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
-          />
-          <button
-            onClick={handleAddComment}
-            disabled={addComment.isPending || !comment.trim()}
-            className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
-          >
-            <Send className="h-3.5 w-3.5" /> Enviar
-          </button>
+        {network === "instagram" ? (
+          <div className="flex items-center gap-2 px-1">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <meta.icon className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-extrabold">labombashow</p>
+              <p className="text-[10px] font-bold text-muted-foreground">La Bomba Show</p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-1">
+            <div className="min-w-0 flex-1 text-right">
+              <p className="truncate text-xs font-extrabold">labombashow</p>
+              <p className="flex items-center justify-end gap-1 text-[10px] font-bold text-muted-foreground">
+                <Music2 className="h-3 w-3" /> La Bomba Show
+              </p>
+            </div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <meta.icon className="h-4 w-4" />
+            </div>
+          </div>
+        )}
+
+        <div className="mt-2 flex h-36 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 via-primary/5 to-accent">
+          <Instagram className="h-8 w-8 text-primary/40" />
+        </div>
+
+        <div className="mt-2 flex items-center gap-3 px-1 text-ink">
+          <Heart className="h-4 w-4" />
+          <MessageCircle className="h-4 w-4" />
+          <Send className="h-4 w-4" />
+          <div className="flex-1" />
+          <Bookmark className="h-4 w-4" />
+        </div>
+
+        <div className="mt-2 space-y-1 px-1">
+          <p className="text-[10px] font-extrabold uppercase text-muted-foreground">
+            {title.trim() || "Sin título"}
+          </p>
+          <p className="whitespace-pre-line break-words text-xs leading-relaxed">
+            <HighlightRuns segments={segments} />
+          </p>
+          <p className="text-[9px] font-bold text-muted-foreground/70">Hace 1 hora</p>
         </div>
       </div>
     </div>
