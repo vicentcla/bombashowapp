@@ -349,7 +349,7 @@ export function useSocialPosts() {
     queryFn: async (): Promise<SocialPost[]> => {
       const { data, error } = await supabase
         .from("social_posts")
-        .select("*, comments(count)")
+        .select("*, comments:social_comments(count)")
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as SocialPost[];
