@@ -267,7 +267,7 @@ function SocialPage() {
   }
 
   function startFromTemplate(t: SocialTemplate) {
-    setDraft({ title: t.name, content: "", network: t.network });
+    setDraft({ title: t.name, content: t.content, network: t.network });
     setCreating(true);
   }
 
@@ -1526,6 +1526,7 @@ function CopyFromModal({
 function CreateTemplateModal({ onClose }: { onClose: () => void }) {
   const save = useSaveSocialTemplate();
   const [name, setName] = useState("");
+  const [content, setContent] = useState("");
   const [network, setNetwork] = useState<SocialNetwork>("instagram");
 
   function submit() {
@@ -1534,7 +1535,7 @@ function CreateTemplateModal({ onClose }: { onClose: () => void }) {
       return;
     }
     save.mutate(
-      { name: name.trim(), network },
+      { name: name.trim(), content, network },
       {
         onSuccess: () => {
           toast.success("Plantilla creada");
@@ -1566,6 +1567,22 @@ function CreateTemplateModal({ onClose }: { onClose: () => void }) {
             autoFocus
             className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
           />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-extrabold uppercase text-muted-foreground">
+            Texto del copy
+          </label>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Escribe el texto base del post..."
+            rows={4}
+            className="w-full resize-y rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
+          />
+          <p className="text-[10px] font-bold text-muted-foreground">
+            Se copiará al crear un texto nuevo desde esta plantilla.
+          </p>
         </div>
 
         <div className="space-y-1.5">

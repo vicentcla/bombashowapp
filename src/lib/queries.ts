@@ -454,6 +454,7 @@ export function useDeleteComment() {
 export type SocialTemplate = {
   id: string;
   name: string;
+  content: string;
   network: SocialNetwork;
   created_by: string;
   created_at: string;
@@ -477,7 +478,12 @@ export function useSocialTemplates() {
 export function useSaveSocialTemplate() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: async (input: { id?: string; name: string; network: SocialNetwork }) => {
+    mutationFn: async (input: {
+      id?: string;
+      name: string;
+      content: string;
+      network: SocialNetwork;
+    }) => {
       const { id, ...rest } = input;
       if (id) {
         const { error } = await supabase

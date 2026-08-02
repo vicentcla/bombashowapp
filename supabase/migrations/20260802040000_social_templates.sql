@@ -1,7 +1,8 @@
--- Plantillas de redes sociales: esquemas reutilizables (nombre + red)
+-- Plantillas de redes sociales: esquemas reutilizables (nombre + red + copy)
 CREATE TABLE public.social_templates (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
+  content text NOT NULL DEFAULT '',
   network text NOT NULL DEFAULT 'instagram' CHECK (network IN ('instagram', 'tiktok')),
   created_by uuid NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at timestamptz NOT NULL DEFAULT now(),

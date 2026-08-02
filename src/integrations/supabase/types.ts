@@ -394,6 +394,7 @@ export type Database = {
       };
       social_templates: {
         Row: {
+          content: string;
           created_at: string;
           created_by: string;
           id: string;
@@ -402,6 +403,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          content?: string;
           created_at?: string;
           created_by?: string;
           id?: string;
@@ -410,6 +412,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          content?: string;
           created_at?: string;
           created_by?: string;
           id?: string;
