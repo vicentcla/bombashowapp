@@ -64,6 +64,37 @@ export function useProfileStatus() {
   });
 }
 
+export type ProfileRow = {
+  id: string;
+  display_name: string | null;
+  status: ApprovalStatus;
+  onboarded_at: string | null;
+};
+
+/** Perfil completo del usuario actual (estado de aprobación + alta de usuario). */
+export function useProfile() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["my-profile", user?.id],
+    enabled: !!user?.id,
+    retry: 0,
+    queryFn: async (): Promise<ProfileRow> => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, display_name, status, onboarded_at")
+        .eq("id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return {
+        id: user!.id,
+        display_name: data?.display_name ?? null,
+        status: (data?.status as ApprovalStatus | undefined) ?? "pending",
+        onboarded_at: data?.onboarded_at ?? null,
+      };
+    },
+  });
+}
+
 export function useIsAdmin() {
   const roleQuery = useRole();
   const isAdmin = roleQuery.data === "admin" || roleQuery.data === "superadmin";

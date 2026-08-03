@@ -125,7 +125,10 @@ function AuthPage() {
         if (error) throw error;
         if (!data?.url) throw new Error("No se pudo iniciar sesión con Google");
         const ok = await openGooglePopup(data.url);
-        if (ok) navigate({ to: "/inicio", replace: true });
+        if (ok) {
+          await ensureProfileRequest();
+          navigate({ to: "/inicio", replace: true });
+        }
         return;
       }
 
@@ -135,6 +138,7 @@ function AuthPage() {
       });
       if (result.error) throw result.error;
       if (result.redirected) return;
+      await ensureProfileRequest();
       navigate({ to: "/inicio", replace: true });
     } catch (err) {
       const message =
@@ -248,6 +252,29 @@ function AuthPage() {
 }
 
 const OAUTH_POPUP_TIMEOUT_MS = 120000;
+
+// Garantiza que un usuario nuevo tenga su petición de acceso (perfil pendiente)
+async function ensureProfileRequest() {
+  const { data } = await supabase.auth.getSession();
+  const user = data.session?.user ?? null;
+  if (!user) return;
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (error || profile) return;
+  await supabase.from("profiles").insert({
+    id: user.id,
+    email: user.email ?? null,
+    display_name:
+      user.user_metadata?.["display_name"] ||
+      user.user_metadata?.["full_name"] ||
+      user.email?.split("@")[0] ||
+      "",
+    status: "pending",
+  });
+}
 
 function openGooglePopup(url: string): Promise<boolean> {
   return new Promise((resolve) => {
