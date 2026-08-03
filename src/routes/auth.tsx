@@ -10,6 +10,9 @@ import { LogIn, KeyRound, Mail, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  validateSearch: (search: Record<string, unknown>) => ({
+    error: typeof search["error"] === "string" ? search["error"] : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Entrar — La Bomba Show" },
@@ -29,11 +32,19 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { error: oauthError } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [recovery, setRecovery] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
+
+  useEffect(() => {
+    if (oauthError) {
+      toast.error(`No se pudo iniciar sesión con Google: ${oauthError}`);
+      navigate({ to: "/auth", replace: true, search: {} });
+    }
+  }, [oauthError, navigate]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -93,12 +104,16 @@ function AuthPage() {
     setBusy(true);
     try {
       const host = window.location.hostname;
-      const isLovableHost = host.endsWith(".lovable.app") || host.endsWith(".lovableproject.com") || host === "localhost";
+      const isLovableHost =
+        host.endsWith(".lovable.app") ||
+        host.endsWith(".lovableproject.com") ||
+        host === "localhost";
 
       if (!isLovableHost) {
+        const redirectTo = window.location.origin;
         const { error } = await supabase.auth.signInWithOAuth({
           provider: "google",
-          options: { redirectTo: window.location.origin },
+          options: { redirectTo },
         });
         if (error) throw error;
         return;
@@ -111,7 +126,13 @@ function AuthPage() {
       if (result.redirected) return;
       navigate({ to: "/inicio", replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se ha podido iniciar sesión con Google");
+      const message =
+        err instanceof Error ? err.message : "No se ha podido iniciar sesión con Google";
+      toast.error(
+        message.toLowerCase().includes("redirect") || message.toLowerCase().includes("url")
+          ? `${message} — Añade la URL de esta página a Redirect URLs en Supabase (Authentication → URL Configuration) y configura el proveedor Google.`
+          : message,
+      );
     } finally {
       setBusy(false);
     }
