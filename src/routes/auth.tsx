@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 const BANNER_SRC = "/banner-2.png";
 const LOGO_SRC = "/logo-titulo-2.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
