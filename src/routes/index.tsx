@@ -12,7 +12,7 @@ export const Route = createFileRoute("/")({
     if (oauthError) {
       throw redirect({ to: "/auth", search: { error: oauthError } });
     }
-    throw redirect({ to: "/auth" });
+    throw redirect({ to: "/auth", search: {} });
   },
   component: () => null,
 });

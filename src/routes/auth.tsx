@@ -10,9 +10,10 @@ import { LogIn, KeyRound, Mail, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  validateSearch: (search: Record<string, unknown>) => ({
-    error: typeof search["error"] === "string" ? search["error"] : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>) =>
+    ({
+      error: typeof search["error"] === "string" ? search["error"] : undefined,
+    }) as { error?: string },
   head: () => ({
     meta: [
       { title: "Entrar — La Bomba Show" },
@@ -110,17 +111,27 @@ function AuthPage() {
         host === "localhost";
 
       if (!isLovableHost) {
-        const redirectTo = window.location.origin;
-        const { error } = await supabase.auth.signInWithOAuth({
+        // Fuera de Lovable (Cloudflare): OAuth directo de Supabase en ventana
+        // emergente para no sacar la app (PWA) y obligar a elegir cuenta.
+        const redirectTo = `${window.location.origin}/oauth-callback.html`;
+        const { data, error } = await supabase.auth.signInWithOAuth({
           provider: "google",
-          options: { redirectTo },
+          options: {
+            redirectTo,
+            skipBrowserRedirect: true,
+            queryParams: { prompt: "select_account" },
+          },
         });
         if (error) throw error;
+        if (!data?.url) throw new Error("No se pudo iniciar sesión con Google");
+        const ok = await openGooglePopup(data.url);
+        if (ok) navigate({ to: "/inicio", replace: true });
         return;
       }
 
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
+        extraParams: { prompt: "select_account" },
       });
       if (result.error) throw result.error;
       if (result.redirected) return;
@@ -234,6 +245,102 @@ function AuthPage() {
       </form>
     </div>
   );
+}
+
+const OAUTH_POPUP_TIMEOUT_MS = 120000;
+
+function openGooglePopup(url: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const width = 520;
+    const height = 600;
+    const left = Math.max(0, (window.screen.width - width) / 2);
+    const top = Math.max(0, (window.screen.height - height) / 2);
+    const popup = window.open(
+      url,
+      "bombashow_google",
+      `width=${width},height=${height},left=${left},top=${top}`,
+    );
+    if (!popup) {
+      toast.error("El navegador bloqueó la ventana de acceso. Permite ventanas emergentes.");
+      resolve(false);
+      return;
+    }
+
+    let done = false;
+
+    const cleanup = () => {
+      clearInterval(interval);
+      window.removeEventListener("message", onMessage);
+      try {
+        popup.close();
+      } catch {
+        /* noop */
+      }
+    };
+
+    const applyTokens = async (params: URLSearchParams) => {
+      const error = params.get("error_description") ?? params.get("error");
+      if (error) {
+        cleanup();
+        toast.error(`No se pudo iniciar sesión con Google: ${error}`);
+        resolve(false);
+        return;
+      }
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+      const code = params.get("code");
+      if (!((accessToken && refreshToken) || code)) return;
+      done = true;
+      cleanup();
+      try {
+        if (accessToken && refreshToken) {
+          await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+        } else if (code) {
+          await supabase.auth.exchangeCodeForSession(code);
+        }
+        resolve(true);
+      } catch {
+        toast.error("No se pudo completar el acceso con Google");
+        resolve(false);
+      }
+    };
+
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== window.location.origin || done) return;
+      const data = e.data as { type?: string; hash?: string };
+      if (!data || data.type !== "oauth_callback") return;
+      applyTokens(new URLSearchParams((data.hash ?? "").replace(/^#/, "")));
+    }
+
+    const interval = setInterval(() => {
+      if (done) return;
+      if (popup.closed) {
+        cleanup();
+        resolve(false);
+        return;
+      }
+      let href = "";
+      try {
+        href = popup.location.href;
+      } catch {
+        return;
+      }
+      if (href.startsWith(window.location.origin)) {
+        applyTokens(new URLSearchParams((popup.location.hash ?? "").replace(/^#/, "")));
+      }
+    }, 300);
+
+    window.addEventListener("message", onMessage);
+    setTimeout(() => {
+      if (done) return;
+      cleanup();
+      toast.error("Se agotó el tiempo. Vuelve a intentarlo.");
+      resolve(false);
+    }, OAUTH_POPUP_TIMEOUT_MS);
+  });
 }
 
 function RecoverySent({ email, onBack }: { email: string; onBack: () => void }) {

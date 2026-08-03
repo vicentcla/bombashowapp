@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Completando acceso</title>
+  </head>
+  <body
+    style="
+      margin: 0;
+      font-family:
+        system-ui,
+        -apple-system,
+        sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #0b1220;
+      color: #fff;
+    "
+  >
+    <p style="font-weight: 600">Completando acceso…</p>
+    <script>
+      (function () {
+        var hash = window.location.hash || "";
+        if (window.opener) {
+          try {
+            window.opener.postMessage(
+              { type: "oauth_callback", hash: hash },
+              window.location.origin,
+            );
+          } catch (e) {
+            /* noop */
+          }
+          setTimeout(function () {
+            try {
+              window.close();
+            } catch (e) {
+              /* noop */
+            }
+          }, 600);
+        }
+      })();
+    </script>
+  </body>
+</html>
