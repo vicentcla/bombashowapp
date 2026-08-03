@@ -95,6 +95,33 @@ export type Database = {
           },
         ]
       }
+      notices: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       play_events: {
         Row: {
           arrangement_id: string | null
@@ -298,22 +325,31 @@ export type Database = {
         Row: {
           body: string
           created_at: string
+          end_offset: number | null
           id: string
           post_id: string
+          snippet: string
+          start_offset: number | null
           user_id: string
         }
         Insert: {
           body: string
           created_at?: string
+          end_offset?: number | null
           id?: string
           post_id: string
+          snippet?: string
+          start_offset?: number | null
           user_id?: string
         }
         Update: {
           body?: string
           created_at?: string
+          end_offset?: number | null
           id?: string
           post_id?: string
+          snippet?: string
+          start_offset?: number | null
           user_id?: string
         }
         Relationships: [
@@ -336,6 +372,7 @@ export type Database = {
           status: string
           title: string
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           content?: string
@@ -346,6 +383,7 @@ export type Database = {
           status?: string
           title: string
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           content?: string
@@ -355,6 +393,37 @@ export type Database = {
           network?: string
           status?: string
           title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      social_templates: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          network: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name: string
+          network?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          network?: string
           updated_at?: string
         }
         Relationships: []
