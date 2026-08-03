@@ -92,6 +92,18 @@ function AuthPage() {
   async function signInWithGoogle() {
     setBusy(true);
     try {
+      const host = window.location.hostname;
+      const isLovableHost = host.endsWith(".lovable.app") || host.endsWith(".lovableproject.com") || host === "localhost";
+
+      if (!isLovableHost) {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: { redirectTo: window.location.origin },
+        });
+        if (error) throw error;
+        return;
+      }
+
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
       });
