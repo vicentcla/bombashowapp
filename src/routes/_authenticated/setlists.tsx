@@ -1288,7 +1288,7 @@ function PassDropZone({
   return (
     <div
       ref={setNodeRef}
-      className={`${className} transition-colors duration-150 ${isOver ? "ring-2 ring-primary/60 bg-primary/5 rounded-xl" : ""}`}
+      className={`${className} rounded-xl transition-colors duration-150 ${isOver ? "ring-2 ring-primary bg-primary/10" : ""}`}
     >
       {children}
     </div>
@@ -1318,22 +1318,29 @@ function DraggableItem({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.35 : 1,
     zIndex: isDragging ? 10 : undefined,
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={className}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`${className} ${
+        isDragging
+          ? "opacity-60 outline-2 outline-dashed outline-offset-2 outline-primary bg-primary/10 [&>*]:invisible"
+          : ""
+      }`}
+    >
       <button
         ref={setActivatorNodeRef}
         {...attributes}
         {...listeners}
         type="button"
         aria-label="Arrastrar para mover"
-        className="cursor-grab touch-none rounded p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+        className="-m-1 cursor-grab touch-none rounded-lg p-2.5 text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing active:bg-primary/15 active:text-primary"
         style={{ touchAction: "none" }}
       >
-        <GripVertical className="h-4 w-4" />
+        <GripVertical className="h-5 w-5" />
       </button>
       {children}
     </div>
