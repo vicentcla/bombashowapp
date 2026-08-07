@@ -329,7 +329,7 @@ function SocialPage() {
           {showNewMenu && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowNewMenu(false)} />
-              <div className="comic fixed left-1/2 top-24 z-50 w-60 -translate-x-1/2 overflow-hidden rounded-xl border border-ink/10 bg-card shadow-lg sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1.5 sm:translate-x-0">
+              <div className="comic fixed left-1/2 top-1/2 z-50 w-64 max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl border border-ink/10 bg-card shadow-lg sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1.5 sm:w-60 sm:max-w-none sm:translate-x-0 sm:translate-y-0">
                 <button
                   onClick={() => {
                     setShowNewMenu(false);
