@@ -50,11 +50,13 @@ export type Database = {
           clothing: string
           created_at: string
           created_by: string
+          data: Json
           day: string
           id: string
           location: string
           maps_url: string
           message: string
+          template: string
           time: string
           title: string
           updated_at: string
@@ -64,11 +66,13 @@ export type Database = {
           clothing?: string
           created_at?: string
           created_by?: string
+          data?: Json
           day?: string
           id?: string
           location?: string
           maps_url?: string
           message?: string
+          template?: string
           time?: string
           title: string
           updated_at?: string
@@ -78,11 +82,13 @@ export type Database = {
           clothing?: string
           created_at?: string
           created_by?: string
+          data?: Json
           day?: string
           id?: string
           location?: string
           maps_url?: string
           message?: string
+          template?: string
           time?: string
           title?: string
           updated_at?: string

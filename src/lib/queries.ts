@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 /** Los ámbitos son los mismos valores que acepta la base de datos. */
 export type Scope = "calle" | "arreglo";
@@ -591,6 +592,8 @@ export function useDeleteNotice() {
   });
 }
 
+export type BoloTemplate = "fiestas" | "suelto" | "generico";
+
 export type BoloMessage = {
   id: string;
   title: string;
@@ -600,6 +603,8 @@ export type BoloMessage = {
   maps_url: string;
   attendees: string[];
   clothing: string;
+  template: BoloTemplate;
+  data: Json;
   message: string;
   created_by: string;
   created_at: string;
@@ -626,12 +631,8 @@ export function useSaveBoloMessage() {
     mutationFn: async (input: {
       id?: string;
       title: string;
-      day: string;
-      time: string;
-      location: string;
-      maps_url: string;
-      attendees: string[];
-      clothing: string;
+      template: BoloTemplate;
+      data: Json;
       message: string;
     }): Promise<string> => {
       const { id, ...rest } = input;

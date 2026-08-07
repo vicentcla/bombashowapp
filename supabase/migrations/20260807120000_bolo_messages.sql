@@ -8,6 +8,8 @@ CREATE TABLE public.bolo_messages (
   maps_url text NOT NULL DEFAULT '',
   attendees text[] NOT NULL DEFAULT '{}',
   clothing text NOT NULL DEFAULT '',
+  template text NOT NULL DEFAULT 'generico',
+  data jsonb NOT NULL DEFAULT '{}',
   message text NOT NULL DEFAULT '',
   created_by uuid NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at timestamptz NOT NULL DEFAULT now(),
