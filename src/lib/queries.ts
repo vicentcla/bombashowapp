@@ -66,6 +66,15 @@ export type RoleRequest = {
   created_at: string;
 };
 
+export type DriveFolder = {
+  id: string;
+  instrument: string;
+  name: string;
+  folder_id: string;
+  sort_order: number;
+  created_at: string;
+};
+
 export function useArrangements() {
   return useQuery({
     queryKey: ["arrangements"],
@@ -121,6 +130,21 @@ export function useSetlists() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as Setlist[];
+    },
+  });
+}
+
+export function useDriveFolders() {
+  return useQuery({
+    queryKey: ["drive_folders"],
+    queryFn: async (): Promise<DriveFolder[]> => {
+      const { data, error } = await supabase
+        .from("drive_folders")
+        .select("*")
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data as DriveFolder[];
     },
   });
 }

@@ -4,6 +4,7 @@ import {
   FileText,
   Clock,
   ListMusic,
+  Music4,
   Library,
   Instagram,
   LogOut,
@@ -22,6 +23,7 @@ const NAV = [
   { to: "/letras", label: "Letras", icon: FileText },
   { to: "/contadores", label: "Contadores", icon: Clock },
   { to: "/setlists", label: "Setlists", icon: ListMusic },
+  { to: "/partituras", label: "Partituras", icon: Music4 },
   { to: "/social", label: "Redes", icon: Instagram },
   { to: "/repertorio", label: "Repertorio", icon: Library },
 ] as const;

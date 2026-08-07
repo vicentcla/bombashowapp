@@ -19,6 +19,7 @@ import { Route as AuthenticatedContadoresRouteImport } from './routes/_authentic
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
 import { Route as AuthenticatedLetrasRouteImport } from './routes/_authenticated/letras'
 import { Route as AuthenticatedMiembrosRouteImport } from './routes/_authenticated/miembros'
+import { Route as AuthenticatedPartiturasRouteImport } from './routes/_authenticated/partituras'
 import { Route as AuthenticatedRepertorioRouteImport } from './routes/_authenticated/repertorio'
 import { Route as AuthenticatedSetlistsRouteImport } from './routes/_authenticated/setlists'
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
@@ -72,6 +73,11 @@ const AuthenticatedMiembrosRoute = AuthenticatedMiembrosRouteImport.update({
   path: '/miembros',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPartiturasRoute = AuthenticatedPartiturasRouteImport.update({
+  id: '/partituras',
+  path: '/partituras',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRepertorioRoute = AuthenticatedRepertorioRouteImport.update({
   id: '/repertorio',
   path: '/repertorio',
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/inicio': typeof AuthenticatedInicioRoute
   '/letras': typeof AuthenticatedLetrasRoute
   '/miembros': typeof AuthenticatedMiembrosRoute
+  '/partituras': typeof AuthenticatedPartiturasRoute
   '/repertorio': typeof AuthenticatedRepertorioRoute
   '/setlists': typeof AuthenticatedSetlistsRoute
   '/social': typeof AuthenticatedSocialRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/inicio': typeof AuthenticatedInicioRoute
   '/letras': typeof AuthenticatedLetrasRoute
   '/miembros': typeof AuthenticatedMiembrosRoute
+  '/partituras': typeof AuthenticatedPartiturasRoute
   '/repertorio': typeof AuthenticatedRepertorioRoute
   '/setlists': typeof AuthenticatedSetlistsRoute
   '/social': typeof AuthenticatedSocialRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
   '/_authenticated/letras': typeof AuthenticatedLetrasRoute
   '/_authenticated/miembros': typeof AuthenticatedMiembrosRoute
+  '/_authenticated/partituras': typeof AuthenticatedPartiturasRoute
   '/_authenticated/repertorio': typeof AuthenticatedRepertorioRoute
   '/_authenticated/setlists': typeof AuthenticatedSetlistsRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/inicio'
     | '/letras'
     | '/miembros'
+    | '/partituras'
     | '/repertorio'
     | '/setlists'
     | '/social'
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/inicio'
     | '/letras'
     | '/miembros'
+    | '/partituras'
     | '/repertorio'
     | '/setlists'
     | '/social'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/_authenticated/inicio'
     | '/_authenticated/letras'
     | '/_authenticated/miembros'
+    | '/_authenticated/partituras'
     | '/_authenticated/repertorio'
     | '/_authenticated/setlists'
     | '/_authenticated/social'
@@ -256,6 +268,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMiembrosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/partituras': {
+      id: '/_authenticated/partituras'
+      path: '/partituras'
+      fullPath: '/partituras'
+      preLoaderRoute: typeof AuthenticatedPartiturasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/repertorio': {
       id: '/_authenticated/repertorio'
       path: '/repertorio'
@@ -288,6 +307,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
   AuthenticatedLetrasRoute: typeof AuthenticatedLetrasRoute
   AuthenticatedMiembrosRoute: typeof AuthenticatedMiembrosRoute
+  AuthenticatedPartiturasRoute: typeof AuthenticatedPartiturasRoute
   AuthenticatedRepertorioRoute: typeof AuthenticatedRepertorioRoute
   AuthenticatedSetlistsRoute: typeof AuthenticatedSetlistsRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
@@ -301,6 +321,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,
   AuthenticatedLetrasRoute: AuthenticatedLetrasRoute,
   AuthenticatedMiembrosRoute: AuthenticatedMiembrosRoute,
+  AuthenticatedPartiturasRoute: AuthenticatedPartiturasRoute,
   AuthenticatedRepertorioRoute: AuthenticatedRepertorioRoute,
   AuthenticatedSetlistsRoute: AuthenticatedSetlistsRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
@@ -317,3 +338,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
