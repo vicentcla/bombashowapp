@@ -169,13 +169,15 @@ export type UnicodeStyle =
   | "sansItalic"
   | "sansBoldItalic"
   | "script"
+  | "scriptBold"
   | "fraktur"
   | "frakturBold"
   | "doubleStruck"
   | "circled"
   | "squared"
   | "squaredNegative"
-  | "parenthesized";
+  | "parenthesized"
+  | "fullwidth";
 
 type UnicodeFont = {
   upper: string;
@@ -230,6 +232,10 @@ const UNICODE_STYLES: Record<UnicodeStyle, UnicodeFont> = {
     upper: "𝒜ℬ𝒞𝒟ℰℱ𝒢ℋℐ𝒥𝒦ℒℳ𝒩𝒪𝒫𝒬ℛ𝒮𝒯𝒰𝒱𝒲𝒳𝒴𝒵",
     lower: "𝒶𝒷𝒸𝒹ℯ𝒻ℊ𝒽𝒾𝒿𝓀𝓁𝓂𝓃ℴ𝓅𝓆𝓇𝓈𝓉𝓊𝓋𝓌𝓍𝓎𝓏",
   },
+  scriptBold: {
+    upper: "𝓐𝓑𝓒𝓓𝓔𝓕𝓖𝓗𝓘𝓙𝓚𝓛𝓜𝓝𝓞𝓟𝓠𝓡𝓢𝓣𝓤𝓥𝓦𝓧𝓨𝓩",
+    lower: "𝓪𝓫𝓬𝓭𝓮𝓯𝓰𝓱𝓲𝓳𝓴𝓵𝓶𝓷𝓸𝓹𝓺𝓻𝓼𝓽𝓾𝓿𝔀𝔁𝔂𝔃",
+  },
   fraktur: {
     upper: "𝔄𝔅ℭ𝔇𝔈𝔉𝔊ℌℑ𝔍𝔎𝔏𝔐𝔑𝔒𝔓𝔔ℜ𝔖𝔗𝔘𝔙𝔚𝔛𝔜ℨ",
     lower: "𝔞𝔟𝔠𝔡𝔢𝔣𝔤𝔥𝔦𝔧𝔨𝔩𝔪𝔫𝔬𝔭𝔮𝔯𝔰𝔱𝔲𝔳𝔴𝔵𝔶𝔷",
@@ -261,6 +267,11 @@ const UNICODE_STYLES: Record<UnicodeStyle, UnicodeFont> = {
     upper: "⒜⒝⒞⒟⒠⒡⒢⒣⒤⒥⒦⒧⒨⒩⒪⒫⒬⒭⒮⒯⒰⒱⒲⒳⒴⒵",
     lower: "",
     upperForLower: true,
+  },
+  fullwidth: {
+    upper: "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ",
+    lower: "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ",
+    digits: "０１２３４５６７８９",
   },
 };
 
@@ -315,7 +326,11 @@ export type UnicodeFontFamily =
   | "circled"
   | "squared"
   | "squaredNegative"
-  | "parenthesized";
+  | "parenthesized"
+  | "sansBold"
+  | "sansBoldItalic"
+  | "scriptBold"
+  | "fullwidth";
 
 /** Estilo (peso/inclinación) aplicable a una familia. */
 export type UnicodeFontStyle = "normal" | "bold" | "italic" | "boldItalic";
@@ -334,6 +349,10 @@ const FAMILY_STYLE_COMPOSITION: Record<
   squared: { normal: "squared" },
   squaredNegative: { normal: "squaredNegative" },
   parenthesized: { normal: "parenthesized" },
+  sansBold: { normal: "sansBold" },
+  sansBoldItalic: { normal: "sansBoldItalic" },
+  scriptBold: { normal: "scriptBold" },
+  fullwidth: { normal: "fullwidth" },
 };
 
 /** Devuelve true si una familia soporta un estilo dado (ej. Círculos no tiene negrita). */

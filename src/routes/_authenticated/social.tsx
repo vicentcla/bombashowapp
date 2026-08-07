@@ -98,8 +98,12 @@ const STATUSES: { value: SocialPostStatus; label: string; className: string }[] 
 const FONT_FAMILIES: { value: UnicodeFontFamily; name: string }[] = [
   { value: "normal", name: "Normal" },
   { value: "sans", name: "Sans serif" },
+  { value: "fullwidth", name: "Ancho completo" },
+  { value: "sansBold", name: "Sans negrita" },
+  { value: "sansBoldItalic", name: "Sans negrita cursiva" },
   { value: "mono", name: "Monoespaciada" },
   { value: "script", name: "Escritura a mano" },
+  { value: "scriptBold", name: "Escritura a mano negrita" },
   { value: "fraktur", name: "Gótica" },
   { value: "doubleStruck", name: "Doble trazo" },
   { value: "circled", name: "Círculos" },
