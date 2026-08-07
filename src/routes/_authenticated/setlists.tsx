@@ -34,6 +34,7 @@ import {
   useSensor,
   useSensors,
   closestCorners,
+  MeasuringStrategy,
   type DragEndEvent,
   type DragStartEvent,
   useDroppable,
