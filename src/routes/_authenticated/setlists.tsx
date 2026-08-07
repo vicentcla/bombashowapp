@@ -54,6 +54,7 @@ import {
   useSetlistItems,
   useInvalidate,
   useLyrics,
+  useReorder,
   type Arrangement,
   type Lyric,
 } from "@/lib/queries";
@@ -329,10 +330,15 @@ export function renumberVirtualItems(
 function SetlistsPage() {
   const setlists = useSetlists();
   const invalidate = useInvalidate();
+  const reorder = useReorder("setlists");
   const search = Route.useSearch();
   const navigate = useNavigate();
   const [selected, setSelected] = useState<string | null>(search.open ?? null);
   const [selectedToConfig, setSelectedToConfig] = useState(false);
+
+  function handleReorder(newItems: { id: string }[]) {
+    reorder.mutate(newItems.map((s) => s.id));
+  }
 
   function openSetlist(id: string) {
     setSelected(id);
@@ -399,6 +405,7 @@ function SetlistsPage() {
         name: name.trim(),
         event_date: date || null,
         notes: serializeSetlistNotes(config),
+        sort_order: 0,
       })
       .select("id")
       .single();
@@ -444,6 +451,7 @@ function SetlistsPage() {
         name: "Plantilla 2 pases",
         event_date: null,
         notes: serializeSetlistNotes(config),
+        sort_order: 0,
       })
       .select("id")
       .single();
@@ -464,6 +472,7 @@ function SetlistsPage() {
       name: string;
       event_date: string | null;
       notes: string | null;
+      sort_order: number;
     };
     items: {
       id: string;
@@ -525,6 +534,7 @@ function SetlistsPage() {
         name: "-",
         event_date: null,
         notes: serializeSetlistNotes(initialConfig),
+        sort_order: 0,
       })
       .select("id")
       .single();
@@ -629,6 +639,7 @@ function SetlistsPage() {
       name: target.setlist.name,
       event_date: target.setlist.event_date,
       notes: target.setlist.notes,
+      sort_order: target.setlist.sort_order,
     });
 
     if (sErr) {
@@ -838,20 +849,28 @@ function SetlistsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {visibleSetlists.map((s) => {
-          const config = parseSetlistNotes(s.notes);
-          return (
-            <SetlistCard
-              key={s.id}
-              setlist={s}
-              config={config}
-              onSelect={() => openSetlist(s.id)}
-              onDelete={() => removeSetlist(s.id, s.name)}
-              onArchive={() => toggleArchive(s, config)}
-            />
-          );
-        })}
+      <div className="space-y-2">
+        <SortableList items={visibleSetlists} onReorder={handleReorder} strategy="vertical">
+          {(s) => {
+            const config = parseSetlistNotes(s.notes);
+            return (
+              <SortableItem
+                key={s.id}
+                id={s.id}
+                handleOnly
+                className="comic grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-xl bg-card p-4"
+              >
+                <SetlistCard
+                  setlist={s}
+                  config={config}
+                  onSelect={() => openSetlist(s.id)}
+                  onDelete={() => removeSetlist(s.id, s.name)}
+                  onArchive={() => toggleArchive(s, config)}
+                />
+              </SortableItem>
+            );
+          }}
+        </SortableList>
       </div>
 
       {/* Modal "A partir de..." – copiar un setlist existente */}
@@ -1151,7 +1170,7 @@ function SetlistCard({
   const comp = formatTimeComparison(totalSeconds, config.target_minutes);
 
   return (
-    <div className="comic flex flex-col justify-between rounded-xl bg-card p-4 space-y-3">
+    <div className="flex min-w-0 flex-col justify-between gap-3">
       <div>
         <div className="flex items-start justify-between gap-2">
           <button onClick={onSelect} className="group min-w-0 text-left">

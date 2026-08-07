@@ -255,25 +255,29 @@ const OAUTH_POPUP_TIMEOUT_MS = 120000;
 
 // Garantiza que un usuario nuevo tenga su petición de acceso (perfil pendiente)
 async function ensureProfileRequest() {
-  const { data } = await supabase.auth.getSession();
-  const user = data.session?.user ?? null;
-  if (!user) return;
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (error || profile) return;
-  await supabase.from("profiles").insert({
-    id: user.id,
-    email: user.email ?? null,
-    display_name:
-      user.user_metadata?.["display_name"] ||
-      user.user_metadata?.["full_name"] ||
-      user.email?.split("@")[0] ||
-      "",
-    status: "pending",
-  });
+  try {
+    const { data } = await supabase.auth.getSession();
+    const user = data.session?.user ?? null;
+    if (!user) return;
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (error || profile) return;
+    await supabase.from("profiles").insert({
+      id: user.id,
+      email: user.email ?? null,
+      display_name:
+        user.user_metadata?.["display_name"] ||
+        user.user_metadata?.["full_name"] ||
+        user.email?.split("@")[0] ||
+        "",
+      status: "pending",
+    });
+  } catch {
+    // El layout _authenticated decide el siguiente paso (alta, espera o app)
+  }
 }
 
 function openGooglePopup(url: string): Promise<boolean> {

@@ -11,8 +11,9 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsAdmin } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 const LOGO_SRC = "/logo-titulo-2.png";
 
@@ -28,6 +29,22 @@ const NAV = [
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isAdmin } = useIsAdmin();
+
+  const pendingUsersQuery = useQuery({
+    queryKey: ["pending-users-count"],
+    enabled: isAdmin,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  const pendingUsers = isAdmin ? (pendingUsersQuery.data ?? 0) : 0;
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -61,10 +78,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <Link
               to="/ajustes"
-              className="comic-sm comic-press flex items-center justify-center rounded-lg bg-secondary p-2 text-secondary-foreground"
+              className="comic-sm comic-press relative flex items-center justify-center rounded-lg bg-secondary p-2 text-secondary-foreground"
               aria-label="Ajustes de usuario"
             >
               <Settings className="h-5 w-5 shrink-0" />
+              {pendingUsers > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-extrabold leading-none text-destructive-foreground">
+                  {pendingUsers > 99 ? "99+" : pendingUsers}
+                </span>
+              )}
             </Link>
 
             <button

@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { useAuth, useProfile, type ApprovalStatus } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Clock, LogOut, ShieldAlert, Save, KeyRound, User } from "lucide-react";
+import { Clock, LogOut, ShieldAlert, Save, KeyRound, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -24,11 +24,24 @@ function AuthGate() {
 
   if (profileQuery.isLoading && !profile) return null;
 
-  if (profile?.status === "pending" || profile?.status === "rejected") {
+  // A prueba de fallos: si el perfil no se puede leer, nunca abrir la app.
+  if (profileQuery.isError || !profile) {
+    return <PendingApprovalScreen status="pending" />;
+  }
+
+  if (profile.status === "rejected") {
     return <PendingApprovalScreen status={profile.status} />;
   }
 
-  if (profile?.status === "approved" && !profile.onboarded_at) {
+  if (profile.status === "pending") {
+    return profile.onboarded_at ? (
+      <PendingApprovalScreen status={profile.status} />
+    ) : (
+      <OnboardingForm />
+    );
+  }
+
+  if (!profile.onboarded_at) {
     return <OnboardingForm />;
   }
 
@@ -51,6 +64,11 @@ function OnboardingForm() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  if (submitted) {
+    return <PendingApprovalScreen status="pending" />;
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -80,7 +98,7 @@ function OnboardingForm() {
       await queryClient.invalidateQueries({ queryKey: ["my-profile"] });
       await queryClient.invalidateQueries({ queryKey: ["profile"] });
       await queryClient.invalidateQueries({ queryKey: ["profiles"] });
-      toast.success("¡Bienvenido a La Bomba Show!");
+      setSubmitted(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "No se ha podido completar el alta");
       setBusy(false);
@@ -97,8 +115,17 @@ function OnboardingForm() {
       <form onSubmit={submit} className="comic w-full max-w-sm rounded-xl bg-card p-5">
         <h1 className="mb-1 text-3xl">Crea tu usuario</h1>
         <p className="mb-4 text-sm font-bold text-muted-foreground">
-          Tu cuenta ya está aprobada. Completa tus datos para entrar.
+          Completa tus datos. Cuando guardes, tu acceso quedará{" "}
+          <span className="text-foreground">pendiente de aprobación</span> de un administrador.
         </p>
+
+        <label className="mb-3 block text-sm font-bold uppercase">
+          Correo
+          <div className="comic-sm mt-1 flex items-center rounded-md bg-muted px-3 py-2 text-muted-foreground">
+            <Mail className="mr-2 h-4 w-4 shrink-0" />
+            <span className="truncate font-semibold text-base">{user?.email}</span>
+          </div>
+        </label>
 
         <label className="mb-3 block text-sm font-bold uppercase">
           Nombre
@@ -169,11 +196,6 @@ function OnboardingForm() {
           {busy ? <KeyRound className="h-5 w-5" /> : <Save className="h-5 w-5" />}
           {busy ? "Guardando…" : "Crear usuario"}
         </button>
-
-        <div className="mt-4 flex items-center justify-center gap-1.5 text-xs font-bold text-muted-foreground">
-          <User className="h-3.5 w-3.5" />
-          {user?.email}
-        </div>
       </form>
     </div>
   );

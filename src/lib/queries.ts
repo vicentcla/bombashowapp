@@ -39,6 +39,7 @@ export type Setlist = {
   event_date: string | null;
   notes: string | null;
   created_at: string;
+  sort_order: number;
 };
 
 export type PlayEvent = {
@@ -116,6 +117,7 @@ export function useSetlists() {
       const { data, error } = await supabase
         .from("setlists")
         .select("*")
+        .order("sort_order", { ascending: true })
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as Setlist[];
@@ -269,7 +271,7 @@ export function useResetCounters(scope: Scope) {
 }
 
 /** Guarda el nuevo orden manual de una lista. */
-export function useReorder(table: "arrangements" | "street_songs") {
+export function useReorder(table: "arrangements" | "street_songs" | "setlists") {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (orderedIds: string[]) => {

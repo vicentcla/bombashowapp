@@ -175,6 +175,7 @@ function Ajustes() {
 
   const pendingAdminRequests = (requests.data ?? []).filter((r) => r.status === "pending");
   const myRequest = (requests.data ?? []).find((r) => r.user_id === user?.id);
+  const pendingUsers = (allUsersQuery.data ?? []).filter((u) => u.status === "pending");
 
   // Recopilar todas las propuestas pendientes de todos los setlists
   const allPendingProposals: (SetlistProposal & { setlistId: string })[] = [];
@@ -187,7 +188,8 @@ function Ajustes() {
     }
   }
 
-  const totalPending = pendingAdminRequests.length + allPendingProposals.length;
+  const totalPending =
+    pendingAdminRequests.length + allPendingProposals.length + pendingUsers.length;
 
   function nameOf(userId: string) {
     const p = allProfilesQuery.data?.find((x) => x.id === userId);
@@ -768,6 +770,11 @@ function Ajustes() {
             >
               <UserPlus className="h-4 w-4" />
               Usuarios
+              {pendingUsers.length > 0 && (
+                <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] font-bold text-destructive-foreground">
+                  {pendingUsers.length}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setAdminSubTab("admin_requests")}
