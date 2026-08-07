@@ -132,6 +132,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+// Bloquea el zoom por pellizco y doble toque en iOS (que ignora user-scalable=no).
+const noZoomScript = `(function(){
+  document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, { passive: false });
+  document.addEventListener('gesturechange', function(e){ e.preventDefault(); }, { passive: false });
+  var last = 0;
+  document.addEventListener('touchend', function(e){
+    var now = Date.now();
+    if (now - last < 300) e.preventDefault();
+    last = now;
+  }, { passive: false });
+})();`;
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="es" suppressHydrationWarning>
