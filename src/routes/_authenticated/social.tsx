@@ -26,6 +26,7 @@ import {
   Loader2,
   Quote,
   RefreshCw,
+  PenLine,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -593,6 +594,7 @@ function SocialDetail({
   const [status, setStatus] = useState<SocialPostStatus>("borrador");
   const [fontFamily, setFontFamily] = useState<UnicodeFontFamily>("normal");
   const [fontStyle, setFontStyle] = useState<UnicodeFontStyle>("normal");
+  const [liveMode, setLiveMode] = useState(false);
   const [showFamilyMenu, setShowFamilyMenu] = useState(false);
   const [showStyleMenu, setShowStyleMenu] = useState(false);
   const [comment, setComment] = useState("");
@@ -611,6 +613,7 @@ function SocialDetail({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const pendingEditRef = useRef<Set<"title" | "content">>(new Set());
+  const prevContentRef = useRef(content);
   const lastSavedSnapshotRef = useRef<{
     title: string;
     content: string;
@@ -659,6 +662,11 @@ function SocialDetail({
     lastSavedSnapshotRef.current = snapshot;
     myLastSaveRef.current = snapshot;
   }, [post]);
+
+  // Mantiene el valor anterior del editor al día para el modo escritura directa
+  useEffect(() => {
+    prevContentRef.current = content;
+  }, [content]);
 
   // Realtime: cambios del post y de sus comentarios
   useSocialPostChanges({
@@ -767,6 +775,25 @@ function SocialDetail({
     });
   }
 
+  function applyStyleToSelection(family: UnicodeFontFamily, style: UnicodeFontStyle) {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selected = content.slice(start, end);
+    if (!selected) return;
+    const composed = composeUnicodeStyle(family, style);
+    const cleaned = cleanUnicodeStyle(selected);
+    const styled = composed ? toUnicodeStyle(cleaned, composed) : cleaned;
+    const next = content.slice(0, start) + styled + content.slice(end);
+    setContent(next);
+    prevContentRef.current = next;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start, start + styled.length);
+    });
+  }
+
   function applyTypography() {
     const el = textareaRef.current;
     if (!el) return;
@@ -777,18 +804,59 @@ function SocialDetail({
       toast("Selecciona parte del texto para aplicar el estilo");
       return;
     }
-    const composed = composeUnicodeStyle(fontFamily, fontStyle);
-    const styled = composed ? toUnicodeStyle(selected, composed) : cleanUnicodeStyle(selected);
-    setContent(content.slice(0, start) + styled + content.slice(end));
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(start, start + styled.length);
-    });
+    applyStyleToSelection(fontFamily, fontStyle);
   }
 
   function changeFamily(family: UnicodeFontFamily) {
+    setShowFamilyMenu(false);
+    const style = supportsUnicodeStyle(family, fontStyle) ? fontStyle : "normal";
     setFontFamily(family);
-    if (!supportsUnicodeStyle(family, fontStyle)) setFontStyle("normal");
+    setFontStyle(style);
+    applyStyleToSelection(family, style);
+  }
+
+  function changeStyle(style: UnicodeFontStyle) {
+    setShowStyleMenu(false);
+    setFontStyle(style);
+    applyStyleToSelection(fontFamily, style);
+  }
+
+  function handleContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const el = e.target;
+    const newVal = el.value;
+    const composed = liveMode ? composeUnicodeStyle(fontFamily, fontStyle) : null;
+    if (!composed) {
+      prevContentRef.current = newVal;
+      setContent(newVal);
+      return;
+    }
+    const prev = prevContentRef.current;
+    let prefix = 0;
+    const maxPrefix = Math.min(prev.length, newVal.length);
+    while (prefix < maxPrefix && prev.charCodeAt(prefix) === newVal.charCodeAt(prefix)) prefix++;
+    let suffix = 0;
+    const maxSuffix = Math.min(prev.length, newVal.length) - prefix;
+    while (
+      suffix < maxSuffix &&
+      prev.charCodeAt(prev.length - 1 - suffix) === newVal.charCodeAt(newVal.length - 1 - suffix)
+    ) {
+      suffix++;
+    }
+    const inserted = newVal.slice(prefix, newVal.length - suffix);
+    if (!inserted) {
+      prevContentRef.current = newVal;
+      setContent(newVal);
+      return;
+    }
+    const styled = toUnicodeStyle(inserted, composed);
+    const next = newVal.slice(0, prefix) + styled + newVal.slice(newVal.length - suffix);
+    prevContentRef.current = next;
+    setContent(next);
+    const caret = prefix + styled.length;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(caret, caret);
+    });
   }
 
   function cleanFormat() {
@@ -1101,7 +1169,7 @@ function SocialDetail({
               <textarea
                 ref={textareaRef}
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={handleContentChange}
                 onFocus={() => {
                   pendingEditRef.current.add("content");
                   setEditing(true);
@@ -1112,7 +1180,7 @@ function SocialDetail({
                 }}
                 onMouseUp={trackSelection}
                 onKeyUp={trackSelection}
-                placeholder="Escribe aquí el texto... Selecciona una parte y elige una tipografía y un estilo llamativo."
+                placeholder="Escribe aquí el texto... Activa el modo escritura directa para escribir con la tipografía elegida, o selecciona una palabra y elige una tipografía llamativa."
                 rows={7}
                 className="w-full resize-y rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
               />
@@ -1131,7 +1199,9 @@ function SocialDetail({
                         : "bg-secondary text-secondary-foreground hover:bg-accent"
                     }`}
                   >
-                    <Type className="h-3.5 w-3.5" /> Tipografía <ChevronDown className="h-3 w-3" />
+                    <Type className="h-3.5 w-3.5" />
+                    {FONT_FAMILIES.find((f) => f.value === fontFamily)?.name ?? "Tipografía"}
+                    <ChevronDown className="h-3 w-3" />
                   </button>
 
                   {showFamilyMenu && (
@@ -1144,11 +1214,10 @@ function SocialDetail({
                         {FONT_FAMILIES.map((f) => (
                           <button
                             key={f.value}
-                            onClick={() => {
-                              setShowFamilyMenu(false);
-                              changeFamily(f.value);
-                            }}
-                            className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-accent"
+                            onClick={() => changeFamily(f.value)}
+                            className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-accent ${
+                              f.value === fontFamily ? "bg-accent" : ""
+                            }`}
                           >
                             <span className="w-36 shrink-0 text-[10px] font-extrabold uppercase text-muted-foreground">
                               {f.name}
@@ -1156,6 +1225,9 @@ function SocialDetail({
                             <span className="min-w-0 flex-1 truncate text-base leading-tight">
                               {familySample(f.value)}
                             </span>
+                            {f.value === fontFamily && (
+                              <Check className="h-4 w-4 shrink-0 text-primary" />
+                            )}
                           </button>
                         ))}
                       </div>
@@ -1189,10 +1261,7 @@ function SocialDetail({
                             <button
                               key={s.value}
                               disabled={!supported}
-                              onClick={() => {
-                                setShowStyleMenu(false);
-                                setFontStyle(s.value);
-                              }}
+                              onClick={() => changeStyle(s.value)}
                               title={supported ? undefined : "No disponible para esta tipografía"}
                               className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-bold transition-colors hover:bg-accent ${
                                 supported ? "" : "cursor-not-allowed opacity-40"
@@ -1207,6 +1276,22 @@ function SocialDetail({
                     </>
                   )}
                 </div>
+
+                <button
+                  onClick={() => setLiveMode((v) => !v)}
+                  title={
+                    liveMode
+                      ? "Escribir con la tipografía actual: activado"
+                      : "Escribir con la tipografía actual: desactivado"
+                  }
+                  className={`comic-sm comic-press flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-extrabold uppercase transition-colors ${
+                    liveMode
+                      ? "bg-primary text-primary-foreground ring-2 ring-ink/30"
+                      : "bg-secondary text-secondary-foreground hover:bg-accent"
+                  }`}
+                >
+                  <PenLine className="h-3.5 w-3.5" /> Escribir directo
+                </button>
 
                 <button
                   onClick={applyTypography}
