@@ -4,12 +4,12 @@ import {
   FileText,
   Clock,
   ListMusic,
-  Music4,
   Library,
   Instagram,
   LogOut,
   Settings,
 } from "lucide-react";
+import { GoogleDriveIcon } from "@/components/BrandIcons";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,7 +23,7 @@ const NAV = [
   { to: "/letras", label: "Letras", icon: FileText },
   { to: "/contadores", label: "Contadores", icon: Clock },
   { to: "/setlists", label: "Setlists", icon: ListMusic },
-  { to: "/partituras", label: "Partituras", icon: Music4 },
+  { to: "/partituras", label: "Partituras", icon: GoogleDriveIcon },
   { to: "/social", label: "Redes", icon: Instagram },
   { to: "/repertorio", label: "Repertorio", icon: Library },
 ] as const;
