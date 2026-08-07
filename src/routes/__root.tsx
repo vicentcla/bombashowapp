@@ -76,7 +76,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      {
+        name: "viewport",
+        content:
+          "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover",
+      },
       { title: "La Bomba Show — App de la xaranga" },
       {
         name: "description",
@@ -128,12 +132,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+// Bloquea el zoom por pellizco y doble toque en iOS (que ignora user-scalable=no).
+const noZoomScript = `(function(){
+  document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, { passive: false });
+  document.addEventListener('gesturechange', function(e){ e.preventDefault(); }, { passive: false });
+  var last = 0;
+  document.addEventListener('touchend', function(e){
+    var now = Date.now();
+    if (now - last < 300) e.preventDefault();
+    last = now;
+  }, { passive: false });
+})();`;
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
         <HeadContent />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script dangerouslySetInnerHTML={{ __html: noZoomScript }} />
       </head>
       <body>
         {children}

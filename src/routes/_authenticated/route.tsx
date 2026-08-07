@@ -11,9 +11,9 @@ import { Clock, LogOut, ShieldAlert, Save, KeyRound, Mail } from "lucide-react";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth", search: {} });
-    return { user: data.user };
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data.session?.user) throw redirect({ to: "/auth", search: {} });
+    return { user: data.session.user };
   },
   component: AuthGate,
 });
@@ -22,11 +22,12 @@ function AuthGate() {
   const profileQuery = useProfile();
   const profile = profileQuery.data;
 
-  if (profileQuery.isLoading && !profile) return null;
+  if (profileQuery.isPending && !profile) return null;
 
-  // A prueba de fallos: si el perfil no se puede leer, nunca abrir la app.
-  if (profileQuery.isError || !profile) {
-    return <PendingApprovalScreen status="pending" />;
+  // Si el perfil no se puede leer (fallo de red), no bloquear la cuenta:
+  // ofrecer reintentar en vez de mostrar "pendiente de aprobación".
+  if (!profile) {
+    return <ProfileErrorScreen onRetry={() => void profileQuery.refetch()} />;
   }
 
   if (profile.status === "rejected") {
@@ -239,6 +240,40 @@ function PendingApprovalScreen({ status }: { status?: ApprovalStatus | undefined
           Cerrar sesión
         </button>
         {user && <p className="text-xs text-muted-foreground">{user.email}</p>}
+      </div>
+    </div>
+  );
+}
+
+function ProfileErrorScreen({ onRetry }: { onRetry: () => void }) {
+  async function signOut() {
+    await supabase.auth.signOut();
+    window.location.href = "/auth";
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
+      <img src="/logo-titulo-2.png" alt="La Bomba Show" className="mb-4 h-28 w-auto" />
+      <div className="comic flex w-full max-w-sm flex-col items-center gap-3 rounded-xl bg-card p-6 text-center">
+        <h1 className="text-2xl font-extrabold leading-none">No hemos podido cargar tu perfil</h1>
+        <p className="text-sm font-bold text-muted-foreground">
+          Puede ser un problema de conexión. Inténtalo de nuevo.
+        </p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="comic-sm comic-press rounded-lg bg-primary px-4 py-2 text-sm font-extrabold uppercase text-primary-foreground"
+        >
+          Reintentar
+        </button>
+        <button
+          type="button"
+          onClick={signOut}
+          className="comic-sm comic-press flex items-center gap-2 rounded-lg bg-secondary px-4 py-2 text-sm font-extrabold uppercase text-secondary-foreground"
+        >
+          <LogOut className="h-4 w-4" />
+          Cerrar sesión
+        </button>
       </div>
     </div>
   );
