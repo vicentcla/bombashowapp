@@ -2948,7 +2948,9 @@ function SetlistDetail({
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
+        measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
         onDragStart={handleDragStart}
+        onDragCancel={() => setDraggingItemId(null)}
         onDragEnd={handleDragEnd}
       >
         <div className="space-y-6">
