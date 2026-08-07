@@ -22,12 +22,14 @@ function AuthGate() {
   const profileQuery = useProfile();
   const profile = profileQuery.data;
 
-  if (profileQuery.isLoading && !profile) return null;
+  if (profileQuery.isPending && !profile) return null;
 
-  // A prueba de fallos: si el perfil no se puede leer, nunca abrir la app.
-  if (profileQuery.isError || !profile) {
-    return <PendingApprovalScreen status="pending" />;
+  // Si el perfil no se puede leer (fallo de red), no bloquear la cuenta:
+  // ofrecer reintentar en vez de mostrar "pendiente de aprobación".
+  if (!profile) {
+    return <ProfileErrorScreen onRetry={() => void profileQuery.refetch()} />;
   }
+
 
   if (profile.status === "rejected") {
     return <PendingApprovalScreen status={profile.status} />;
