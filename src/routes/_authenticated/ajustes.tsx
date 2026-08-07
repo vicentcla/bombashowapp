@@ -20,7 +20,6 @@ import {
   UserX,
   ShieldPlus,
   ShieldMinus,
-  Folder,
 } from "lucide-react";
 import { SousaphoneIcon } from "@/components/InstrumentIcons";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +30,6 @@ import {
   serializeSetlistNotes,
   type SetlistProposal,
 } from "@/routes/_authenticated/setlists";
-import { DriveFoldersManager } from "@/components/DriveFoldersManager";
 
 export const Route = createFileRoute("/_authenticated/ajustes")({
   head: () => ({
@@ -81,7 +79,7 @@ function Ajustes() {
 
   const [activeTab, setActiveTab] = useState<"perfil" | "solicitudes">("perfil");
   const [adminSubTab, setAdminSubTab] = useState<
-    "usuarios" | "admin_requests" | "setlist_proposals" | "drive_folders"
+    "usuarios" | "admin_requests" | "setlist_proposals"
   >("usuarios");
 
   // Perfil state
@@ -810,17 +808,6 @@ function Ajustes() {
                 </span>
               )}
             </button>
-            <button
-              onClick={() => setAdminSubTab("drive_folders")}
-              className={`flex min-w-fit flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2.5 text-sm font-extrabold uppercase transition-colors ${
-                adminSubTab === "drive_folders"
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Folder className="h-4 w-4" />
-              Carpetas de Drive
-            </button>
           </div>
 
           {/* Sub-pestaña: Usuarios */}
@@ -1053,16 +1040,6 @@ function Ajustes() {
                   </div>
                 ))
               )}
-            </div>
-          )}
-
-          {/* Sub-pestaña: Carpetas de Drive */}
-          {adminSubTab === "drive_folders" && (
-            <div>
-              <p className="mb-3 text-sm font-bold text-muted-foreground">
-                Vincula las carpetas de Google Drive de cada instrumento para la pestaña Partituras.
-              </p>
-              <DriveFoldersManager />
             </div>
           )}
         </div>

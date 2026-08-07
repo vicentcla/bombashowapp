@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Music4, Folder, Pin, X } from "lucide-react";
+import { Music4, Folder, Pin, X, Plus } from "lucide-react";
 import { GoogleDriveIcon } from "@/components/BrandIcons";
-import { useAuth } from "@/hooks/useAuth";
+import { DriveFoldersManager } from "@/components/DriveFoldersManager";
+import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { useDriveFolders, type DriveFolder } from "@/lib/queries";
 import { INSTRUMENT_ICONS, driveUrl, embedUrl } from "@/lib/drive";
 
@@ -70,6 +71,7 @@ function DriveFolderCard({
 
 function Partituras() {
   const { user } = useAuth();
+  const { isAdmin } = useIsAdmin();
   const folders = useDriveFolders();
   const isTouch = useIsTouch();
 
@@ -87,6 +89,7 @@ function Partituras() {
   }, [folders.data, userInstrument]);
 
   const [openFolder, setOpenFolder] = useState<DriveFolder | null>(null);
+  const [showManager, setShowManager] = useState(false);
 
   function openFolderAccess(folder: DriveFolder) {
     if (isTouch) {
@@ -100,14 +103,25 @@ function Partituras() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <GoogleDriveIcon className="h-7 w-7 shrink-0 text-muted-foreground" />
-        <div>
-          <h1 className="text-3xl font-extrabold leading-none">Partituras</h1>
-          <p className="text-xs font-bold text-muted-foreground">
-            Carpetas de Google Drive por instrumento
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <GoogleDriveIcon className="h-7 w-7 shrink-0 text-muted-foreground" />
+          <div>
+            <h1 className="text-3xl font-extrabold leading-none">Partituras</h1>
+            <p className="text-xs font-bold text-muted-foreground">
+              Carpetas de Google Drive por instrumento
+            </p>
+          </div>
         </div>
+
+        {isAdmin && (
+          <button
+            onClick={() => setShowManager(true)}
+            className="comic comic-press flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-extrabold uppercase text-primary-foreground"
+          >
+            <Plus className="h-4 w-4" /> Gestionar carpetas
+          </button>
+        )}
       </div>
 
       {!userInstrument && (
@@ -127,9 +141,18 @@ function Partituras() {
         <div className="comic rounded-xl bg-card p-8 text-center">
           <Folder className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
           <p className="text-lg font-bold">Todavía no hay carpetas de partituras.</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Pídele a un administrador que las configure en Ajustes → Gestión.
-          </p>
+          {isAdmin ? (
+            <button
+              onClick={() => setShowManager(true)}
+              className="comic comic-press mt-4 rounded-md bg-primary px-4 py-2 font-extrabold uppercase text-primary-foreground"
+            >
+              Añadir carpeta
+            </button>
+          ) : (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Pídele a un administrador que añada las carpetas desde esta misma página.
+            </p>
+          )}
         </div>
       ) : (
         <>
@@ -200,6 +223,21 @@ function Partituras() {
               title={openFolder.name}
               className="min-h-[70vh] w-full flex-1"
             />
+          </div>
+        </div>
+      )}
+
+      {/* Modal gestión de carpetas (admin) */}
+      {showManager && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+          <div className="comic w-full max-w-md rounded-xl bg-card p-5 mt-4 space-y-4">
+            <div className="flex items-center justify-between border-b pb-2">
+              <h2 className="text-2xl font-extrabold leading-none">Carpetas de Drive</h2>
+              <button onClick={() => setShowManager(false)} aria-label="Cerrar">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <DriveFoldersManager />
           </div>
         </div>
       )}
