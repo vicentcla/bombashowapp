@@ -3216,13 +3216,13 @@ function SetlistDetail({
         </div>
 
         {/* Overlay visual mientras se arrastra */}
-        <DragOverlay>
+        <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
           {draggingItemId &&
             (() => {
               const draggedItem = activeItems.find((i) => i.id === draggingItemId);
               if (!draggedItem) return null;
               return (
-                <div className="comic flex items-center gap-3 rounded-xl bg-primary text-primary-foreground p-3 shadow-2xl opacity-90">
+                <div className="comic pointer-events-none flex rotate-1 scale-[1.03] items-center gap-3 rounded-xl bg-primary text-primary-foreground p-3 shadow-2xl">
                   <GripVertical className="h-5 w-5 shrink-0" />
                   <span className="font-extrabold text-base">
                     {itemTitleOf(draggedItem) || "Canción"}
