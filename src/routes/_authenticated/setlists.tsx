@@ -2600,6 +2600,9 @@ function SetlistDetail({
   // Handlers de cross-container DnD
   function handleDragStart(event: DragStartEvent) {
     setDraggingItemId(String(event.active.id));
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate(15);
+    }
   }
 
   async function handleDragEnd(event: DragEndEvent) {
