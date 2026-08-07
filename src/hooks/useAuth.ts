@@ -51,7 +51,7 @@ export function useProfileStatus() {
   return useQuery({
     queryKey: ["profile-status", user?.id],
     enabled: !!user?.id,
-    retry: 0,
+    retry: 2,
     queryFn: async (): Promise<ApprovalStatus> => {
       const { data, error } = await supabase
         .from("profiles")
@@ -77,7 +77,8 @@ export function useProfile() {
   return useQuery({
     queryKey: ["my-profile", user?.id],
     enabled: !!user?.id,
-    retry: 0,
+    retry: 2,
+    staleTime: 60_000,
     queryFn: async (): Promise<ProfileRow> => {
       const { data, error } = await supabase
         .from("profiles")
