@@ -1,0 +1,2 @@
+ALTER TABLE public.setlists ADD COLUMN IF NOT EXISTS sort_order integer NOT NULL DEFAULT 0;
+UPDATE public.setlists s SET sort_order = t.rn FROM (SELECT id, row_number() OVER (ORDER BY created_at) AS rn FROM public.setlists) t WHERE s.id = t.id AND s.sort_order = 0;
