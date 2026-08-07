@@ -25,7 +25,6 @@ const NAV = [
   { to: "/setlists", label: "Setlists", icon: ListMusic },
   { to: "/partituras", label: "Partituras", icon: GoogleDriveIcon },
   { to: "/social", label: "Redes", icon: Instagram },
-  { to: "/repertorio", label: "Repertorio", icon: Library },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -77,6 +76,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <ThemeToggle />
+
+            <Link
+              to="/repertorio"
+              search={{ tab: "calle", editLyricId: undefined }}
+              className="comic-sm comic-press flex items-center justify-center rounded-lg bg-secondary p-2 text-secondary-foreground"
+              aria-label="Repertorio"
+            >
+              <Library className="h-5 w-5 shrink-0" />
+            </Link>
 
             <Link
               to="/ajustes"
