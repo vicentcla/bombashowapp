@@ -30,7 +30,6 @@ function AuthGate() {
     return <ProfileErrorScreen onRetry={() => void profileQuery.refetch()} />;
   }
 
-
   if (profile.status === "rejected") {
     return <PendingApprovalScreen status={profile.status} />;
   }

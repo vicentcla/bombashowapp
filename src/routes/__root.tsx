@@ -151,7 +151,6 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <script dangerouslySetInnerHTML={{ __html: noZoomScript }} />
-
       </head>
       <body>
         {children}
