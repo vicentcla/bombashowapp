@@ -8,6 +8,7 @@ import {
   Instagram,
   LogOut,
   Settings,
+  Megaphone,
 } from "lucide-react";
 import { GoogleDriveIcon } from "@/components/BrandIcons";
 import type { ReactNode } from "react";
@@ -23,6 +24,7 @@ const NAV = [
   { to: "/letras", label: "Letras", icon: FileText },
   { to: "/contadores", label: "Contadores", icon: Clock },
   { to: "/setlists", label: "Setlists", icon: ListMusic },
+  { to: "/bolo", label: "Bolo", icon: Megaphone },
   { to: "/partituras", label: "Partituras", icon: GoogleDriveIcon },
   { to: "/social", label: "Redes", icon: Instagram },
 ] as const;

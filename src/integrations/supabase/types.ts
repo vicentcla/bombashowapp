@@ -44,6 +44,51 @@ export type Database = {
         }
         Relationships: []
       }
+      bolo_messages: {
+        Row: {
+          attendees: string[]
+          clothing: string
+          created_at: string
+          created_by: string
+          day: string
+          id: string
+          location: string
+          maps_url: string
+          message: string
+          time: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          attendees?: string[]
+          clothing?: string
+          created_at?: string
+          created_by?: string
+          day?: string
+          id?: string
+          location?: string
+          maps_url?: string
+          message?: string
+          time?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          attendees?: string[]
+          clothing?: string
+          created_at?: string
+          created_by?: string
+          day?: string
+          id?: string
+          location?: string
+          maps_url?: string
+          message?: string
+          time?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       drive_folders: {
         Row: {
           created_at: string

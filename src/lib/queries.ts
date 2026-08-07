@@ -590,3 +590,78 @@ export function useDeleteNotice() {
     onSuccess: () => invalidate("notices"),
   });
 }
+
+export type BoloMessage = {
+  id: string;
+  title: string;
+  day: string;
+  time: string;
+  location: string;
+  maps_url: string;
+  attendees: string[];
+  clothing: string;
+  message: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export function useBoloMessages() {
+  return useQuery({
+    queryKey: ["bolo_messages"],
+    queryFn: async (): Promise<BoloMessage[]> => {
+      const { data, error } = await supabase
+        .from("bolo_messages")
+        .select("*")
+        .order("updated_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as BoloMessage[];
+    },
+  });
+}
+
+export function useSaveBoloMessage() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (input: {
+      id?: string;
+      title: string;
+      day: string;
+      time: string;
+      location: string;
+      maps_url: string;
+      attendees: string[];
+      clothing: string;
+      message: string;
+    }): Promise<string> => {
+      const { id, ...rest } = input;
+      if (id) {
+        const { error } = await supabase
+          .from("bolo_messages")
+          .update({ ...rest, updated_at: new Date().toISOString() })
+          .eq("id", id);
+        if (error) throw error;
+        return id;
+      }
+      const { data, error } = await supabase
+        .from("bolo_messages")
+        .insert({ ...rest })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return data.id;
+    },
+    onSuccess: () => invalidate("bolo_messages"),
+  });
+}
+
+export function useDeleteBoloMessage() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("bolo_messages").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("bolo_messages"),
+  });
+}

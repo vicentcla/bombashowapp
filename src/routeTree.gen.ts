@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAjustesRouteImport } from './routes/_authenticated/ajustes'
 import { Route as AuthenticatedArreglosRouteImport } from './routes/_authenticated/arreglos'
+import { Route as AuthenticatedBoloRouteImport } from './routes/_authenticated/bolo'
 import { Route as AuthenticatedCalleRouteImport } from './routes/_authenticated/calle'
 import { Route as AuthenticatedContadoresRouteImport } from './routes/_authenticated/contadores'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
@@ -46,6 +47,11 @@ const AuthenticatedAjustesRoute = AuthenticatedAjustesRouteImport.update({
 const AuthenticatedArreglosRoute = AuthenticatedArreglosRouteImport.update({
   id: '/arreglos',
   path: '/arreglos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedBoloRoute = AuthenticatedBoloRouteImport.update({
+  id: '/bolo',
+  path: '/bolo',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCalleRoute = AuthenticatedCalleRouteImport.update({
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/ajustes': typeof AuthenticatedAjustesRoute
   '/arreglos': typeof AuthenticatedArreglosRoute
+  '/bolo': typeof AuthenticatedBoloRoute
   '/calle': typeof AuthenticatedCalleRoute
   '/contadores': typeof AuthenticatedContadoresRoute
   '/inicio': typeof AuthenticatedInicioRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/ajustes': typeof AuthenticatedAjustesRoute
   '/arreglos': typeof AuthenticatedArreglosRoute
+  '/bolo': typeof AuthenticatedBoloRoute
   '/calle': typeof AuthenticatedCalleRoute
   '/contadores': typeof AuthenticatedContadoresRoute
   '/inicio': typeof AuthenticatedInicioRoute
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/ajustes': typeof AuthenticatedAjustesRoute
   '/_authenticated/arreglos': typeof AuthenticatedArreglosRoute
+  '/_authenticated/bolo': typeof AuthenticatedBoloRoute
   '/_authenticated/calle': typeof AuthenticatedCalleRoute
   '/_authenticated/contadores': typeof AuthenticatedContadoresRoute
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
@@ -148,6 +157,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/ajustes'
     | '/arreglos'
+    | '/bolo'
     | '/calle'
     | '/contadores'
     | '/inicio'
@@ -163,6 +173,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/ajustes'
     | '/arreglos'
+    | '/bolo'
     | '/calle'
     | '/contadores'
     | '/inicio'
@@ -179,6 +190,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/ajustes'
     | '/_authenticated/arreglos'
+    | '/_authenticated/bolo'
     | '/_authenticated/calle'
     | '/_authenticated/contadores'
     | '/_authenticated/inicio'
@@ -231,6 +243,13 @@ declare module '@tanstack/react-router' {
       path: '/arreglos'
       fullPath: '/arreglos'
       preLoaderRoute: typeof AuthenticatedArreglosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/bolo': {
+      id: '/_authenticated/bolo'
+      path: '/bolo'
+      fullPath: '/bolo'
+      preLoaderRoute: typeof AuthenticatedBoloRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/calle': {
@@ -302,6 +321,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAjustesRoute: typeof AuthenticatedAjustesRoute
   AuthenticatedArreglosRoute: typeof AuthenticatedArreglosRoute
+  AuthenticatedBoloRoute: typeof AuthenticatedBoloRoute
   AuthenticatedCalleRoute: typeof AuthenticatedCalleRoute
   AuthenticatedContadoresRoute: typeof AuthenticatedContadoresRoute
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
@@ -316,6 +336,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAjustesRoute: AuthenticatedAjustesRoute,
   AuthenticatedArreglosRoute: AuthenticatedArreglosRoute,
+  AuthenticatedBoloRoute: AuthenticatedBoloRoute,
   AuthenticatedCalleRoute: AuthenticatedCalleRoute,
   AuthenticatedContadoresRoute: AuthenticatedContadoresRoute,
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,
