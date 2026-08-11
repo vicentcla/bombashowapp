@@ -35,16 +35,38 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { isAdmin } = useIsAdmin();
 
   const pendingUsersQuery = useQuery({
-    queryKey: ["pending-users-count"],
+    queryKey: ["pending-admin-badge"],
     enabled: isAdmin,
     refetchOnWindowFocus: true,
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending");
-      if (error) throw error;
-      return count ?? 0;
+      const [profilesRes, requestsRes, setlistsRes] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+        supabase
+          .from("role_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+        supabase.from("setlists").select("notes"),
+      ]);
+      if (profilesRes.error) throw profilesRes.error;
+      if (requestsRes.error) throw requestsRes.error;
+      if (setlistsRes.error) throw setlistsRes.error;
+
+      let proposals = 0;
+      for (const row of setlistsRes.data ?? []) {
+        try {
+          const parsed = JSON.parse(row.notes ?? "");
+          for (const p of parsed?.proposals ?? []) {
+            if (p?.status === "pending") proposals += 1;
+          }
+        } catch {
+          // notes en texto plano: sin propuestas
+        }
+      }
+
+      return (profilesRes.count ?? 0) + (requestsRes.count ?? 0) + proposals;
     },
   });
   const pendingUsers = isAdmin ? (pendingUsersQuery.data ?? 0) : 0;
@@ -95,7 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <Settings className="h-5 w-5 shrink-0" />
               {pendingUsers > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-extrabold leading-none text-destructive-foreground">
+                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-destructive px-1 text-[10px] font-extrabold leading-none text-destructive-foreground">
                   {pendingUsers > 99 ? "99+" : pendingUsers}
                 </span>
               )}
