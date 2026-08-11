@@ -40,7 +40,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     refetchOnWindowFocus: true,
     queryFn: async () => {
       const [profilesRes, requestsRes, setlistsRes] = await Promise.all([
-        supabase.from("profiles").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
         supabase
           .from("role_requests")
           .select("id", { count: "exact", head: true })
@@ -67,7 +70,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     },
   });
   const pendingUsers = isAdmin ? (pendingUsersQuery.data ?? 0) : 0;
-
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -118,7 +120,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-destructive px-1 text-[10px] font-extrabold leading-none text-destructive-foreground">
                   {pendingUsers > 99 ? "99+" : pendingUsers}
                 </span>
-
               )}
             </Link>
 

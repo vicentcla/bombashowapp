@@ -524,7 +524,6 @@ function Ajustes() {
                 {totalPending > 99 ? "99+" : totalPending}
               </span>
             )}
-
           </button>
         )}
       </div>
@@ -776,7 +775,6 @@ function Ajustes() {
                   {pendingUsers.length}
                 </span>
               )}
-
             </button>
             <button
               onClick={() => setAdminSubTab("admin_requests")}
@@ -793,7 +791,6 @@ function Ajustes() {
                   {pendingAdminRequests.length}
                 </span>
               )}
-
             </button>
             <button
               onClick={() => setAdminSubTab("setlist_proposals")}
@@ -810,7 +807,6 @@ function Ajustes() {
                   {allPendingProposals.length}
                 </span>
               )}
-
             </button>
           </div>
 
