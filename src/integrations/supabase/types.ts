@@ -44,6 +44,33 @@ export type Database = {
         }
         Relationships: []
       }
+      drive_folders: {
+        Row: {
+          created_at: string
+          folder_id: string
+          id: string
+          instrument: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          folder_id: string
+          id?: string
+          instrument: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string
+          id?: string
+          instrument?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       lyrics: {
         Row: {
           arrangement_id: string | null
