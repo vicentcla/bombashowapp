@@ -520,10 +520,11 @@ function Ajustes() {
             <Shield className="h-4 w-4" />
             Gestión
             {totalPending > 0 && (
-              <span className="ml-1 rounded-full bg-destructive px-2 py-0.5 text-xs text-destructive-foreground">
-                {totalPending}
+              <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-destructive px-1 text-[11px] font-extrabold leading-none text-destructive-foreground">
+                {totalPending > 99 ? "99+" : totalPending}
               </span>
             )}
+
           </button>
         )}
       </div>
