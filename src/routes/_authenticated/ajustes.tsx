@@ -772,10 +772,11 @@ function Ajustes() {
               <UserPlus className="h-4 w-4" />
               Usuarios
               {pendingUsers.length > 0 && (
-                <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] font-bold text-destructive-foreground">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-destructive px-1 text-[11px] font-extrabold leading-none text-destructive-foreground">
                   {pendingUsers.length}
                 </span>
               )}
+
             </button>
             <button
               onClick={() => setAdminSubTab("admin_requests")}
@@ -788,10 +789,11 @@ function Ajustes() {
               <UserCheck className="h-4 w-4" />
               Peticiones de Admin
               {pendingAdminRequests.length > 0 && (
-                <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] font-bold text-destructive-foreground">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-destructive px-1 text-[11px] font-extrabold leading-none text-destructive-foreground">
                   {pendingAdminRequests.length}
                 </span>
               )}
+
             </button>
             <button
               onClick={() => setAdminSubTab("setlist_proposals")}
@@ -804,10 +806,11 @@ function Ajustes() {
               <Lightbulb className="h-4 w-4" />
               Modificación Setlist
               {allPendingProposals.length > 0 && (
-                <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-bold text-white">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-warning px-1 text-[11px] font-extrabold leading-none text-warning-foreground">
                   {allPendingProposals.length}
                 </span>
               )}
+
             </button>
           </div>
 
