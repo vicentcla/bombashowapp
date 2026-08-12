@@ -16,6 +16,7 @@ import { Route as AuthenticatedAjustesRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedArreglosRouteImport } from './routes/_authenticated/arreglos'
 import { Route as AuthenticatedBoloRouteImport } from './routes/_authenticated/bolo'
 import { Route as AuthenticatedCalleRouteImport } from './routes/_authenticated/calle'
+import { Route as AuthenticatedCentroRouteImport } from './routes/_authenticated/centro'
 import { Route as AuthenticatedContadoresRouteImport } from './routes/_authenticated/contadores'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
 import { Route as AuthenticatedLetrasRouteImport } from './routes/_authenticated/letras'
@@ -57,6 +58,11 @@ const AuthenticatedBoloRoute = AuthenticatedBoloRouteImport.update({
 const AuthenticatedCalleRoute = AuthenticatedCalleRouteImport.update({
   id: '/calle',
   path: '/calle',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCentroRoute = AuthenticatedCentroRouteImport.update({
+  id: '/centro',
+  path: '/centro',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedContadoresRoute = AuthenticatedContadoresRouteImport.update({
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/arreglos': typeof AuthenticatedArreglosRoute
   '/bolo': typeof AuthenticatedBoloRoute
   '/calle': typeof AuthenticatedCalleRoute
+  '/centro': typeof AuthenticatedCentroRoute
   '/contadores': typeof AuthenticatedContadoresRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/letras': typeof AuthenticatedLetrasRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/arreglos': typeof AuthenticatedArreglosRoute
   '/bolo': typeof AuthenticatedBoloRoute
   '/calle': typeof AuthenticatedCalleRoute
+  '/centro': typeof AuthenticatedCentroRoute
   '/contadores': typeof AuthenticatedContadoresRoute
   '/inicio': typeof AuthenticatedInicioRoute
   '/letras': typeof AuthenticatedLetrasRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/_authenticated/arreglos': typeof AuthenticatedArreglosRoute
   '/_authenticated/bolo': typeof AuthenticatedBoloRoute
   '/_authenticated/calle': typeof AuthenticatedCalleRoute
+  '/_authenticated/centro': typeof AuthenticatedCentroRoute
   '/_authenticated/contadores': typeof AuthenticatedContadoresRoute
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
   '/_authenticated/letras': typeof AuthenticatedLetrasRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/arreglos'
     | '/bolo'
     | '/calle'
+    | '/centro'
     | '/contadores'
     | '/inicio'
     | '/letras'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/arreglos'
     | '/bolo'
     | '/calle'
+    | '/centro'
     | '/contadores'
     | '/inicio'
     | '/letras'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/_authenticated/arreglos'
     | '/_authenticated/bolo'
     | '/_authenticated/calle'
+    | '/_authenticated/centro'
     | '/_authenticated/contadores'
     | '/_authenticated/inicio'
     | '/_authenticated/letras'
@@ -259,6 +271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCalleRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/centro': {
+      id: '/_authenticated/centro'
+      path: '/centro'
+      fullPath: '/centro'
+      preLoaderRoute: typeof AuthenticatedCentroRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/contadores': {
       id: '/_authenticated/contadores'
       path: '/contadores'
@@ -323,6 +342,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedArreglosRoute: typeof AuthenticatedArreglosRoute
   AuthenticatedBoloRoute: typeof AuthenticatedBoloRoute
   AuthenticatedCalleRoute: typeof AuthenticatedCalleRoute
+  AuthenticatedCentroRoute: typeof AuthenticatedCentroRoute
   AuthenticatedContadoresRoute: typeof AuthenticatedContadoresRoute
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
   AuthenticatedLetrasRoute: typeof AuthenticatedLetrasRoute
@@ -338,6 +358,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedArreglosRoute: AuthenticatedArreglosRoute,
   AuthenticatedBoloRoute: AuthenticatedBoloRoute,
   AuthenticatedCalleRoute: AuthenticatedCalleRoute,
+  AuthenticatedCentroRoute: AuthenticatedCentroRoute,
   AuthenticatedContadoresRoute: AuthenticatedContadoresRoute,
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,
   AuthenticatedLetrasRoute: AuthenticatedLetrasRoute,
@@ -359,3 +380,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

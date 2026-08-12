@@ -12,7 +12,7 @@ function MiembrosRedirect() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    navigate({ to: "/ajustes", replace: true });
+    navigate({ to: "/centro", search: { tab: "perfil" }, replace: true });
   }, [navigate]);
 
   return null;

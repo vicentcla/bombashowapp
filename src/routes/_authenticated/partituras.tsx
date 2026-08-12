@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Music4, Folder, Pin, X, Plus } from "lucide-react";
 import { GoogleDriveIcon } from "@/components/BrandIcons";
@@ -129,9 +129,9 @@ function Partituras() {
           <Music4 className="h-6 w-6 shrink-0 text-muted-foreground" />
           <p className="text-sm font-bold text-muted-foreground">
             Aún no has elegido tu instrumento.{" "}
-            <a href="/ajustes" className="text-primary underline">
+            <Link to="/centro" search={{ tab: "perfil" }} className="text-primary underline">
               Elíguelo en Ajustes
-            </a>{" "}
+            </Link>{" "}
             para fijar tus carpetas arriba.
           </p>
         </div>

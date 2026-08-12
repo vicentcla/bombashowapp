@@ -39,7 +39,13 @@ nombres de tablas/columnas en la BD también.
 - `src/lib/queries.ts`: tipos + hooks React Query sobre Supabase
   (`useArrangements`, `useStreetSongs`, `useLyrics`, `useSetlists`,
   `useSetlistItems`, `usePlayEvents`, `usePeriods`, `useAddPlay`,
-  `useResetCounters`, `useReorder`, `useRoleRequests`).
+  `useResetCounters`, `useReorder`, `useRoleRequests`, `useTabOrder`,
+  `usePendingCount`).
+- `src/lib/nav.ts`: definición compartida de pestañas (`ALL_NAV`,
+  `DESKTOP_NAV`, `DEFAULT_ORDER`, `orderNav`). La barra inferior móvil muestra
+  las 4 primeras del orden personalizado del usuario (`profiles.tab_order`) +
+  un botón fijo **«Más»** que abre `/centro`. En móvil la barra solo muestra
+  iconos (sin títulos).
 - `src/lib/format.ts`: formato de duraciones, saneado de HTML de letras
   (`sanitizeLyricsHtml`), `htmlToPlainText`, `normalize` (quita acentos) y
   `formatTimeComparison` (estados pending/exact/exceeded).
@@ -64,6 +70,10 @@ Tablas (migraciones en `supabase/migrations/`): `profiles`, `user_roles`,
 - `play_events` = cada toque (+1) con `period_id`; el −1 borra el último evento.
 - `reset_periods` = periodos de fiestas; el "reiniciar contadores" cierra el
   periodo abierto (le pone `ended_at`) y abre uno nuevo.
+- `profiles.tab_order` (`text[]`) = orden personalizado de pestañas de la barra
+  inferior por usuario (migración `20260812120000_add_profiles_tab_order.sql`).
+  No está en los tipos generados de Supabase: al leerlo/escribirlo se usa un
+  cast tipado.
 - RLS actual: **todos los autenticados** pueden escribir en `arrangements`,
   `street_songs`, `lyrics`, `setlists` y `setlist_items`. `play_events`,
   `reset_periods` y `user_roles` siguen siendo **solo admin** (helper
@@ -84,9 +94,12 @@ Tablas (migraciones en `supabase/migrations/`): `profiles`, `user_roles`,
   propuesta** para no-admins (ver "Propuestas").
 - `/calle` y `/arreglos`: contadores (tarjetas +1/−1) y estadísticas en vistas
   Mes / Año / Periodo de reseteo.
-- `/miembros`: gestión de miembros.
-- `/ajustes`: perfil (nombre + instrumento) y, para admin, panel con
-  sub-pestañas **Usuarios nuevos**, **Peticiones de Admin** y
+- `/miembros`: redirige a `/centro`.
+- `/centro`: **Centro de control**. Secciones internas **Páginas** (todas las
+  pestañas en cuadrícula + "Editar orden" con drag & drop), **Perfil** y
+  **Gestión** (solo admin). La sección Perfil y el panel de gestión viven aquí
+  (antes en `/ajustes`, que ahora redirige a `/centro`). El panel de gestión
+  usa sub-pestañas **Usuarios nuevos**, **Peticiones de Admin** y
   **Modificación Setlist** (revisión de propuestas).
 
 ## Formato de `setlists.notes`
@@ -104,7 +117,7 @@ y `proposals`. Si se edita `setlists` siempre hay que preservar este formato.
   propuesta, `isProposalMode`) y al enviar guardan un `SetlistProposal` en
   `notes.proposals` (con `kind: 'single_song'` o `'bulk_edit'` con
   `bulk_items`). Nada se escribe en `setlist_items` hasta aprobarse.
-- Los admin revisan en `/ajustes` (sub-pestaña "Modificación Setlist"): al
+- Los admin revisan en `/centro` (sección Gestión → "Modificación Setlist"): al
   aprobar, se insertan los items y se actualiza `item_pass_map`; al rechazar,
   solo se marca `status`.
 - Tipos compartidos exportados desde `setlists.tsx` (`SetlistProposal`,

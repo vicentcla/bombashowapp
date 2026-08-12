@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsAdmin } from "@/hooks/useAuth";
 import type { Json } from "@/integrations/supabase/types";
 
 /** Los ámbitos son los mismos valores que acepta la base de datos. */
@@ -664,5 +665,71 @@ export function useDeleteBoloMessage() {
       if (error) throw error;
     },
     onSuccess: () => invalidate("bolo_messages"),
+  });
+}
+
+export function useTabOrder(userId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["profile-tab-order", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<string[]> => {
+      // tab_order no existe en los tipos generados de Supabase (migración nueva).
+      const builder = supabase.from("profiles") as unknown as {
+        select: (cols: string) => {
+          eq: (
+            col: string,
+            val: string,
+          ) => {
+            maybeSingle: () => Promise<{
+              data: { tab_order: string[] | null } | null;
+              error: Error | null;
+            }>;
+          };
+        };
+      };
+      const res = await builder.select("tab_order").eq("id", userId!).maybeSingle();
+      if (res.error) throw res.error;
+      return res.data?.tab_order ?? [];
+    },
+  });
+}
+
+/** Número de tareas pendientes de admin (usuarios, peticiones y propuestas). */
+export function usePendingCount() {
+  const { isAdmin } = useIsAdmin();
+  return useQuery({
+    queryKey: ["pending-admin-badge"],
+    enabled: isAdmin,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const [profilesRes, requestsRes, setlistsRes] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+        supabase
+          .from("role_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+        supabase.from("setlists").select("notes"),
+      ]);
+      if (profilesRes.error) throw profilesRes.error;
+      if (requestsRes.error) throw requestsRes.error;
+      if (setlistsRes.error) throw setlistsRes.error;
+
+      let proposals = 0;
+      for (const row of setlistsRes.data ?? []) {
+        try {
+          const parsed = JSON.parse(row.notes ?? "");
+          for (const p of parsed?.proposals ?? []) {
+            if (p?.status === "pending") proposals += 1;
+          }
+        } catch {
+          // notes en texto plano: sin propuestas
+        }
+      }
+
+      return (profilesRes.count ?? 0) + (requestsRes.count ?? 0) + proposals;
+    },
   });
 }

@@ -1,75 +1,31 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import {
-  Home,
-  FileText,
-  Clock,
-  ListMusic,
-  Library,
-  Instagram,
-  LogOut,
-  Settings,
-  Megaphone,
-} from "lucide-react";
-import { GoogleDriveIcon } from "@/components/BrandIcons";
+import { LayoutGrid, Library, LogOut, Settings } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsAdmin } from "@/hooks/useAuth";
+import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { usePendingCount, useTabOrder } from "@/lib/queries";
+import { DESKTOP_NAV, orderNav, type NavTo } from "@/lib/nav";
 const LOGO_SRC = "/logo-titulo-2.png";
 
-const NAV = [
-  { to: "/inicio", label: "Inicio", icon: Home },
-  { to: "/letras", label: "Letras", icon: FileText },
-  { to: "/contadores", label: "Contadores", icon: Clock },
-  { to: "/setlists", label: "Setlists", icon: ListMusic },
-  { to: "/bolo", label: "Bolo", icon: Megaphone },
-  { to: "/partituras", label: "Partituras", icon: GoogleDriveIcon },
-  { to: "/social", label: "Redes", icon: Instagram },
-] as const;
+const BAR_LIMIT = 4;
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { isAdmin } = useIsAdmin();
+  const pendingCountQuery = usePendingCount();
+  const pendingCount = isAdmin ? (pendingCountQuery.data ?? 0) : 0;
 
-  const pendingUsersQuery = useQuery({
-    queryKey: ["pending-admin-badge"],
-    enabled: isAdmin,
-    refetchOnWindowFocus: true,
-    queryFn: async () => {
-      const [profilesRes, requestsRes, setlistsRes] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending"),
-        supabase
-          .from("role_requests")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending"),
-        supabase.from("setlists").select("notes"),
-      ]);
-      if (profilesRes.error) throw profilesRes.error;
-      if (requestsRes.error) throw requestsRes.error;
-      if (setlistsRes.error) throw setlistsRes.error;
-
-      let proposals = 0;
-      for (const row of setlistsRes.data ?? []) {
-        try {
-          const parsed = JSON.parse(row.notes ?? "");
-          for (const p of parsed?.proposals ?? []) {
-            if (p?.status === "pending") proposals += 1;
-          }
-        } catch {
-          // notes en texto plano: sin propuestas
-        }
-      }
-
-      return (profilesRes.count ?? 0) + (requestsRes.count ?? 0) + proposals;
-    },
-  });
-  const pendingUsers = isAdmin ? (pendingUsersQuery.data ?? 0) : 0;
+  const tabOrderQuery = useTabOrder(user?.id);
+  const orderedNav = useMemo(
+    () => orderNav(tabOrderQuery.data as NavTo[] | undefined),
+    [tabOrderQuery.data],
+  );
+  const barNav = orderedNav.slice(0, BAR_LIMIT);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -101,27 +57,31 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <ThemeToggle />
 
-            <Link
-              to="/repertorio"
-              search={{ tab: "calle", editLyricId: undefined }}
-              className="comic-sm comic-press flex items-center justify-center rounded-xl p-2.5 text-foreground"
-              aria-label="Repertorio"
-            >
-              <Library className="h-5 w-5 shrink-0" />
-            </Link>
+            {/* Iconos de escritorio: repertorio y ajustes van al centro de control en móvil */}
+            <div className="hidden items-center gap-1.5 sm:gap-2 md:flex">
+              <Link
+                to="/repertorio"
+                search={{ tab: "calle", editLyricId: undefined }}
+                className="comic-sm comic-press flex items-center justify-center rounded-xl p-2.5 text-foreground"
+                aria-label="Repertorio"
+              >
+                <Library className="h-5 w-5 shrink-0" />
+              </Link>
 
-            <Link
-              to="/ajustes"
-              className="comic-sm comic-press relative flex items-center justify-center rounded-xl p-2.5 text-foreground"
-              aria-label="Ajustes de usuario"
-            >
-              <Settings className="h-5 w-5 shrink-0" />
-              {pendingUsers > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-extrabold leading-none text-destructive-foreground shadow-[0_0_0_2px_var(--background),0_4px_12px_-4px_var(--destructive)]">
-                  {pendingUsers > 99 ? "99+" : pendingUsers}
-                </span>
-              )}
-            </Link>
+              <Link
+                to="/centro"
+                search={{ tab: isAdmin ? "gestion" : "perfil" }}
+                className="comic-sm comic-press relative flex items-center justify-center rounded-xl p-2.5 text-foreground"
+                aria-label="Centro de control"
+              >
+                <Settings className="h-5 w-5 shrink-0" />
+                {pendingCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-extrabold leading-none text-destructive-foreground shadow-[0_0_0_2px_var(--background),0_4px_12px_-4px_var(--destructive)]">
+                    {pendingCount > 99 ? "99+" : pendingCount}
+                  </span>
+                )}
+              </Link>
+            </div>
 
             <button
               onClick={signOut}
@@ -135,7 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {/* Navegación escritorio */}
         <nav className="mx-auto hidden max-w-5xl flex-wrap gap-1.5 px-4 pb-2.5 md:flex">
-          {NAV.map(({ to, label, icon: Icon }) => (
+          {DESKTOP_NAV.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
@@ -161,23 +121,36 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Barra de navegación inferior móvil — dock flotante de cristal */}
       <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] md:hidden">
         <div className="glass-strong mx-auto flex max-w-md items-center gap-0.5 rounded-[1.75rem] px-1.5 py-1.5">
-          {NAV.map(({ to, label, icon: Icon }) => (
+          {barNav.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
+              aria-label={label}
+              title={label}
               activeProps={{
                 className:
                   "bg-primary text-primary-foreground shadow-[0_8px_20px_-10px_var(--primary)]",
               }}
               inactiveProps={{ className: "text-muted-foreground" }}
-              className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] py-1.5 transition-all duration-200 active:scale-90"
+              className="flex min-w-0 flex-1 items-center justify-center rounded-[1.25rem] py-2.5 transition-all duration-200 active:scale-90"
             >
-              <Icon className="h-[18px] w-[18px] shrink-0" />
-              <span className="w-full truncate text-center text-[9px] font-extrabold uppercase leading-none tracking-tight">
-                {label}
-              </span>
+              <Icon className="h-6 w-6 shrink-0" />
             </Link>
           ))}
+
+          <Link
+            to="/centro"
+            aria-label="Más"
+            title="Más"
+            activeProps={{
+              className:
+                "bg-primary text-primary-foreground shadow-[0_8px_20px_-10px_var(--primary)]",
+            }}
+            inactiveProps={{ className: "text-muted-foreground" }}
+            className="flex min-w-0 flex-1 items-center justify-center rounded-[1.25rem] py-2.5 transition-all duration-200 active:scale-90"
+          >
+            <LayoutGrid className="h-6 w-6 shrink-0" />
+          </Link>
         </div>
       </nav>
     </div>
