@@ -173,7 +173,7 @@ function NoticeModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 pb-10">
       <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4 mt-4">
         <div className="flex items-center justify-between border-b pb-2">
           <h2 className="text-2xl font-extrabold leading-none">

@@ -833,7 +833,7 @@ function StreetSongDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="comic w-full max-w-md rounded-xl bg-card p-4">
         <div className="mb-3 flex items-center">
           <h2 className="mr-auto text-2xl leading-none">
@@ -916,7 +916,7 @@ function ArrangementDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="comic w-full max-w-md rounded-xl bg-card p-4">
         <div className="mb-3 flex items-center">
           <h2 className="mr-auto text-2xl leading-none">

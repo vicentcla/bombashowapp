@@ -242,7 +242,7 @@ function StatsDialog({
   const total = rows.reduce((sum, r) => sum + r.count, 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4">
       <div className="comic w-full max-w-xl rounded-xl bg-card p-4">
         <div className="mb-3 flex items-center gap-2">
           <h2 className="mr-auto text-2xl leading-none">Estadísticas</h2>

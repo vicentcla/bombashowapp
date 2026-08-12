@@ -876,7 +876,7 @@ function SetlistsPage() {
 
       {/* Modal "A partir de..." – copiar un setlist existente */}
       {showCopyFrom && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 pb-10">
           <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4 mt-4">
             <div className="flex items-center justify-between border-b pb-2">
               <h2 className="text-2xl font-extrabold leading-none">A partir de...</h2>
@@ -981,7 +981,7 @@ function SetlistsPage() {
 
       {/* Modal Nuevo Setlist */}
       {creating && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 pb-10">
           <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4 mt-4">
             <div className="flex items-center justify-between border-b pb-2">
               <h2 className="text-2xl font-extrabold leading-none">Nuevo setlist</h2>
@@ -1351,7 +1351,7 @@ function DraggableItem({
 // ─── Modal de visualización de letra (igual que en letras.tsx) ──────────────────
 function SetlistLyricModal({ lyric, onClose }: { lyric: Lyric; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="comic flex max-h-[85vh] w-full max-w-lg flex-col rounded-xl bg-card p-5 shadow-2xl">
         <div className="mb-4 flex items-start justify-between gap-3 border-b border-border pb-3">
           <div>
@@ -1467,7 +1467,7 @@ function AddSongsToPassModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="comic flex max-h-[85vh] w-full max-w-lg flex-col rounded-xl bg-card p-4 space-y-3 shadow-2xl">
         <div className="flex items-center justify-between border-b pb-2">
           <div>
@@ -1702,7 +1702,7 @@ function AddBreakModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="comic w-full max-w-sm rounded-xl bg-card p-5 space-y-4 shadow-2xl">
         <div className="flex items-center justify-between border-b pb-3">
           <div>
@@ -3238,7 +3238,7 @@ function SetlistDetail({
 
       {/* Modal Editar Configuración de Setlist y Pases */}
       {editingConfig && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 pb-10">
           <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4 mt-4">
             <div className="flex items-center justify-between border-b pb-2">
               <h2 className="text-2xl font-extrabold leading-none">Configurar Setlist</h2>

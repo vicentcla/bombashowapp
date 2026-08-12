@@ -1554,7 +1554,7 @@ function CopyFromModal({
     : (posts.data ?? []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 pb-10">
       <div className="comic mt-4 w-full max-w-md space-y-4 rounded-xl bg-card p-5">
         <div className="flex items-center justify-between border-b pb-2">
           <h2 className="text-2xl font-extrabold leading-none">A partir de...</h2>
@@ -1636,7 +1636,7 @@ function CreateTemplateModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 pb-10">
       <div className="comic mt-4 w-full max-w-sm space-y-4 rounded-xl bg-card p-5">
         <div className="flex items-center justify-between border-b pb-2">
           <h2 className="text-2xl font-extrabold leading-none">Crear plantilla</h2>
