@@ -25,7 +25,7 @@ export function RichTextEditor({ value, onChange }: Props) {
 
   return (
     <div className="comic-sm overflow-hidden rounded-md bg-card">
-      <div className="flex flex-wrap gap-1 border-b-2 border-ink bg-secondary p-1">
+      <div className="flex flex-wrap gap-1 border-b border-border bg-secondary p-1">
         <ToolButton onClick={() => exec("bold")} label="Negrita">
           <Bold className="h-4 w-4" />
         </ToolButton>

@@ -88,7 +88,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background pb-28 md:pb-6">
       {/* Cabecera: fluye con la página en móvil, sticky en escritorio */}
-      <header className="border-b-[3px] border-ink bg-card/95 pt-[env(safe-area-inset-top)] backdrop-blur-md md:sticky md:top-0 md:z-40">
+      <header className="border-b border-border bg-card/95 pt-[env(safe-area-inset-top)] backdrop-blur-md md:sticky md:top-0 md:z-40">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-3 py-2 sm:px-4">
           <Link to="/inicio" className="shrink-0 min-w-0">
             <img
@@ -117,7 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <Settings className="h-5 w-5 shrink-0" />
               {pendingUsers > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-destructive px-1 text-[10px] font-extrabold leading-none text-destructive-foreground">
+                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border border-border bg-destructive px-1 text-[10px] font-extrabold leading-none text-destructive-foreground">
                   {pendingUsers > 99 ? "99+" : pendingUsers}
                 </span>
               )}

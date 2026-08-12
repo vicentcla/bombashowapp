@@ -1113,7 +1113,7 @@ function SocialDetail({
                   setEditing(false);
                 }}
                 placeholder="P. ej. Concierto en las fiestas de..."
-                className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
               />
             </div>
 
@@ -1182,7 +1182,7 @@ function SocialDetail({
                 onKeyUp={trackSelection}
                 placeholder="Escribe aquí el texto... Activa el modo escritura directa para escribir con la tipografía elegida, o selecciona una palabra y elige una tipografía llamativa."
                 rows={7}
-                className="w-full resize-y rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
+                className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
               />
 
               {/* Selectores tipografía + estilo */}
@@ -1330,7 +1330,7 @@ function SocialDetail({
                         if (e.key === "Enter") submitAnchoredComment();
                       }}
                       placeholder="Comenta este fragmento..."
-                      className="min-w-0 flex-1 rounded-lg border-2 border-border bg-background px-2.5 py-1.5 text-sm font-medium focus:border-primary focus:outline-none"
+                      className="min-w-0 flex-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm font-medium focus:border-primary focus:outline-none"
                     />
                     <button
                       onClick={submitAnchoredComment}
@@ -1447,7 +1447,7 @@ function SocialDetail({
                   if (e.key === "Enter") handleAddComment();
                 }}
                 placeholder="Añade un comentario general..."
-                className="flex-1 rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
+                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
               />
               <button
                 onClick={handleAddComment}
@@ -1654,7 +1654,7 @@ function CreateTemplateModal({ onClose }: { onClose: () => void }) {
             onChange={(e) => setName(e.target.value)}
             placeholder="P. ej. Concierto"
             autoFocus
-            className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
           />
         </div>
 
@@ -1667,7 +1667,7 @@ function CreateTemplateModal({ onClose }: { onClose: () => void }) {
             onChange={(e) => setContent(e.target.value)}
             placeholder="Escribe el texto base del post..."
             rows={4}
-            className="w-full resize-y rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
+            className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
           />
           <p className="text-[10px] font-bold text-muted-foreground">
             Se copiará al crear un texto nuevo desde esta plantilla.

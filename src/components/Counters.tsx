@@ -289,7 +289,7 @@ function StatsDialog({
 
         <table className="w-full text-left">
           <thead>
-            <tr className="border-b-2 border-ink text-xs uppercase">
+            <tr className="border-b border-border text-xs uppercase">
               <th className="py-1">Canción</th>
               <th className="w-20 py-1 text-right">Veces</th>
             </tr>
