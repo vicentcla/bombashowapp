@@ -303,7 +303,7 @@ function StatsDialog({
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t-2 border-ink">
+            <tr className="border-t border-border">
               <td className="py-1 font-extrabold uppercase">Total</td>
               <td className="py-1 text-right font-extrabold">{total}</td>
             </tr>

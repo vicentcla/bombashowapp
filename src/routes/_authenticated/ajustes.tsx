@@ -658,7 +658,7 @@ function Ajustes() {
             </div>
 
             {/* Cambio de contraseña */}
-            <div className="border-t-2 border-dashed border-ink/20 pt-4">
+            <div className="border-t-2 border-dashed border-border pt-4">
               <h2 className="text-xl font-bold uppercase text-muted-foreground">
                 Cambiar contraseña
               </h2>

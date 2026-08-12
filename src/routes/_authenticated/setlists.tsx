@@ -774,7 +774,7 @@ function SetlistsPage() {
               <>
                 {/* Overlay para cerrar */}
                 <div className="fixed inset-0 z-40" onClick={() => setShowNewMenu(false)} />
-                <div className="absolute right-0 top-full z-50 mt-1.5 w-52 rounded-xl bg-card comic shadow-lg border border-ink/10 overflow-hidden">
+                <div className="absolute right-0 top-full z-50 mt-1.5 w-52 rounded-xl glass-strong comic shadow-lg border border-border overflow-hidden">
                   <button
                     onClick={() => {
                       setShowNewMenu(false);
@@ -787,7 +787,7 @@ function SetlistsPage() {
                   </button>
                   <button
                     onClick={createFromTemplate}
-                    className="flex w-full items-center gap-2.5 px-4 py-3 text-sm font-extrabold uppercase hover:bg-accent transition-colors text-left border-t border-ink/10"
+                    className="flex w-full items-center gap-2.5 px-4 py-3 text-sm font-extrabold uppercase hover:bg-accent transition-colors text-left border-t border-border"
                   >
                     <LayoutTemplate className="h-4 w-4 text-primary" />
                     Plantilla 2 pases
@@ -798,7 +798,7 @@ function SetlistsPage() {
                       setShowCopyFrom(true);
                       setCopyFromSearch("");
                     }}
-                    className="flex w-full items-center gap-2.5 px-4 py-3 text-sm font-extrabold uppercase hover:bg-accent transition-colors text-left border-t border-ink/10"
+                    className="flex w-full items-center gap-2.5 px-4 py-3 text-sm font-extrabold uppercase hover:bg-accent transition-colors text-left border-t border-border"
                   >
                     <Archive className="h-4 w-4 text-primary" />A partir de...
                   </button>
@@ -891,7 +891,7 @@ function SetlistsPage() {
             </p>
 
             {/* Buscador */}
-            <div className="flex items-center gap-2 rounded-lg bg-background px-3 py-2 border border-ink/10">
+            <div className="flex items-center gap-2 rounded-lg bg-background px-3 py-2 border border-border">
               <Search className="h-4 w-4 text-muted-foreground shrink-0" />
               <input
                 value={copyFromSearch}
@@ -930,7 +930,7 @@ function SetlistsPage() {
                   <button
                     key={s.id}
                     onClick={() => createFromSetlist(s)}
-                    className="w-full text-left rounded-lg border border-ink/10 bg-background px-4 py-3 hover:border-primary/60 hover:bg-primary/5 transition-all group"
+                    className="w-full text-left rounded-lg border border-border bg-background px-4 py-3 hover:border-primary/60 hover:bg-primary/5 transition-all group"
                   >
                     <p className="font-extrabold text-sm group-hover:text-primary transition-colors">
                       {s.name || <span className="italic text-muted-foreground">(sin nombre)</span>}
@@ -1248,7 +1248,7 @@ function SetlistCard({
         </div>
 
         {config.target_minutes > 0 && (
-          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-secondary border border-ink/20">
+          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-secondary border border-border">
             <div
               className={`h-full transition-all duration-500 ${
                 comp.status === "exceeded"
@@ -1867,7 +1867,7 @@ function ConfigSectionRow({
             value={pass.name}
             onChange={(e) => onUpdatePass({ ...pass, name: e.target.value })}
             placeholder="Nombre del pase"
-            className="comic-sm min-w-0 flex-1 rounded bg-card px-2.5 py-1 text-xs font-bold outline-none border border-ink/10 focus:border-primary"
+            className="comic-sm min-w-0 flex-1 rounded bg-card px-2.5 py-1 text-xs font-bold outline-none border border-border focus:border-primary"
           />
           <div className="flex items-center gap-1 shrink-0">
             <input
@@ -1877,7 +1877,7 @@ function ConfigSectionRow({
               min={0}
               value={pass.target_minutes}
               onChange={(e) => onUpdatePass({ ...pass, target_minutes: Number(e.target.value) })}
-              className="comic-sm w-14 rounded bg-card px-2 py-1 text-xs font-bold text-center outline-none border border-ink/10 focus:border-primary"
+              className="comic-sm w-14 rounded bg-card px-2 py-1 text-xs font-bold text-center outline-none border border-border focus:border-primary"
             />
             <span className="text-[10px] font-bold text-muted-foreground">min</span>
           </div>
@@ -1900,7 +1900,7 @@ function ConfigSectionRow({
             value={breakItem.title ?? "Descanso"}
             onChange={(e) => onUpdateBreak({ ...breakItem, title: e.target.value })}
             placeholder="Etiqueta"
-            className="comic-sm min-w-0 flex-1 rounded bg-card px-2.5 py-1 text-xs font-bold outline-none border border-ink/10 focus:border-amber-500"
+            className="comic-sm min-w-0 flex-1 rounded bg-card px-2.5 py-1 text-xs font-bold outline-none border border-border focus:border-amber-500"
           />
           <div className="flex items-center gap-1 shrink-0">
             <input
@@ -1911,7 +1911,7 @@ function ConfigSectionRow({
               max={180}
               value={breakItem.minutes}
               onChange={(e) => onUpdateBreak({ ...breakItem, minutes: Number(e.target.value) })}
-              className="comic-sm w-14 rounded bg-card px-2 py-1 text-xs font-bold text-center outline-none border border-ink/10 focus:border-amber-500"
+              className="comic-sm w-14 rounded bg-card px-2 py-1 text-xs font-bold text-center outline-none border border-border focus:border-amber-500"
             />
             <span className="text-[10px] font-bold text-muted-foreground">min</span>
           </div>
@@ -2837,7 +2837,7 @@ function SetlistDetail({
                 {overallComp.addedText} / {overallComp.targetText} ({overallComp.diffText})
               </span>
             </div>
-            <div className="relative h-3.5 w-full overflow-hidden rounded-full bg-secondary border border-ink/20">
+            <div className="relative h-3.5 w-full overflow-hidden rounded-full bg-secondary border border-border">
               {/* Segmento de canciones */}
               <div
                 className={`absolute left-0 top-0 h-full transition-all duration-500 ${
@@ -3086,7 +3086,7 @@ function SetlistDetail({
                   {/* Barra de Progreso del Pase */}
                   {pass.target_minutes > 0 && (
                     <div className="space-y-1">
-                      <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-secondary border border-ink/20">
+                      <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-secondary border border-border">
                         <div
                           className={`h-full transition-all duration-500 ${
                             passComp.status === "exceeded"

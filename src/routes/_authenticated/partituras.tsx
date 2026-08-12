@@ -198,7 +198,7 @@ function Partituras() {
       {openFolder && (
         <div className="fixed inset-0 z-50 flex flex-col bg-ink/60 p-3 sm:p-6">
           <div className="comic mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-hidden rounded-xl bg-card">
-            <div className="flex items-center justify-between gap-2 border-b border-ink/10 px-4 py-3">
+            <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
               <p className="truncate font-extrabold">{openFolder.name}</p>
               <div className="flex shrink-0 items-center gap-2">
                 <a
