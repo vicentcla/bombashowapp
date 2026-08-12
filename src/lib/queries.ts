@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useAuth";
@@ -590,6 +591,78 @@ export function useDeleteNotice() {
       if (error) throw error;
     },
     onSuccess: () => invalidate("notices"),
+  });
+}
+
+export type NoticeComment = {
+  id: string;
+  notice_id: string;
+  user_id: string;
+  parent_id: string | null;
+  content: string;
+  created_at: string;
+};
+
+export function useNoticeComments(noticeId?: string) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("notice_comments_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "notice_comments" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["notice_comments"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return useQuery({
+    queryKey: ["notice_comments", noticeId],
+    queryFn: async (): Promise<NoticeComment[]> => {
+      let query = supabase
+        .from("notice_comments")
+        .select("*")
+        .order("created_at", { ascending: true });
+      if (noticeId) {
+        query = query.eq("notice_id", noticeId);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data ?? []) as unknown as NoticeComment[];
+    },
+  });
+}
+
+export function useAddNoticeComment() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (input: { notice_id: string; content: string; parent_id?: string | null }) => {
+      const { error } = await supabase.from("notice_comments").insert({
+        notice_id: input.notice_id,
+        content: input.content,
+        parent_id: input.parent_id ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("notice_comments"),
+  });
+}
+
+export function useDeleteNoticeComment() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("notice_comments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("notice_comments"),
   });
 }
 
