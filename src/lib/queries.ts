@@ -745,6 +745,7 @@ export function useTabOrder(userId: string | null | undefined) {
   return useQuery({
     queryKey: ["profile-tab-order", userId],
     enabled: !!userId,
+    retry: false,
     queryFn: async (): Promise<string[]> => {
       // tab_order no existe en los tipos generados de Supabase (migración nueva).
       const builder = supabase.from("profiles") as unknown as {
@@ -755,13 +756,20 @@ export function useTabOrder(userId: string | null | undefined) {
           ) => {
             maybeSingle: () => Promise<{
               data: { tab_order: string[] | null } | null;
-              error: Error | null;
+              error: { message?: string } | null;
             }>;
           };
         };
       };
       const res = await builder.select("tab_order").eq("id", userId!).maybeSingle();
-      if (res.error) throw res.error;
+      // Si la columna aún no existe en la BD (migración pendiente), devolver [] sin error
+      if (res.error) {
+        const msg = res.error.message ?? "";
+        if (msg.includes("tab_order") || msg.includes("schema cache") || msg.includes("column")) {
+          return [];
+        }
+        throw res.error;
+      }
       return res.data?.tab_order ?? [];
     },
   });
