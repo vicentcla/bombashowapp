@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -25,9 +25,36 @@ export function useAuth() {
 export type AppRole = "miembro" | "admin" | "superadmin";
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 
-/** Rol del usuario actual (superadmin > admin > miembro). */
+/** Rol del usuario actual (superadmin > admin > miembro).
+ *  Incluye suscripción Realtime para que el cambio de rol
+ *  sea inmediato sin necesidad de recargar la página. */
 export function useRole() {
   const { user } = useAuth();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`user-role-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_roles",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["my-role", user.id] });
+          qc.invalidateQueries({ queryKey: ["all_user_roles"] });
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user?.id, qc]);
+
   return useQuery({
     queryKey: ["my-role", user?.id],
     enabled: !!user?.id,

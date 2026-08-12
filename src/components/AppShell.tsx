@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { LayoutGrid, Library, LogOut, RefreshCw, Settings } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePendingCount, useTabOrder } from "@/lib/queries";
 import { BAR_LIMIT, DEFAULT_BAR_COUNT, DESKTOP_NAV, orderNav, type NavTo } from "@/lib/nav";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 const LOGO_SRC = "/logo-titulo-2.png";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -33,9 +34,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   const barIconClass = hasFiveTabs ? "h-5 w-5" : "h-6 w-6";
 
   const { pullY, refreshing, threshold } = usePullToRefresh();
-  // Sólo activo en móvil (táctil): ignorar en escritorio
   const pullProgress = Math.min(pullY / threshold, 1);
   const isActivated = pullY >= threshold;
+
+  const scrollDir = useScrollDirection();
+  // La barra se encoge al bajar o en idle; se expande al subir o al tocar
+  const [navTapped, setNavTapped] = useState(false);
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isShrunk = !navTapped && (scrollDir === "down" || scrollDir === "idle");
+
+  function handleNavTap() {
+    setNavTapped(true);
+    if (tapTimer.current) clearTimeout(tapTimer.current);
+    tapTimer.current = setTimeout(() => setNavTapped(false), 2200);
+  }
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -154,9 +166,29 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      {/* Barra de navegación inferior móvil — dock flotante de cristal */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] md:hidden">
-        <div className="glass-strong mx-auto flex max-w-md items-center gap-0.5 rounded-[1.75rem] px-1.5 py-1.5">
+      {/* Barra de navegación inferior móvil — dock liquid glass adaptativo */}
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[max(env(safe-area-inset-bottom),0.6rem)] md:hidden"
+        onPointerDown={handleNavTap}
+      >
+        <div
+          className={`flex items-center gap-0.5 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
+            isShrunk
+              ? "rounded-[2rem] px-1 py-0.5 max-w-[52vw]"
+              : "rounded-[1.6rem] px-1.5 py-1 max-w-[88vw] w-full"
+          }`}
+          style={{
+            background: isShrunk
+              ? "rgba(255,255,255,0.08)"
+              : "rgba(255,255,255,0.12)",
+            backdropFilter: "blur(28px) saturate(200%) brightness(1.08)",
+            WebkitBackdropFilter: "blur(28px) saturate(200%) brightness(1.08)",
+            border: "1px solid rgba(255,255,255,0.22)",
+            boxShadow: isShrunk
+              ? "0 2px 16px -4px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.18)"
+              : "0 8px 32px -8px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.22), 0 0 0 0.5px rgba(255,255,255,0.08)",
+          }}
+        >
           {barNav.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
@@ -165,12 +197,18 @@ export function AppShell({ children }: { children: ReactNode }) {
               title={label}
               activeProps={{
                 className:
-                  "bg-primary text-primary-foreground shadow-[0_8px_20px_-10px_var(--primary)]",
+                  "bg-primary/90 text-primary-foreground shadow-[0_4px_16px_-6px_var(--primary)]",
               }}
-              inactiveProps={{ className: "text-muted-foreground" }}
-              className={`flex min-w-0 flex-1 items-center justify-center rounded-[1.25rem] ${barItemClass} transition-all duration-200 active:scale-90`}
+              inactiveProps={{ className: "text-white/60 dark:text-white/50" }}
+              className={`flex min-w-0 flex-1 items-center justify-center rounded-[1.2rem] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:scale-85 ${
+                isShrunk ? "py-1.5" : "py-2"
+              }`}
             >
-              <Icon className={`${barIconClass} shrink-0`} />
+              <Icon
+                className={`shrink-0 transition-all duration-500 ${
+                  isShrunk ? "h-4 w-4" : hasFiveTabs ? "h-5 w-5" : "h-5.5 w-5.5"
+                }`}
+              />
             </Link>
           ))}
 
@@ -181,12 +219,18 @@ export function AppShell({ children }: { children: ReactNode }) {
             title="Más"
             activeProps={{
               className:
-                "bg-primary text-primary-foreground shadow-[0_8px_20px_-10px_var(--primary)]",
+                "bg-primary/90 text-primary-foreground shadow-[0_4px_16px_-6px_var(--primary)]",
             }}
-            inactiveProps={{ className: "text-muted-foreground" }}
-            className={`flex min-w-0 flex-1 items-center justify-center rounded-[1.25rem] ${barItemClass} transition-all duration-200 active:scale-90`}
+            inactiveProps={{ className: "text-white/60 dark:text-white/50" }}
+            className={`flex min-w-0 flex-1 items-center justify-center rounded-[1.2rem] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:scale-85 ${
+              isShrunk ? "py-1.5" : "py-2"
+            }`}
           >
-            <LayoutGrid className={`${barIconClass} shrink-0`} />
+            <LayoutGrid
+              className={`shrink-0 transition-all duration-500 ${
+                isShrunk ? "h-4 w-4" : hasFiveTabs ? "h-5 w-5" : "h-5.5 w-5.5"
+              }`}
+            />
           </Link>
         </div>
       </nav>
