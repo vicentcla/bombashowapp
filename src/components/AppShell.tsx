@@ -7,10 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePendingCount, useTabOrder } from "@/lib/queries";
-import { DESKTOP_NAV, orderNav, type NavTo } from "@/lib/nav";
+import { BAR_LIMIT, DEFAULT_BAR_COUNT, DESKTOP_NAV, orderNav, type NavTo } from "@/lib/nav";
 const LOGO_SRC = "/logo-titulo-2.png";
-
-const BAR_LIMIT = 4;
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -25,7 +23,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     () => orderNav(tabOrderQuery.data as NavTo[] | undefined),
     [tabOrderQuery.data],
   );
-  const barNav = orderedNav.slice(0, BAR_LIMIT);
+  const hasCustomOrder = !!tabOrderQuery.data && tabOrderQuery.data.length > 0;
+  const barCount = Math.min(BAR_LIMIT, orderedNav.length);
+  const barLimit = hasCustomOrder ? barCount : Math.min(DEFAULT_BAR_COUNT, barCount);
+  const barNav = orderedNav.slice(0, barLimit);
+  const hasFiveTabs = barLimit === 5;
+  const barItemClass = hasFiveTabs ? "py-2" : "py-2.5";
+  const barIconClass = hasFiveTabs ? "h-5 w-5" : "h-6 w-6";
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -132,9 +136,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                   "bg-primary text-primary-foreground shadow-[0_8px_20px_-10px_var(--primary)]",
               }}
               inactiveProps={{ className: "text-muted-foreground" }}
-              className="flex min-w-0 flex-1 items-center justify-center rounded-[1.25rem] py-2.5 transition-all duration-200 active:scale-90"
+              className={`flex min-w-0 flex-1 items-center justify-center rounded-[1.25rem] ${barItemClass} transition-all duration-200 active:scale-90`}
             >
-              <Icon className="h-6 w-6 shrink-0" />
+              <Icon className={`${barIconClass} shrink-0`} />
             </Link>
           ))}
 
@@ -147,9 +151,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 "bg-primary text-primary-foreground shadow-[0_8px_20px_-10px_var(--primary)]",
             }}
             inactiveProps={{ className: "text-muted-foreground" }}
-            className="flex min-w-0 flex-1 items-center justify-center rounded-[1.25rem] py-2.5 transition-all duration-200 active:scale-90"
+            className={`flex min-w-0 flex-1 items-center justify-center rounded-[1.25rem] ${barItemClass} transition-all duration-200 active:scale-90`}
           >
-            <LayoutGrid className="h-6 w-6 shrink-0" />
+            <LayoutGrid className={`${barIconClass} shrink-0`} />
           </Link>
         </div>
       </nav>

@@ -42,6 +42,12 @@ export const DESKTOP_NAV: NavItem[] = ALL_NAV.filter((n) => n.to !== "/repertori
 /** Orden por defecto de la barra inferior (primeras 4). */
 export const DEFAULT_ORDER: NavTo[] = ["/inicio", "/letras", "/contadores", "/partituras"];
 
+/** Número máximo de pestañas que puede mostrar la barra inferior. */
+export const BAR_LIMIT = 5;
+
+/** Pestañas que se muestran en la barra sin orden personalizado. */
+export const DEFAULT_BAR_COUNT = 4;
+
 /** Aplica el orden guardado del usuario, añadiendo al final las pestañas que falten. */
 export function orderNav(userOrder: NavTo[] | null | undefined): NavItem[] {
   const seen = new Set<string>();

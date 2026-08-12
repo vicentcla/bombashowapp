@@ -42,10 +42,11 @@ nombres de tablas/columnas en la BD también.
   `useResetCounters`, `useReorder`, `useRoleRequests`, `useTabOrder`,
   `usePendingCount`).
 - `src/lib/nav.ts`: definición compartida de pestañas (`ALL_NAV`,
-  `DESKTOP_NAV`, `DEFAULT_ORDER`, `orderNav`). La barra inferior móvil muestra
-  las 4 primeras del orden personalizado del usuario (`profiles.tab_order`) +
-  un botón fijo **«Más»** que abre `/centro`. En móvil la barra solo muestra
-  iconos (sin títulos).
+  `DESKTOP_NAV`, `DEFAULT_ORDER`, `BAR_LIMIT`, `orderNav`). La barra inferior
+  móvil muestra las pestañas del orden personalizado del usuario
+  (`profiles.tab_order`): 4 por defecto y hasta 5 cuando hay orden guardado
+  (el tamaño de los iconos se adapta), + un botón fijo **«Más»** que abre
+  `/centro`. En móvil la barra solo muestra iconos (sin títulos).
 - `src/lib/format.ts`: formato de duraciones, saneado de HTML de letras
   (`sanitizeLyricsHtml`), `htmlToPlainText`, `normalize` (quita acentos) y
   `formatTimeComparison` (estados pending/exact/exceeded).
