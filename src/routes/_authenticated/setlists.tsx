@@ -224,11 +224,13 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
         proposals,
         board:
           parsed.board && typeof parsed.board === "object"
-            ? {
-                pinned: parsed.board.pinned === true,
-                expires_at:
-                  parsed.board.expires_at !== undefined ? String(parsed.board.expires_at) : null,
-              }
+            ? (() => {
+                const b = parsed.board as Record<string, unknown>;
+                return {
+                  pinned: b["pinned"] === true,
+                  expires_at: b["expires_at"] !== undefined ? String(b["expires_at"]) : null,
+                };
+              })()
             : { pinned: false, expires_at: null },
       };
     }

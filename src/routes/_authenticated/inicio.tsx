@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   CornerDownRight,
   Gamepad2,
@@ -224,7 +225,7 @@ function NoticeModal({
     });
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-md transition-opacity">
       {/* Clic en el fondo para cerrar */}
       <div className="fixed inset-0" onClick={onClose} />
@@ -233,7 +234,7 @@ function NoticeModal({
       <div className="relative z-10 comic w-full max-w-2xl rounded-2xl bg-card p-6 sm:p-7 space-y-5 shadow-2xl border-2 border-border/80 my-auto">
         <div className="flex items-center justify-between border-b pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-primary">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary">
               <Megaphone className="h-5 w-5" />
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold leading-none">
@@ -241,6 +242,7 @@ function NoticeModal({
             </h2>
           </div>
           <button
+            type="button"
             onClick={onClose}
             aria-label="Cerrar"
             className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
@@ -272,7 +274,7 @@ function NoticeModal({
               onChange={(e) => setBody(e.target.value)}
               placeholder="Explica los detalles del aviso para la xaranga..."
               rows={7}
-              className="w-full min-h-[160px] sm:min-h-[200px] resize-y rounded-xl border-2 border-border bg-background px-4 py-3 text-sm sm:text-base font-medium focus:border-primary focus:outline-none shadow-xs"
+              className="w-full min-h-[160px] sm:min-h-[220px] resize-y rounded-xl border-2 border-border bg-background px-4 py-3 text-sm sm:text-base font-medium focus:border-primary focus:outline-none shadow-xs"
             />
           </div>
 
@@ -295,7 +297,8 @@ function NoticeModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
