@@ -5,13 +5,14 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * La Bomba Show — sistema de diseño cómic/pop tomado del logo:
- * azul cian, rojo, amarillo y negro de contorno grueso.
+ * La Bomba Show — sistema de diseño "cristal" (glassmorphism):
+ * superficies translúcidas con desenfoque, bordes finos luminosos,
+ * sombras suaves y el cian del logo como acento. Claro y oscuro.
  */
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
@@ -58,80 +59,102 @@
 }
 
 :root {
-  --radius: 0.75rem;
-  --background: oklch(0.98 0.012 95);
-  --foreground: oklch(0.16 0.01 260);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.16 0.01 260);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.16 0.01 260);
-  --primary: oklch(0.66 0.17 235);
-  --primary-foreground: oklch(0.14 0.01 260);
-  --secondary: oklch(0.94 0.02 240);
-  --secondary-foreground: oklch(0.18 0.01 260);
-  --muted: oklch(0.95 0.012 240);
-  --muted-foreground: oklch(0.47 0.02 260);
-  --accent: oklch(0.86 0.17 92);
-  --accent-foreground: oklch(0.16 0.01 260);
-  --destructive: oklch(0.58 0.23 27);
+  --radius: 1rem;
+  --background: oklch(0.97 0.008 250);
+  --foreground: oklch(0.2 0.02 260);
+  /* Superficies translúcidas: el desenfoque de las utilidades glass hace el resto */
+  --card: oklch(1 0 0 / 0.7);
+  --card-foreground: oklch(0.2 0.02 260);
+  --popover: oklch(0.99 0.004 250 / 0.92);
+  --popover-foreground: oklch(0.2 0.02 260);
+  --primary: oklch(0.66 0.14 232);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.58 0.02 260 / 0.1);
+  --secondary-foreground: oklch(0.28 0.02 260);
+  --muted: oklch(0.58 0.02 260 / 0.08);
+  --muted-foreground: oklch(0.5 0.02 260);
+  --accent: oklch(0.66 0.14 232 / 0.14);
+  --accent-foreground: oklch(0.35 0.1 232);
+  --destructive: oklch(0.6 0.21 25);
   --destructive-foreground: oklch(0.99 0 0);
-  --warning: oklch(0.75 0.18 60);
-  --warning-foreground: oklch(0.16 0.01 260);
-  --ink: oklch(0.13 0.01 260);
-  --border: oklch(0.13 0.01 260);
-  --input: oklch(0.88 0.01 260);
-  --ring: oklch(0.66 0.17 235);
-  --chart-1: oklch(0.66 0.17 235);
-  --chart-2: oklch(0.58 0.23 27);
-  --chart-3: oklch(0.86 0.17 92);
-  --chart-4: oklch(0.62 0.18 150);
-  --chart-5: oklch(0.6 0.2 320);
-  --sidebar: oklch(0.98 0.012 95);
-  --sidebar-foreground: oklch(0.16 0.01 260);
-  --sidebar-primary: oklch(0.66 0.17 235);
-  --sidebar-primary-foreground: oklch(0.14 0.01 260);
-  --sidebar-accent: oklch(0.94 0.02 240);
-  --sidebar-accent-foreground: oklch(0.18 0.01 260);
-  --sidebar-border: oklch(0.13 0.01 260);
-  --sidebar-ring: oklch(0.66 0.17 235);
+  --warning: oklch(0.75 0.16 65);
+  --warning-foreground: oklch(0.22 0.02 260);
+  --ink: oklch(0.2 0.03 260);
+  --border: oklch(0.55 0.03 260 / 0.18);
+  --input: oklch(0.55 0.03 260 / 0.22);
+  --ring: oklch(0.66 0.14 232);
+
+  /* Tokens del sistema de cristal */
+  --glass-bg: oklch(1 0 0 / 0.62);
+  --glass-bg-strong: oklch(1 0 0 / 0.82);
+  --glass-border: oklch(1 0 0 / 0.7);
+  --glass-border-outer: oklch(0.55 0.05 260 / 0.16);
+  --glass-shadow: 0 8px 24px -12px oklch(0.3 0.06 260 / 0.35);
+  --glass-shadow-lg: 0 20px 48px -20px oklch(0.3 0.06 260 / 0.45);
+  --glow-1: oklch(0.7 0.16 232 / 0.3);
+  --glow-2: oklch(0.7 0.19 25 / 0.16);
+
+  --chart-1: oklch(0.66 0.14 232);
+  --chart-2: oklch(0.6 0.21 25);
+  --chart-3: oklch(0.8 0.15 92);
+  --chart-4: oklch(0.62 0.15 155);
+  --chart-5: oklch(0.6 0.17 315);
+  --sidebar: oklch(1 0 0 / 0.7);
+  --sidebar-foreground: oklch(0.2 0.02 260);
+  --sidebar-primary: oklch(0.66 0.14 232);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.66 0.14 232 / 0.14);
+  --sidebar-accent-foreground: oklch(0.35 0.1 232);
+  --sidebar-border: oklch(0.55 0.03 260 / 0.18);
+  --sidebar-ring: oklch(0.66 0.14 232);
 }
 
 .dark {
-  --background: oklch(0.16 0.02 260);
-  --foreground: oklch(0.97 0.005 240);
-  --card: oklch(0.22 0.025 260);
-  --card-foreground: oklch(0.97 0.005 240);
-  --popover: oklch(0.22 0.025 260);
-  --popover-foreground: oklch(0.97 0.005 240);
-  --primary: oklch(0.72 0.16 235);
-  --primary-foreground: oklch(0.14 0.02 260);
-  --secondary: oklch(0.28 0.03 260);
-  --secondary-foreground: oklch(0.97 0.005 240);
-  --muted: oklch(0.27 0.025 260);
-  --muted-foreground: oklch(0.75 0.02 250);
-  --accent: oklch(0.82 0.17 92);
-  --accent-foreground: oklch(0.16 0.02 260);
-  --destructive: oklch(0.66 0.21 27);
+  --background: oklch(0.19 0.022 262);
+  --foreground: oklch(0.96 0.005 250);
+  --card: oklch(0.62 0.04 262 / 0.14);
+  --card-foreground: oklch(0.96 0.005 250);
+  --popover: oklch(0.24 0.025 262 / 0.94);
+  --popover-foreground: oklch(0.96 0.005 250);
+  --primary: oklch(0.72 0.15 232);
+  --primary-foreground: oklch(0.15 0.02 262);
+  --secondary: oklch(0.75 0.03 262 / 0.14);
+  --secondary-foreground: oklch(0.96 0.005 250);
+  --muted: oklch(0.75 0.03 262 / 0.1);
+  --muted-foreground: oklch(0.76 0.02 255);
+  --accent: oklch(0.72 0.15 232 / 0.2);
+  --accent-foreground: oklch(0.9 0.08 232);
+  --destructive: oklch(0.66 0.2 25);
   --destructive-foreground: oklch(0.99 0 0);
-  --warning: oklch(0.79 0.17 60);
-  --warning-foreground: oklch(0.16 0.02 260);
-  --ink: oklch(0.92 0.005 240);
-  --border: oklch(0.85 0.01 240);
-  --input: oklch(0.34 0.03 260);
-  --ring: oklch(0.72 0.16 235);
-  --chart-1: oklch(0.72 0.16 235);
-  --chart-2: oklch(0.66 0.21 27);
-  --chart-3: oklch(0.82 0.17 92);
-  --chart-4: oklch(0.7 0.17 150);
-  --chart-5: oklch(0.68 0.19 320);
-  --sidebar: oklch(0.19 0.02 260);
-  --sidebar-foreground: oklch(0.97 0.005 240);
-  --sidebar-primary: oklch(0.72 0.16 235);
-  --sidebar-primary-foreground: oklch(0.14 0.02 260);
-  --sidebar-accent: oklch(0.28 0.03 260);
-  --sidebar-accent-foreground: oklch(0.97 0.005 240);
-  --sidebar-border: oklch(0.85 0.01 240);
-  --sidebar-ring: oklch(0.72 0.16 235);
+  --warning: oklch(0.79 0.16 65);
+  --warning-foreground: oklch(0.18 0.02 262);
+  --ink: oklch(0.13 0.02 262);
+  --border: oklch(0.85 0.02 250 / 0.14);
+  --input: oklch(0.85 0.02 250 / 0.18);
+  --ring: oklch(0.72 0.15 232);
+
+  --glass-bg: oklch(0.62 0.04 262 / 0.16);
+  --glass-bg-strong: oklch(0.3 0.03 262 / 0.72);
+  --glass-border: oklch(1 0 0 / 0.14);
+  --glass-border-outer: oklch(0 0 0 / 0.35);
+  --glass-shadow: 0 8px 24px -12px oklch(0 0 0 / 0.6);
+  --glass-shadow-lg: 0 24px 56px -24px oklch(0 0 0 / 0.8);
+  --glow-1: oklch(0.65 0.18 232 / 0.32);
+  --glow-2: oklch(0.6 0.2 25 / 0.2);
+
+  --chart-1: oklch(0.72 0.15 232);
+  --chart-2: oklch(0.66 0.2 25);
+  --chart-3: oklch(0.82 0.15 92);
+  --chart-4: oklch(0.7 0.15 155);
+  --chart-5: oklch(0.68 0.17 315);
+  --sidebar: oklch(0.62 0.04 262 / 0.14);
+  --sidebar-foreground: oklch(0.96 0.005 250);
+  --sidebar-primary: oklch(0.72 0.15 232);
+  --sidebar-primary-foreground: oklch(0.15 0.02 262);
+  --sidebar-accent: oklch(0.72 0.15 232 / 0.2);
+  --sidebar-accent-foreground: oklch(0.9 0.08 232);
+  --sidebar-border: oklch(0.85 0.02 250 / 0.14);
+  --sidebar-ring: oklch(0.72 0.15 232);
 }
 
 @layer base {
@@ -141,12 +164,11 @@
 
   html,
   body {
-    /* iOS 26 deriva el color de la barra de estado del fondo de html/body:
-       lo igualamos al color de la cabecera para que el borde superior sea del mismo color. */
-    background-color: var(--color-card);
+    background-color: var(--color-background);
   }
 
   body {
+    position: relative;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     /* Sensación de app: sin zoom por pellizco ni doble toque, y sin resaltado al tocar. */
@@ -157,6 +179,19 @@
     overscroll-behavior-y: none;
   }
 
+  /* Halos de color detrás del contenido: dan profundidad al cristal */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(90rem 50rem at 8% -10%, var(--glow-1), transparent 60%),
+      radial-gradient(70rem 45rem at 110% 15%, var(--glow-2), transparent 60%),
+      radial-gradient(60rem 40rem at 50% 115%, var(--glow-1), transparent 65%);
+  }
+
   h1,
   h2,
   h3 {
@@ -165,24 +200,59 @@
   }
 }
 
-/* Marco cómic: borde negro/blanco según tema + sombra dura */
+/*
+ * Panel de cristal. Conservamos los nombres `comic*` porque están usados en
+ * toda la app, pero ahora producen vidrio esmerilado en lugar de tinta.
+ */
 @utility comic {
-  border: 3px solid var(--color-ink);
-  box-shadow: 4px 4px 0 0 var(--color-ink);
+  border: 1px solid var(--glass-border-outer);
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(18px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-border),
+    var(--glass-shadow);
 }
 
 @utility comic-sm {
-  border: 2px solid var(--color-ink);
-  box-shadow: 2px 2px 0 0 var(--color-ink);
+  border: 1px solid var(--glass-border-outer);
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(14px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-border),
+    0 4px 14px -8px oklch(0 0 0 / 0.35);
 }
 
 @utility comic-press {
   transition:
-    transform 80ms ease,
-    box-shadow 80ms ease;
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 160ms ease,
+    filter 160ms ease;
   &:active {
-    transform: translate(3px, 3px);
-    box-shadow: 0 0 0 0 var(--color-ink);
+    transform: scale(0.965);
+    filter: brightness(1.05);
+  }
+}
+
+/* Superficie de cristal más opaca (menús, diálogos, barras flotantes) */
+@utility glass-strong {
+  background-color: var(--glass-bg-strong);
+  backdrop-filter: blur(24px) saturate(170%);
+  border: 1px solid var(--glass-border-outer);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-border),
+    var(--glass-shadow-lg);
+}
+
+/* Elevación al pasar el ratón / mantener pulsado */
+@utility lift {
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 200ms ease;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 0 var(--glass-border),
+      var(--glass-shadow-lg);
   }
 }
 
@@ -205,14 +275,14 @@
   & hr {
     margin: 1rem 0;
     border: none;
-    border-top: 2px solid var(--color-border);
-    opacity: 0.8;
+    border-top: 1px solid var(--color-border);
+    opacity: 0.9;
   }
 }
 
 /* Separadores visibles en modo oscuro */
 .dark .lyrics-body hr {
-  border-top-color: rgba(255, 255, 255, 0.3);
+  border-top-color: rgba(255, 255, 255, 0.22);
   opacity: 1;
 }
 
