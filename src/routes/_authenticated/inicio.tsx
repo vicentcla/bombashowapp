@@ -193,9 +193,19 @@ function NoticeModal({
     setBody(notice?.body ?? "");
   }, [open, notice]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
 
-  function submit() {
+  function submit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     if (!title.trim()) {
       toast.error("El título no puede estar vacío");
       return;
@@ -215,50 +225,75 @@ function NoticeModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 pb-10">
-      <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4 mt-4">
-        <div className="flex items-center justify-between border-b pb-2">
-          <h2 className="text-2xl font-extrabold leading-none">
-            {notice ? "Editar aviso" : "Nuevo aviso"}
-          </h2>
-          <button onClick={onClose} aria-label="Cerrar">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-md transition-opacity">
+      {/* Clic en el fondo para cerrar */}
+      <div className="fixed inset-0" onClick={onClose} />
+
+      {/* Ventana emergente modal */}
+      <div className="relative z-10 comic w-full max-w-2xl rounded-2xl bg-card p-6 sm:p-7 space-y-5 shadow-2xl border-2 border-border/80 my-auto">
+        <div className="flex items-center justify-between border-b pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20 text-primary">
+              <Megaphone className="h-5 w-5" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold leading-none">
+              {notice ? "Editar aviso" : "Nuevo aviso"}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="space-y-3">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Título del aviso"
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
-            autoFocus
-          />
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Contenido del aviso..."
-            rows={4}
-            className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
-          />
-        </div>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-extrabold uppercase text-muted-foreground">
+              Título del aviso
+            </label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Escribe un título claro..."
+              className="w-full rounded-xl border-2 border-border bg-background px-4 py-3 text-base sm:text-lg font-extrabold focus:border-primary focus:outline-none shadow-xs"
+              autoFocus
+            />
+          </div>
 
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="comic-sm rounded-lg bg-secondary px-3 py-2 text-xs font-extrabold uppercase text-secondary-foreground"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={submit}
-            disabled={save.isPending}
-            className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {notice ? "Guardar" : "Publicar"}
-          </button>
-        </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-extrabold uppercase text-muted-foreground">
+              Contenido del aviso
+            </label>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Explica los detalles del aviso para la xaranga..."
+              rows={7}
+              className="w-full min-h-[160px] sm:min-h-[200px] resize-y rounded-xl border-2 border-border bg-background px-4 py-3 text-sm sm:text-base font-medium focus:border-primary focus:outline-none shadow-xs"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="comic-sm rounded-xl bg-secondary px-5 py-2.5 text-xs font-extrabold uppercase text-secondary-foreground hover:bg-accent transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={save.isPending}
+              className="comic-sm comic-press flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+              {notice ? "Guardar cambios" : "Publicar aviso"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
