@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LayoutGrid, Library, LogOut, Settings } from "lucide-react";
+import { LayoutGrid, Library, LogOut, RefreshCw, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePendingCount, useTabOrder } from "@/lib/queries";
 import { BAR_LIMIT, DEFAULT_BAR_COUNT, DESKTOP_NAV, orderNav, type NavTo } from "@/lib/nav";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 const LOGO_SRC = "/logo-titulo-2.png";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -30,6 +31,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hasFiveTabs = barLimit === 5;
   const barItemClass = hasFiveTabs ? "py-2" : "py-2.5";
   const barIconClass = hasFiveTabs ? "h-5 w-5" : "h-6 w-6";
+
+  const { pullY, refreshing, threshold } = usePullToRefresh();
+  // Sólo activo en móvil (táctil): ignorar en escritorio
+  const pullProgress = Math.min(pullY / threshold, 1);
+  const isActivated = pullY >= threshold;
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -119,8 +125,34 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </header>
 
-      {/* Contenido principal */}
-      <main className="mx-auto max-w-5xl px-3 py-4 sm:px-4 md:py-6">{children}</main>
+      {/* Contenido principal — se desplaza suavemente al hacer pull */}
+      <main
+        className="mx-auto max-w-5xl px-3 py-4 sm:px-4 md:py-6"
+        style={pullY > 0 ? { transform: `translateY(${pullY}px)`, transition: "none" } : {}}
+      >
+        {children}
+      </main>
+
+      {/* Indicador visual de Pull-to-Refresh — sólo móvil */}
+      {(pullY > 0 || refreshing) && (
+        <div
+          className="fixed top-0 left-0 right-0 z-50 flex justify-center transition-all md:hidden"
+          style={{ transform: `translateY(calc(${Math.min(pullY, 80)}px - 100%))`, opacity: refreshing ? 1 : pullProgress }}
+        >
+          <div
+            className={`mt-2 flex h-11 w-11 items-center justify-center rounded-full shadow-xl border border-border/40 ${
+              isActivated || refreshing ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"
+            }`}
+          >
+            <RefreshCw
+              className={`h-5 w-5 ${
+                refreshing ? "animate-spin" : ""
+              }`}
+              style={!refreshing ? { transform: `rotate(${pullProgress * 360}deg)` } : {}}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Barra de navegación inferior móvil — dock flotante de cristal */}
       <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] md:hidden">
