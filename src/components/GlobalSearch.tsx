@@ -174,7 +174,7 @@ export function GlobalSearch() {
               key={item.key}
               type="button"
               onClick={item.onClick}
-              className="flex w-full items-start justify-between gap-3 border-b border-ink/5 px-3 py-2.5 text-left transition-colors last:border-b-0 hover:bg-primary/5"
+              className="flex w-full items-start justify-between gap-3 border-b border-border/60 px-3 py-2.5 text-left transition-colors last:border-b-0 hover:bg-primary/5"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-extrabold">{item.title}</p>
@@ -197,7 +197,7 @@ export function GlobalSearch() {
   return (
     <>
       <div className="comic rounded-xl bg-card p-4">
-        <div className="flex items-center gap-2 rounded-lg bg-background px-3 py-2 border border-ink/10 focus-within:border-primary">
+        <div className="flex items-center gap-2 rounded-lg bg-background px-3 py-2 border border-border focus-within:border-primary">
           <Search className="h-5 w-5 shrink-0 text-muted-foreground" />
           <input
             value={query}

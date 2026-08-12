@@ -155,7 +155,7 @@ export function DriveFoldersManager() {
         </div>
       </form>
 
-      <div className="space-y-1.5 border-t border-ink/10 pt-3">
+      <div className="space-y-1.5 border-t border-border pt-3">
         {(folders.data ?? []).length === 0 ? (
           <div className="flex flex-col items-center py-6 text-center">
             <Folder className="mb-2 h-8 w-8 text-muted-foreground/40" />

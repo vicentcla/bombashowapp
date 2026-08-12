@@ -219,7 +219,7 @@ function AuthPage() {
           type="button"
           onClick={signInWithGoogle}
           disabled={busy}
-          className="comic-sm comic-press flex w-full items-center justify-center gap-2 rounded-md border-2 border-ink bg-background px-4 py-3 text-base font-extrabold uppercase text-foreground hover:bg-muted disabled:opacity-60"
+          className="comic-sm comic-press flex w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 py-3 text-base font-extrabold uppercase text-foreground hover:bg-muted disabled:opacity-60"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
             <path

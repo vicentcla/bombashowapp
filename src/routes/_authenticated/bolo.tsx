@@ -266,7 +266,7 @@ function Bolo() {
           {template === "suelto" && <SueltoForm value={suelto} onChange={setSuelto} />}
           {template === "generico" && <GenericFormSection value={generic} onChange={setGeneric} />}
 
-          <div className="flex flex-wrap gap-2 border-t border-ink/10 pt-3">
+          <div className="flex flex-wrap gap-2 border-t border-border pt-3">
             <button
               onClick={handleSave}
               disabled={!currentTitle.trim() || saveBolo.isPending}
@@ -285,11 +285,11 @@ function Bolo() {
               <MessageCircle className="h-3.5 w-3.5" /> Mensaje generado
             </h2>
             {hasContent ? (
-              <div className="whitespace-pre-line rounded-lg border border-ink/10 bg-background p-3 text-sm font-medium">
+              <div className="whitespace-pre-line rounded-lg border border-border bg-background p-3 text-sm font-medium">
                 {message}
               </div>
             ) : (
-              <p className="rounded-lg border border-dashed border-ink/20 bg-background p-3 text-sm font-bold text-muted-foreground">
+              <p className="rounded-lg border border-dashed border-border bg-background p-3 text-sm font-bold text-muted-foreground">
                 Rellena los campos para ir generando el mensaje...
               </p>
             )}
@@ -329,13 +329,13 @@ function Bolo() {
             {messages.isLoading ? (
               <p className="text-sm font-bold text-muted-foreground">Cargando...</p>
             ) : (messages.data?.length ?? 0) === 0 ? (
-              <p className="rounded-lg border border-dashed border-ink/20 bg-background p-3 text-sm font-bold text-muted-foreground">
+              <p className="rounded-lg border border-dashed border-border bg-background p-3 text-sm font-bold text-muted-foreground">
                 Todavía no hay convocatorias guardadas.
               </p>
             ) : (
               <div className="space-y-2">
                 {messages.data?.map((m) => (
-                  <div key={m.id} className="rounded-lg border border-ink/10 bg-background p-3">
+                  <div key={m.id} className="rounded-lg border border-border bg-background p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate font-extrabold">{m.title}</p>
@@ -412,7 +412,7 @@ function PlantillaEditor({
               value={value[key]}
               onChange={(e) => onChange({ ...value, [key]: e.target.value })}
               placeholder="Nombre1, Nombre2..."
-              className="comic-sm w-full rounded-md border-2 border-border bg-background px-2.5 py-1.5 text-sm font-medium focus:border-primary focus:outline-none"
+              className="comic-sm w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm font-medium focus:border-primary focus:outline-none"
             />
           </div>
         );
@@ -436,13 +436,13 @@ function TurnoRopaCard({
     onChange({ ...value, [key]: v });
 
   return (
-    <div className="rounded-lg border border-ink/10 bg-background p-2.5">
+    <div className="rounded-lg border border-border bg-background p-2.5">
       <div className="flex items-center gap-2">
         <input
           value={value.label}
           onChange={(e) => set("label", e.target.value)}
           placeholder="Turno (Matí, Vesprada...)"
-          className="comic-sm min-w-0 flex-1 rounded-md border-2 border-border bg-background px-2.5 py-1.5 text-sm font-extrabold uppercase focus:border-primary focus:outline-none"
+          className="comic-sm min-w-0 flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-sm font-extrabold uppercase focus:border-primary focus:outline-none"
         />
         <button
           onClick={onRemove}
@@ -457,19 +457,19 @@ function TurnoRopaCard({
           value={value.pantalon}
           onChange={(e) => set("pantalon", e.target.value)}
           placeholder="🩳 Pantaló"
-          className="comic-sm w-full rounded-md border border-ink/10 bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+          className="comic-sm w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
         />
         <input
           value={value.camiseta}
           onChange={(e) => set("camiseta", e.target.value)}
           placeholder="🎽 Camiseta"
-          className="comic-sm w-full rounded-md border border-ink/10 bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+          className="comic-sm w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
         />
         <input
           value={value.sabates}
           onChange={(e) => set("sabates", e.target.value)}
           placeholder="👟 Sabates"
-          className="comic-sm w-full rounded-md border border-ink/10 bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+          className="comic-sm w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
         />
       </div>
     </div>
@@ -550,7 +550,7 @@ function FiestasForm({
             value={value.name}
             onChange={(e) => onChange({ ...value, name: e.target.value })}
             placeholder="PENYES DE LA VALL"
-            className="comic-sm w-full rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-extrabold uppercase focus:border-primary focus:outline-none"
+            className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-extrabold uppercase focus:border-primary focus:outline-none"
           />
         </div>
         <div className="flex items-center gap-1.5">
@@ -558,21 +558,21 @@ function FiestasForm({
             value={value.emojiL}
             onChange={(e) => onChange({ ...value, emojiL: e.target.value })}
             title="Emojis de apertura del título"
-            className="comic-sm w-20 rounded-md border border-ink/10 bg-background px-2 py-2 text-center text-sm focus:border-primary focus:outline-none"
+            className="comic-sm w-20 rounded-md border border-border bg-background px-2 py-2 text-center text-sm focus:border-primary focus:outline-none"
           />
           <span className="text-muted-foreground">*</span>
           <input
             value={value.emojiR}
             onChange={(e) => onChange({ ...value, emojiR: e.target.value })}
             title="Emojis de cierre del título"
-            className="comic-sm w-20 rounded-md border border-ink/10 bg-background px-2 py-2 text-center text-sm focus:border-primary focus:outline-none"
+            className="comic-sm w-20 rounded-md border border-border bg-background px-2 py-2 text-center text-sm focus:border-primary focus:outline-none"
           />
         </div>
       </div>
 
       <div className="space-y-3">
         {value.days.map((day, i) => (
-          <div key={i} className="space-y-3 rounded-lg border border-ink/10 bg-background p-3">
+          <div key={i} className="space-y-3 rounded-lg border border-border bg-background p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs font-extrabold uppercase text-muted-foreground">Día {i + 1}</p>
               {value.days.length > 1 && (
@@ -591,27 +591,27 @@ function FiestasForm({
                 value={day.dayName}
                 onChange={(e) => updateDay(i, { ...day, dayName: e.target.value })}
                 placeholder="DIUMENGE"
-                className="comic-sm rounded-md border border-ink/10 bg-background px-2.5 py-1.5 text-sm font-bold uppercase focus:border-primary focus:outline-none"
+                className="comic-sm rounded-md border border-border bg-background px-2.5 py-1.5 text-sm font-bold uppercase focus:border-primary focus:outline-none"
               />
               <div className="flex gap-2">
                 <input
                   value={day.dayNum}
                   onChange={(e) => updateDay(i, { ...day, dayNum: e.target.value })}
                   placeholder="Nº"
-                  className="comic-sm w-14 rounded-md border border-ink/10 bg-background px-2.5 py-1.5 text-sm text-center font-bold focus:border-primary focus:outline-none"
+                  className="comic-sm w-14 rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-center font-bold focus:border-primary focus:outline-none"
                 />
                 <input
                   value={day.month}
                   onChange={(e) => updateDay(i, { ...day, month: e.target.value })}
                   placeholder="AGOST"
-                  className="comic-sm min-w-0 flex-1 rounded-md border border-ink/10 bg-background px-2.5 py-1.5 text-sm font-bold uppercase focus:border-primary focus:outline-none"
+                  className="comic-sm min-w-0 flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-sm font-bold uppercase focus:border-primary focus:outline-none"
                 />
               </div>
               <input
                 value={day.hours}
                 onChange={(e) => updateDay(i, { ...day, hours: e.target.value })}
                 placeholder="DE 16:00 A 21:00"
-                className="comic-sm col-span-2 rounded-md border border-ink/10 bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+                className="comic-sm col-span-2 rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
               />
             </div>
 
@@ -707,7 +707,7 @@ function SueltoForm({ value, onChange }: { value: SueltoData; onChange: (v: Suel
           value={value.title}
           onChange={(e) => set("title", e.target.value)}
           placeholder="JÉRICA"
-          className="comic-sm w-full rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-extrabold uppercase focus:border-primary focus:outline-none"
+          className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-extrabold uppercase focus:border-primary focus:outline-none"
         />
       </div>
 
@@ -720,7 +720,7 @@ function SueltoForm({ value, onChange }: { value: SueltoData; onChange: (v: Suel
             value={value.date}
             onChange={(e) => set("date", e.target.value)}
             placeholder="25 JULIOL"
-            className="comic-sm w-full rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-bold uppercase focus:border-primary focus:outline-none"
+            className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-bold uppercase focus:border-primary focus:outline-none"
           />
         </div>
         <div className="space-y-1.5">
@@ -731,7 +731,7 @@ function SueltoForm({ value, onChange }: { value: SueltoData; onChange: (v: Suel
             value={value.hours}
             onChange={(e) => set("hours", e.target.value)}
             placeholder="12:30 A 19:30"
-            className="comic-sm w-full rounded-md border-2 border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
           />
         </div>
       </div>
@@ -744,7 +744,7 @@ function SueltoForm({ value, onChange }: { value: SueltoData; onChange: (v: Suel
           value={value.meetTime}
           onChange={(e) => set("meetTime", e.target.value)}
           placeholder="A les 11:15 h al family"
-          className="comic-sm w-full rounded-md border-2 border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
         />
       </div>
 
@@ -757,7 +757,7 @@ function SueltoForm({ value, onChange }: { value: SueltoData; onChange: (v: Suel
             value={value.location}
             onChange={(e) => set("location", e.target.value)}
             placeholder="Plaza Mayor"
-            className="comic-sm w-full rounded-md border-2 border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
           />
         </div>
         <div className="space-y-1.5">
@@ -768,7 +768,7 @@ function SueltoForm({ value, onChange }: { value: SueltoData; onChange: (v: Suel
             value={value.mapsUrl}
             onChange={(e) => set("mapsUrl", e.target.value)}
             placeholder="Enlace o dirección"
-            className="comic-sm w-full rounded-md border-2 border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
           />
         </div>
       </div>
@@ -782,36 +782,36 @@ function SueltoForm({ value, onChange }: { value: SueltoData; onChange: (v: Suel
         <p className="flex items-center gap-1.5 text-[11px] font-extrabold uppercase text-muted-foreground">
           <Shirt className="h-3 w-3" /> Ropa
         </p>
-        <div className="space-y-2 rounded-lg border border-ink/10 bg-background p-2.5">
+        <div className="space-y-2 rounded-lg border border-border bg-background p-2.5">
           <input
             value={value.pantalon}
             onChange={(e) => set("pantalon", e.target.value)}
             placeholder="🩳 Pantaló: NEGRE"
-            className="comic-sm w-full rounded-md border border-ink/10 bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+            className="comic-sm w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
           />
           <input
             value={value.camisetaMati}
             onChange={(e) => set("camisetaMati", e.target.value)}
             placeholder="🎽 Camiseta matí"
-            className="comic-sm w-full rounded-md border border-ink/10 bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+            className="comic-sm w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
           />
           <input
             value={value.camisetaVesprada}
             onChange={(e) => set("camisetaVesprada", e.target.value)}
             placeholder="🎽 Camiseta vesprada"
-            className="comic-sm w-full rounded-md border border-ink/10 bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+            className="comic-sm w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
           />
           <input
             value={value.ropaNota}
             onChange={(e) => set("ropaNota", e.target.value)}
             placeholder="Nota (opcional): (ens canviarem de camiseta després de dinar)"
-            className="comic-sm w-full rounded-md border border-dashed border-ink/20 bg-background px-2.5 py-1.5 text-xs italic text-muted-foreground focus:border-primary focus:outline-none"
+            className="comic-sm w-full rounded-md border border-dashed border-border bg-background px-2.5 py-1.5 text-xs italic text-muted-foreground focus:border-primary focus:outline-none"
           />
           <input
             value={value.sabates}
             onChange={(e) => set("sabates", e.target.value)}
             placeholder="👟 Sabates: NEGRES"
-            className="comic-sm w-full rounded-md border border-ink/10 bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
+            className="comic-sm w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:border-primary focus:outline-none"
           />
         </div>
       </div>
@@ -841,7 +841,7 @@ function GenericFormSection({
           value={value.title}
           onChange={(e) => set("title", e.target.value)}
           placeholder="Ej. Fiestas de San Juan — Plaza Mayor"
-          className="comic-sm w-full rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
+          className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
         />
       </div>
 
@@ -852,7 +852,7 @@ function GenericFormSection({
             value={value.day}
             onChange={(e) => set("day", e.target.value)}
             placeholder="Sábado 12 de agosto"
-            className="comic-sm w-full rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
+            className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
           />
         </div>
         <div className="space-y-1.5">
@@ -861,7 +861,7 @@ function GenericFormSection({
             value={value.time}
             onChange={(e) => set("time", e.target.value)}
             placeholder="21:30"
-            className="comic-sm w-full rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
+            className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
           />
         </div>
       </div>
@@ -875,7 +875,7 @@ function GenericFormSection({
             value={value.location}
             onChange={(e) => set("location", e.target.value)}
             placeholder="Ej. Plaza del Ayuntamiento, Valencia"
-            className="comic-sm w-full rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
+            className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
           />
         </div>
         <div className="space-y-1.5">
@@ -886,7 +886,7 @@ function GenericFormSection({
             value={value.maps_url}
             onChange={(e) => set("maps_url", e.target.value)}
             placeholder="Pega un enlace o escribe una dirección"
-            className="comic-sm w-full rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
+            className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
           />
         </div>
       </div>
@@ -910,7 +910,7 @@ function GenericFormSection({
           value={value.clothing}
           onChange={(e) => set("clothing", e.target.value)}
           placeholder="Ej. Polo negro y pantalón azul"
-          className="comic-sm w-full rounded-md border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
+          className="comic-sm w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
         />
       </div>
     </div>

@@ -495,7 +495,7 @@ function Ajustes() {
       </div>
 
       {/* Navegación por pestañas */}
-      <div className="comic-sm flex border-b-2 border-ink bg-card">
+      <div className="comic-sm flex border-b border-border bg-card">
         <button
           onClick={() => setActiveTab("perfil")}
           className={`flex items-center gap-2 border-b-4 px-4 py-3 text-sm font-extrabold uppercase transition-all ${
@@ -520,7 +520,7 @@ function Ajustes() {
             <Shield className="h-4 w-4" />
             Gestión
             {totalPending > 0 && (
-              <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-destructive px-1 text-[11px] font-extrabold leading-none text-destructive-foreground">
+              <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-border bg-destructive px-1 text-[11px] font-extrabold leading-none text-destructive-foreground">
                 {totalPending > 99 ? "99+" : totalPending}
               </span>
             )}
@@ -658,7 +658,7 @@ function Ajustes() {
             </div>
 
             {/* Cambio de contraseña */}
-            <div className="border-t-2 border-dashed border-ink/20 pt-4">
+            <div className="border-t-2 border-dashed border-border pt-4">
               <h2 className="text-xl font-bold uppercase text-muted-foreground">
                 Cambiar contraseña
               </h2>
@@ -771,7 +771,7 @@ function Ajustes() {
               <UserPlus className="h-4 w-4" />
               Usuarios
               {pendingUsers.length > 0 && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-destructive px-1 text-[11px] font-extrabold leading-none text-destructive-foreground">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-border bg-destructive px-1 text-[11px] font-extrabold leading-none text-destructive-foreground">
                   {pendingUsers.length}
                 </span>
               )}
@@ -787,7 +787,7 @@ function Ajustes() {
               <UserCheck className="h-4 w-4" />
               Peticiones de Admin
               {pendingAdminRequests.length > 0 && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-destructive px-1 text-[11px] font-extrabold leading-none text-destructive-foreground">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-border bg-destructive px-1 text-[11px] font-extrabold leading-none text-destructive-foreground">
                   {pendingAdminRequests.length}
                 </span>
               )}
@@ -803,7 +803,7 @@ function Ajustes() {
               <Lightbulb className="h-4 w-4" />
               Modificación Setlist
               {allPendingProposals.length > 0 && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-warning px-1 text-[11px] font-extrabold leading-none text-warning-foreground">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-border bg-warning px-1 text-[11px] font-extrabold leading-none text-warning-foreground">
                   {allPendingProposals.length}
                 </span>
               )}

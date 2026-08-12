@@ -196,9 +196,9 @@ function Partituras() {
 
       {/* Modal carpeta incrustada (móvil/tablet) */}
       {openFolder && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-ink/60 p-3 sm:p-6">
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/50 backdrop-blur-sm p-3 sm:p-6">
           <div className="comic mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-hidden rounded-xl bg-card">
-            <div className="flex items-center justify-between gap-2 border-b border-ink/10 px-4 py-3">
+            <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
               <p className="truncate font-extrabold">{openFolder.name}</p>
               <div className="flex shrink-0 items-center gap-2">
                 <a
@@ -229,7 +229,7 @@ function Partituras() {
 
       {/* Modal gestión de carpetas (admin) */}
       {showManager && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 pb-10">
           <div className="comic w-full max-w-md rounded-xl bg-card p-5 mt-4 space-y-4">
             <div className="flex items-center justify-between border-b pb-2">
               <h2 className="text-2xl font-extrabold leading-none">Carpetas de Drive</h2>

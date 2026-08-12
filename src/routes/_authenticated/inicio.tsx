@@ -87,7 +87,7 @@ function Inicio() {
           {linksOpen && (
             <>
               <div className="fixed inset-0" onClick={() => setLinksOpen(false)} />
-              <div className="comic absolute bottom-full left-1/2 z-10 mb-2 flex -translate-x-1/2 gap-1.5 rounded-lg border-2 border-ink bg-card p-1.5 shadow-2xl">
+              <div className="comic absolute bottom-full left-1/2 z-10 mb-2 flex -translate-x-1/2 gap-1.5 rounded-lg border border-border bg-card p-1.5 shadow-2xl">
                 <a
                   href={DRIVE_URL}
                   target="_blank"
@@ -173,7 +173,7 @@ function NoticeModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 pb-10">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 pb-10">
       <div className="comic w-full max-w-md rounded-xl bg-card p-5 space-y-4 mt-4">
         <div className="flex items-center justify-between border-b pb-2">
           <h2 className="text-2xl font-extrabold leading-none">
@@ -189,7 +189,7 @@ function NoticeModal({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Título del aviso"
-            className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
             autoFocus
           />
           <textarea
@@ -197,7 +197,7 @@ function NoticeModal({
             onChange={(e) => setBody(e.target.value)}
             placeholder="Contenido del aviso..."
             rows={4}
-            className="w-full resize-none rounded-lg border-2 border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
+            className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
           />
         </div>
 

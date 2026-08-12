@@ -86,10 +86,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-28 md:pb-6">
+    <div className="min-h-screen bg-background pb-32 md:pb-8">
       {/* Cabecera: fluye con la página en móvil, sticky en escritorio */}
-      <header className="border-b-[3px] border-ink bg-card/95 pt-[env(safe-area-inset-top)] backdrop-blur-md md:sticky md:top-0 md:z-40">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-3 py-2 sm:px-4">
+      <header className="glass-strong rounded-none border-x-0 border-t-0 pt-[env(safe-area-inset-top)] md:sticky md:top-0 md:z-40">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-3 py-2.5 sm:px-4">
           <Link to="/inicio" className="shrink-0 min-w-0">
             <img
               src={LOGO_SRC}
@@ -104,7 +104,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Link
               to="/repertorio"
               search={{ tab: "calle", editLyricId: undefined }}
-              className="comic-sm comic-press flex items-center justify-center rounded-lg bg-secondary p-2 text-secondary-foreground"
+              className="comic-sm comic-press flex items-center justify-center rounded-xl p-2.5 text-foreground"
               aria-label="Repertorio"
             >
               <Library className="h-5 w-5 shrink-0" />
@@ -112,12 +112,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <Link
               to="/ajustes"
-              className="comic-sm comic-press relative flex items-center justify-center rounded-lg bg-secondary p-2 text-secondary-foreground"
+              className="comic-sm comic-press relative flex items-center justify-center rounded-xl p-2.5 text-foreground"
               aria-label="Ajustes de usuario"
             >
               <Settings className="h-5 w-5 shrink-0" />
               {pendingUsers > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-destructive px-1 text-[10px] font-extrabold leading-none text-destructive-foreground">
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-extrabold leading-none text-destructive-foreground shadow-[0_0_0_2px_var(--background),0_4px_12px_-4px_var(--destructive)]">
                   {pendingUsers > 99 ? "99+" : pendingUsers}
                 </span>
               )}
@@ -125,7 +125,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <button
               onClick={signOut}
-              className="comic-sm comic-press flex items-center justify-center rounded-lg bg-destructive p-2 text-destructive-foreground"
+              className="comic-press flex items-center justify-center rounded-xl bg-destructive p-2.5 text-destructive-foreground shadow-[0_6px_18px_-8px_var(--destructive)]"
               aria-label="Cerrar sesión"
             >
               <LogOut className="h-5 w-5 shrink-0" />
@@ -134,16 +134,19 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         {/* Navegación escritorio */}
-        <nav className="mx-auto hidden max-w-5xl flex-wrap gap-2 px-4 pb-2 md:flex">
+        <nav className="mx-auto hidden max-w-5xl flex-wrap gap-1.5 px-4 pb-2.5 md:flex">
           {NAV.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
-              activeProps={{ className: "bg-primary text-primary-foreground" }}
-              inactiveProps={{
-                className: "bg-secondary text-secondary-foreground hover:bg-accent",
+              activeProps={{
+                className:
+                  "bg-primary text-primary-foreground shadow-[0_8px_20px_-10px_var(--primary)]",
               }}
-              className="comic-sm comic-press flex items-center gap-2 rounded-md px-3.5 py-1.5 text-sm font-bold uppercase transition-colors"
+              inactiveProps={{
+                className: "text-muted-foreground hover:bg-accent hover:text-foreground",
+              }}
+              className="comic-press flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-bold uppercase tracking-wide transition-colors"
             >
               <Icon className="h-4 w-4" />
               {label}
@@ -155,16 +158,19 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Contenido principal */}
       <main className="mx-auto max-w-5xl px-3 py-4 sm:px-4 md:py-6">{children}</main>
 
-      {/* Barra de navegación inferior móvil — ventana flotante */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),0.625rem)] md:hidden">
-        <div className="comic-sm mx-auto flex max-w-md items-center gap-0.5 rounded-2xl bg-card/95 px-1.5 py-1 backdrop-blur-md">
+      {/* Barra de navegación inferior móvil — dock flotante de cristal */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] md:hidden">
+        <div className="glass-strong mx-auto flex max-w-md items-center gap-0.5 rounded-[1.75rem] px-1.5 py-1.5">
           {NAV.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
-              activeProps={{ className: "bg-primary text-primary-foreground" }}
-              inactiveProps={{ className: "text-muted-foreground hover:text-foreground" }}
-              className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 transition-colors active:scale-95"
+              activeProps={{
+                className:
+                  "bg-primary text-primary-foreground shadow-[0_8px_20px_-10px_var(--primary)]",
+              }}
+              inactiveProps={{ className: "text-muted-foreground" }}
+              className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] py-1.5 transition-all duration-200 active:scale-90"
             >
               <Icon className="h-[18px] w-[18px] shrink-0" />
               <span className="w-full truncate text-center text-[9px] font-extrabold uppercase leading-none tracking-tight">
