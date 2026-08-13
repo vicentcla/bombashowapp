@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 type ScrollState = "up" | "down" | "idle";
 
 const IDLE_DELAY = 1400; // ms sin scroll → "idle"
-const THRESHOLD = 6;     // px mínimos para considerar dirección
+const THRESHOLD = 6; // px mínimos para considerar dirección
 
 export function useScrollDirection(): ScrollState {
   const [state, setState] = useState<ScrollState>("idle");

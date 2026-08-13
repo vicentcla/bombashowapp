@@ -149,17 +149,20 @@ export function AppShell({ children }: { children: ReactNode }) {
       {(pullY > 0 || refreshing) && (
         <div
           className="fixed top-0 left-0 right-0 z-50 flex justify-center transition-all md:hidden"
-          style={{ transform: `translateY(calc(${Math.min(pullY, 80)}px - 100%))`, opacity: refreshing ? 1 : pullProgress }}
+          style={{
+            transform: `translateY(calc(${Math.min(pullY, 80)}px - 100%))`,
+            opacity: refreshing ? 1 : pullProgress,
+          }}
         >
           <div
             className={`mt-2 flex h-11 w-11 items-center justify-center rounded-full shadow-xl border border-border/40 ${
-              isActivated || refreshing ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"
+              isActivated || refreshing
+                ? "bg-primary text-primary-foreground"
+                : "bg-card text-muted-foreground"
             }`}
           >
             <RefreshCw
-              className={`h-5 w-5 ${
-                refreshing ? "animate-spin" : ""
-              }`}
+              className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
               style={!refreshing ? { transform: `rotate(${pullProgress * 360}deg)` } : {}}
             />
           </div>
@@ -178,9 +181,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               : "rounded-[1.6rem] px-1.5 py-1 max-w-[88vw] w-full"
           }`}
           style={{
-            background: isShrunk
-              ? "rgba(255,255,255,0.08)"
-              : "rgba(255,255,255,0.12)",
+            background: isShrunk ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.12)",
             backdropFilter: "blur(28px) saturate(200%) brightness(1.08)",
             WebkitBackdropFilter: "blur(28px) saturate(200%) brightness(1.08)",
             border: "1px solid rgba(255,255,255,0.22)",
