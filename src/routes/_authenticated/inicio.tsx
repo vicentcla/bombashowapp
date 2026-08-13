@@ -298,7 +298,7 @@ function NoticeModal({
         </form>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }
 
@@ -327,10 +327,7 @@ function NoticeItem({
   const deleteComment = useDeleteNoticeComment();
 
   const comments = commentsQuery.data ?? [];
-  const topComments = useMemo(
-    () => comments.filter((c) => !c.parent_id),
-    [comments]
-  );
+  const topComments = useMemo(() => comments.filter((c) => !c.parent_id), [comments]);
   const repliesMap = useMemo(() => {
     const map: Record<string, NoticeComment[]> = {};
     for (const c of comments) {
@@ -368,7 +365,7 @@ function NoticeItem({
         onError: () => {
           toast.error("No se pudo publicar el comentario");
         },
-      }
+      },
     );
   }
 
@@ -388,9 +385,14 @@ function NoticeItem({
             {getInitials(nameMap[notice.created_by] ?? "Admin")}
           </div>
           <div className="min-w-0">
-            <h3 className="font-extrabold leading-tight text-base text-foreground">{notice.title}</h3>
+            <h3 className="font-extrabold leading-tight text-base text-foreground">
+              {notice.title}
+            </h3>
             <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground">
-              <span className="font-bold text-foreground/80">{nameMap[notice.created_by] ?? "Admin"}</span> · {formatDate(notice.updated_at)}
+              <span className="font-bold text-foreground/80">
+                {nameMap[notice.created_by] ?? "Admin"}
+              </span>{" "}
+              · {formatDate(notice.updated_at)}
             </p>
           </div>
         </div>
@@ -433,8 +435,8 @@ function NoticeItem({
             {comments.length === 0
               ? "Comentar"
               : comments.length === 1
-              ? "1 comentario"
-              : `${comments.length} comentarios`}
+                ? "1 comentario"
+                : `${comments.length} comentarios`}
           </span>
         </button>
       </div>
@@ -445,7 +447,9 @@ function NoticeItem({
           {/* Lista de comentarios */}
           <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
             {commentsQuery.isLoading && (
-              <p className="text-xs text-muted-foreground font-medium italic">Cargando comentarios...</p>
+              <p className="text-xs text-muted-foreground font-medium italic">
+                Cargando comentarios...
+              </p>
             )}
 
             {!commentsQuery.isLoading && comments.length === 0 && (
@@ -470,9 +474,13 @@ function NoticeItem({
                       <div className="rounded-xl bg-muted/40 px-3 py-2 border border-border/30">
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-extrabold text-foreground">{authorName}</span>
-                          <span className="text-[10px] text-muted-foreground">{formatCommentDate(c.created_at)}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {formatCommentDate(c.created_at)}
+                          </span>
                         </div>
-                        <p className="mt-0.5 whitespace-pre-line break-words font-medium text-foreground/90">{c.content}</p>
+                        <p className="mt-0.5 whitespace-pre-line break-words font-medium text-foreground/90">
+                          {c.content}
+                        </p>
                       </div>
                       <div className="mt-1 flex items-center gap-3 pl-1 text-[11px] font-bold text-muted-foreground">
                         <button
@@ -508,8 +516,12 @@ function NoticeItem({
                             <div className="min-w-0 flex-1 text-xs">
                               <div className="rounded-xl bg-muted/30 px-2.5 py-1.5 border border-border/20">
                                 <div className="flex items-center justify-between gap-2">
-                                  <span className="font-extrabold text-foreground">{replyAuthor}</span>
-                                  <span className="text-[9px] text-muted-foreground">{formatCommentDate(r.created_at)}</span>
+                                  <span className="font-extrabold text-foreground">
+                                    {replyAuthor}
+                                  </span>
+                                  <span className="text-[9px] text-muted-foreground">
+                                    {formatCommentDate(r.created_at)}
+                                  </span>
                                 </div>
                                 <p className="mt-0.5 whitespace-pre-line break-words font-medium text-foreground/90">
                                   <span className="text-primary font-bold mr-1">@{authorName}</span>
@@ -547,7 +559,9 @@ function NoticeItem({
           <form onSubmit={handleSend} className="space-y-1.5 pt-1">
             {replyingTo && (
               <div className="flex items-center justify-between rounded-lg bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
-                <span>Respondiendo a <strong className="font-extrabold">@{replyingTo.name}</strong></span>
+                <span>
+                  Respondiendo a <strong className="font-extrabold">@{replyingTo.name}</strong>
+                </span>
                 <button
                   type="button"
                   onClick={() => setReplyingTo(null)}
@@ -563,7 +577,9 @@ function NoticeItem({
                 type="text"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder={replyingTo ? `Responder a @${replyingTo.name}...` : "Añade un comentario..."}
+                placeholder={
+                  replyingTo ? `Responder a @${replyingTo.name}...` : "Añade un comentario..."
+                }
                 className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium focus:border-primary focus:outline-none"
               />
               <button

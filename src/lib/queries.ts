@@ -609,13 +609,9 @@ export function useNoticeComments(noticeId?: string) {
   useEffect(() => {
     const channel = supabase
       .channel("notice_comments_realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "notice_comments" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["notice_comments"] });
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "notice_comments" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["notice_comments"] });
+      })
       .subscribe();
 
     return () => {
@@ -643,7 +639,11 @@ export function useNoticeComments(noticeId?: string) {
 export function useAddNoticeComment() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: async (input: { notice_id: string; content: string; parent_id?: string | null }) => {
+    mutationFn: async (input: {
+      notice_id: string;
+      content: string;
+      parent_id?: string | null;
+    }) => {
       const { error } = await supabase.from("notice_comments").insert({
         notice_id: input.notice_id,
         content: input.content,
