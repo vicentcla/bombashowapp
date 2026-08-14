@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useAuth";
@@ -594,78 +593,6 @@ export function useDeleteNotice() {
   });
 }
 
-export type NoticeComment = {
-  id: string;
-  notice_id: string;
-  user_id: string;
-  parent_id: string | null;
-  content: string;
-  created_at: string;
-};
-
-export function useNoticeComments(noticeId?: string) {
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const channel = supabase
-      .channel("notice_comments_realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "notice_comments" }, () => {
-        queryClient.invalidateQueries({ queryKey: ["notice_comments"] });
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
-
-  return useQuery({
-    queryKey: ["notice_comments", noticeId],
-    queryFn: async (): Promise<NoticeComment[]> => {
-      let query = supabase
-        .from("notice_comments")
-        .select("*")
-        .order("created_at", { ascending: true });
-      if (noticeId) {
-        query = query.eq("notice_id", noticeId);
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data ?? []) as unknown as NoticeComment[];
-    },
-  });
-}
-
-export function useAddNoticeComment() {
-  const invalidate = useInvalidate();
-  return useMutation({
-    mutationFn: async (input: {
-      notice_id: string;
-      content: string;
-      parent_id?: string | null;
-    }) => {
-      const { error } = await supabase.from("notice_comments").insert({
-        notice_id: input.notice_id,
-        content: input.content,
-        parent_id: input.parent_id ?? null,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("notice_comments"),
-  });
-}
-
-export function useDeleteNoticeComment() {
-  const invalidate = useInvalidate();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("notice_comments").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => invalidate("notice_comments"),
-  });
-}
-
 export type BoloTemplate = "fiestas" | "suelto" | "generico";
 
 export type BoloMessage = {
@@ -745,7 +672,6 @@ export function useTabOrder(userId: string | null | undefined) {
   return useQuery({
     queryKey: ["profile-tab-order", userId],
     enabled: !!userId,
-    retry: false,
     queryFn: async (): Promise<string[]> => {
       // tab_order no existe en los tipos generados de Supabase (migración nueva).
       const builder = supabase.from("profiles") as unknown as {
@@ -756,20 +682,13 @@ export function useTabOrder(userId: string | null | undefined) {
           ) => {
             maybeSingle: () => Promise<{
               data: { tab_order: string[] | null } | null;
-              error: { message?: string } | null;
+              error: Error | null;
             }>;
           };
         };
       };
       const res = await builder.select("tab_order").eq("id", userId!).maybeSingle();
-      // Si la columna aún no existe en la BD (migración pendiente), devolver [] sin error
-      if (res.error) {
-        const msg = res.error.message ?? "";
-        if (msg.includes("tab_order") || msg.includes("schema cache") || msg.includes("column")) {
-          return [];
-        }
-        throw res.error;
-      }
+      if (res.error) throw res.error;
       return res.data?.tab_order ?? [];
     },
   });

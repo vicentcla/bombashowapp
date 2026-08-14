@@ -138,10 +138,6 @@ export type SetlistNotesConfig = {
   notes_text?: string;
   archived?: boolean;
   proposals?: SetlistProposal[];
-  board?: {
-    pinned: boolean;
-    expires_at: string | null; // ISO date null = permanent
-  };
 };
 
 export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
@@ -164,7 +160,6 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
       proposals?: unknown[];
       notes_text?: unknown;
       archived?: unknown;
-      board?: unknown;
     };
     if (parsed && typeof parsed === "object") {
       const target_minutes = Number(parsed.target_minutes) || 0;
@@ -222,16 +217,6 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
         notes_text: typeof parsed.notes_text === "string" ? parsed.notes_text : "",
         archived: parsed.archived === true,
         proposals,
-        board:
-          parsed.board && typeof parsed.board === "object"
-            ? (() => {
-                const b = parsed.board as Record<string, unknown>;
-                return {
-                  pinned: b["pinned"] === true,
-                  expires_at: b["expires_at"] !== undefined ? String(b["expires_at"]) : null,
-                };
-              })()
-            : { pinned: false, expires_at: null },
       };
     }
   } catch {
@@ -246,7 +231,6 @@ export function parseSetlistNotes(notes: string | null): SetlistNotesConfig {
     notes_text: notes,
     archived: false,
     proposals: [],
-    board: { pinned: false, expires_at: null },
   };
 }
 

@@ -34,7 +34,6 @@ import {
   useAddComment,
   useDeleteComment,
   useDeleteSocialPost,
-  useDeleteSocialTemplate,
   useProfiles,
   useSaveSocialPost,
   useSaveSocialTemplate,
@@ -231,14 +230,8 @@ function SocialPage() {
   const [showNewMenu, setShowNewMenu] = useState(false);
   const [showCopyFrom, setShowCopyFrom] = useState(false);
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
-  const [templateDraft, setTemplateDraft] = useState<{
-    name?: string;
-    content?: string;
-    network?: SocialNetwork;
-  } | null>(null);
 
   const deletePost = useDeleteSocialPost();
-  const deleteTemplate = useDeleteSocialTemplate();
 
   useEffect(() => {
     const channel = supabase
@@ -336,7 +329,7 @@ function SocialPage() {
           {showNewMenu && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowNewMenu(false)} />
-              <div className="comic absolute right-0 top-full z-50 mt-1.5 w-60 overflow-hidden rounded-xl border border-border bg-card glass-strong shadow-2xl">
+              <div className="comic fixed left-1/2 top-1/2 z-50 w-64 max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl border border-border glass-strong shadow-lg sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1.5 sm:w-60 sm:max-w-none sm:translate-x-0 sm:translate-y-0">
                 <button
                   onClick={() => {
                     setShowNewMenu(false);
@@ -364,39 +357,16 @@ function SocialPage() {
                     {templates.data?.map((t) => {
                       const meta = networkMetaOf(t.network);
                       return (
-                        <div
+                        <button
                           key={t.id}
-                          className="flex items-center justify-between gap-1 px-3 py-0.5 transition-colors hover:bg-accent rounded-md group"
+                          onClick={() => {
+                            setShowNewMenu(false);
+                            startFromTemplate(t);
+                          }}
+                          className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm font-bold transition-colors hover:bg-accent"
                         >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowNewMenu(false);
-                              startFromTemplate(t);
-                            }}
-                            className="flex min-w-0 flex-1 items-center gap-2 py-2 text-left text-sm font-bold truncate"
-                          >
-                            <meta.icon className="h-4 w-4 shrink-0 text-primary" />
-                            <span className="truncate">{t.name}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm(`¿Eliminar la plantilla "${t.name}"?`)) {
-                                deleteTemplate.mutate(t.id, {
-                                  onSuccess: () => toast.success("Plantilla eliminada"),
-                                  onError: () => toast.error("No se pudo eliminar la plantilla"),
-                                });
-                              }
-                            }}
-                            aria-label="Eliminar plantilla"
-                            title="Eliminar plantilla"
-                            className="p-1.5 text-muted-foreground hover:text-destructive transition-colors shrink-0 rounded opacity-70 hover:opacity-100"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
+                          <meta.icon className="h-4 w-4 shrink-0 text-primary" /> {t.name}
+                        </button>
                       );
                     })}
                   </div>
@@ -477,14 +447,6 @@ function SocialPage() {
             post={post}
             onSelect={() => openPost(post.id)}
             onDelete={() => removePost(post)}
-            onSaveAsTemplate={() => {
-              setTemplateDraft({
-                name: post.title,
-                content: post.content,
-                network: post.network,
-              });
-              setShowCreateTemplate(true);
-            }}
           />
         ))}
       </div>
@@ -492,15 +454,7 @@ function SocialPage() {
       {showCopyFrom && (
         <CopyFromModal onPick={startFromPost} onClose={() => setShowCopyFrom(false)} />
       )}
-      {showCreateTemplate && (
-        <CreateTemplateModal
-          initialDraft={templateDraft}
-          onClose={() => {
-            setShowCreateTemplate(false);
-            setTemplateDraft(null);
-          }}
-        />
-      )}
+      {showCreateTemplate && <CreateTemplateModal onClose={() => setShowCreateTemplate(false)} />}
     </div>
   );
 }
@@ -511,12 +465,10 @@ function SocialCard({
   post,
   onSelect,
   onDelete,
-  onSaveAsTemplate,
 }: {
   post: SocialPost;
   onSelect: () => void;
   onDelete: () => void;
-  onSaveAsTemplate?: () => void;
 }) {
   const profiles = useProfiles();
   const networkMeta = networkMetaOf(post.network);
@@ -551,16 +503,6 @@ function SocialCard({
             </p>
           </button>
           <div className="flex items-center gap-1.5 shrink-0">
-            {onSaveAsTemplate && (
-              <button
-                onClick={onSaveAsTemplate}
-                aria-label="Guardar como plantilla"
-                title="Guardar como plantilla"
-                className="comic-sm comic-press rounded-md bg-secondary p-2 text-secondary-foreground hover:bg-accent transition-colors"
-              >
-                <LayoutTemplate className="h-4 w-4 text-primary" />
-              </button>
-            )}
             <button
               onClick={copyText}
               aria-label="Copiar texto"
@@ -626,12 +568,10 @@ function SocialDetail({
   postId: initialPostId,
   onBack,
   initialDraft,
-  onSaveAsTemplate,
 }: {
   postId: string | null;
   onBack: () => void;
   initialDraft?: { title: string; content: string; network: SocialNetwork };
-  onSaveAsTemplate?: (draft: { name: string; content: string; network: SocialNetwork }) => void;
 }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -1119,15 +1059,6 @@ function SocialDetail({
                 </span>
               )}
             </div>
-          )}
-          {onSaveAsTemplate && (
-            <button
-              onClick={() => onSaveAsTemplate({ name: title, content, network })}
-              className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-extrabold uppercase text-secondary-foreground hover:bg-accent transition-colors"
-              title="Guardar este texto como plantilla"
-            >
-              <LayoutTemplate className="h-3.5 w-3.5 text-primary" /> Guardar plantilla
-            </button>
           )}
           {!isNew && (
             <button
@@ -1681,25 +1612,11 @@ function CopyFromModal({
 
 // ─── Modal crear plantilla (nombre + red) ───────────────────────────────────────
 
-function CreateTemplateModal({
-  initialDraft,
-  onClose,
-}: {
-  initialDraft?: { name?: string; content?: string; network?: SocialNetwork } | null;
-  onClose: () => void;
-}) {
+function CreateTemplateModal({ onClose }: { onClose: () => void }) {
   const save = useSaveSocialTemplate();
-  const [name, setName] = useState(initialDraft?.name ?? "");
-  const [content, setContent] = useState(initialDraft?.content ?? "");
-  const [network, setNetwork] = useState<SocialNetwork>(initialDraft?.network ?? "instagram");
-
-  useEffect(() => {
-    if (initialDraft) {
-      if (initialDraft.name) setName(initialDraft.name);
-      if (initialDraft.content) setContent(initialDraft.content);
-      if (initialDraft.network) setNetwork(initialDraft.network);
-    }
-  }, [initialDraft]);
+  const [name, setName] = useState("");
+  const [content, setContent] = useState("");
+  const [network, setNetwork] = useState<SocialNetwork>("instagram");
 
   function submit() {
     if (!name.trim()) {

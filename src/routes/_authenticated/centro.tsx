@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { useTabOrder, useInvalidate, usePendingCount } from "@/lib/queries";
 import { orderNav, type NavItem, type NavTo } from "@/lib/nav";
-import { BAR_LIMIT, DEFAULT_BAR_COUNT } from "@/lib/nav";
 import { SortableList, SortableItem } from "@/components/SortableList";
 import { ProfileSettings } from "@/components/ProfileSettings";
 import { AdminManagement } from "@/components/AdminManagement";
@@ -33,6 +32,8 @@ export const Route = createFileRoute("/_authenticated/centro")({
 
 type Section = "paginas" | "perfil" | "gestion";
 
+const BAR_LIMIT = 4;
+
 function Centro() {
   const search = Route.useSearch();
   const { user } = useAuth();
@@ -58,10 +59,6 @@ function Centro() {
     [tabOrderQuery.data],
   );
   const ordered = draftOrder ?? baseOrdered;
-  const hasCustomOrder = !!tabOrderQuery.data && tabOrderQuery.data.length > 0;
-  const barLimit = hasCustomOrder
-    ? Math.min(BAR_LIMIT, ordered.length)
-    : Math.min(DEFAULT_BAR_COUNT, ordered.length);
 
   function startEditing() {
     setDraftOrder(ordered);
@@ -158,7 +155,7 @@ function Centro() {
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-bold text-muted-foreground">
               {editing
-                ? `Desliza para reordenar. Las ${barLimit} primeras aparecen en la barra inferior.`
+                ? "Desliza para reordenar. Las 4 primeras aparecen en la barra inferior."
                 : "Todas las pestañas de la app."}
             </p>
             {editing ? (
@@ -197,12 +194,12 @@ function Centro() {
                   <SortableItem key={item.to} id={item.to} className="mb-2" handleOnly>
                     <div
                       className={`comic-sm flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5 ${
-                        index < barLimit ? "bg-background" : "bg-muted"
+                        index < BAR_LIMIT ? "bg-background" : "bg-muted"
                       }`}
                     >
                       <Icon className="h-5 w-5 shrink-0 text-primary" />
                       <span className="flex-1 font-extrabold uppercase">{item.label}</span>
-                      {index < barLimit && (
+                      {index < BAR_LIMIT && (
                         <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-primary">
                           En la barra
                         </span>
@@ -226,7 +223,7 @@ function Centro() {
                     <span className="w-full truncate text-center text-xs font-extrabold uppercase leading-tight">
                       {item.label}
                     </span>
-                    {index < barLimit && (
+                    {index < BAR_LIMIT && (
                       <span className="absolute right-1.5 top-1.5 rounded bg-primary/15 px-1 py-0.5 text-[9px] font-extrabold uppercase leading-none text-primary">
                         Barra
                       </span>
