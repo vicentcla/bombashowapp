@@ -140,6 +140,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <Link
             to="/centro"
+            search={{ tab: "paginas" }}
             aria-label="Más"
             title="Más"
             activeProps={{
