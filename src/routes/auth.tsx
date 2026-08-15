@@ -9,7 +9,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogIn, KeyRound, Mail, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
-  ssr: false,
   validateSearch: (search: Record<string, unknown>) =>
     ({
       error: typeof search["error"] === "string" ? search["error"] : undefined,
