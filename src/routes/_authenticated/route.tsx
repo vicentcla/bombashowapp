@@ -1,5 +1,5 @@
-import { createFileRoute, redirect, Outlet } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,20 +9,24 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Clock, LogOut, ShieldAlert, Save, KeyRound, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
-  ssr: false,
-  beforeLoad: async () => {
-    const { data, error } = await supabase.auth.getSession();
-    if (error || !data.session?.user) throw redirect({ to: "/auth", search: {} });
-    return { user: data.session.user };
-  },
   component: AuthGate,
 });
 
 function AuthGate() {
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const profileQuery = useProfile();
   const profile = profileQuery.data;
 
-  if (profileQuery.isPending && !profile) return null;
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate({ to: "/auth", replace: true, search: {} });
+    }
+  }, [authLoading, navigate, user]);
+
+  if (authLoading || (!user && !authLoading) || (profileQuery.isPending && !profile)) {
+    return <AppLoadingScreen />;
+  }
 
   // Si el perfil no se puede leer (fallo de red), no bloquear la cuenta:
   // ofrecer reintentar en vez de mostrar "pendiente de aprobación".
@@ -50,6 +54,16 @@ function AuthGate() {
     <AppShell>
       <Outlet />
     </AppShell>
+  );
+}
+
+function AppLoadingScreen() {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center gap-5 bg-background px-6 text-center">
+      <img src="/logo-titulo-2.png" alt="La Bomba Show" className="h-28 w-auto" />
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary" />
+      <p className="text-sm font-semibold text-muted-foreground">Cargando tu sesión…</p>
+    </main>
   );
 }
 

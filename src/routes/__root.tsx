@@ -102,16 +102,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         name: "twitter:description",
         content: "Letras, repertorio, setlists y contadores de canciones de La Bomba Show Xaranga.",
       },
-      {
-        property: "og:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4b8b0f80-9f54-4ff9-a294-38d0d7fa0be2/id-preview-0f0873f3--60005ef4-fa07-4d4e-8132-531a977c1439.lovable.app-1785548554392.png",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4b8b0f80-9f54-4ff9-a294-38d0d7fa0be2/id-preview-0f0873f3--60005ef4-fa07-4d4e-8132-531a977c1439.lovable.app-1785548554392.png",
-      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
