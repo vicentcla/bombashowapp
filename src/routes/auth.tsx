@@ -25,6 +25,8 @@ export const Route = createFileRoute("/auth")({
         property: "og:description",
         content: "Acceso privado para los miembros de La Bomba Show Xaranga.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: AuthPage,
