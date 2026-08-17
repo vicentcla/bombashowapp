@@ -67,6 +67,7 @@ import {
   formatMinutesToHours,
   formatTimeComparison,
   normalize,
+  sanitizeLyricsHtml,
 } from "@/lib/format";
 import { SortableList, SortableItem } from "@/components/SortableList";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
@@ -1372,7 +1373,7 @@ function SetlistLyricModal({ lyric, onClose }: { lyric: Lyric; onClose: () => vo
         <div className="overflow-y-auto py-2">
           <div
             className="lyrics-body text-base leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: lyric.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeLyricsHtml(lyric.content) }}
           />
         </div>
       </div>

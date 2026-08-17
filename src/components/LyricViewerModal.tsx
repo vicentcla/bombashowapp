@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Pencil, X } from "lucide-react";
 import type { Lyric } from "@/lib/queries";
 import { useIsAdmin } from "@/hooks/useAuth";
+import { sanitizeLyricsHtml } from "@/lib/format";
 
 export function LyricViewerModal({
   title,
@@ -62,7 +63,7 @@ export function LyricViewerModal({
           {lyric ? (
             <div
               className="lyrics-body text-base leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: lyric.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeLyricsHtml(lyric.content) }}
             />
           ) : (
             <p className="text-sm font-bold text-muted-foreground">

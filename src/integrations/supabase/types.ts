@@ -605,6 +605,7 @@ export type Database = {
     }
     Functions: {
       get_profile_email: { Args: { _user_id: string }; Returns: string }
+      sanitize_lyrics_html: { Args: { _html: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "miembro" | "superadmin"
