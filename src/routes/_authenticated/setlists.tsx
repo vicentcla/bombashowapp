@@ -68,7 +68,6 @@ import {
   formatTimeComparison,
   normalize,
   sanitizeLyricsHtml,
-
 } from "@/lib/format";
 import { SortableList, SortableItem } from "@/components/SortableList";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";

@@ -93,20 +93,22 @@ export function sanitizeLyricsHtml(html: string): string {
   const stripped = html.replace(VOID_CONTENT_TAGS, "").replace(OPEN_CONTENT_TAGS, "");
 
   // Elimina cualquier etiqueta no permitida y todos los atributos de las permitidas.
-  const cleaned = stripped.replace(/<\/?([a-zA-Z0-9-]+)\b[^>]*?(\/?)>/g, (_match, rawTag, selfClose) => {
-    const tag = String(rawTag).toUpperCase();
-    if (!ALLOWED_TAGS.has(tag)) return "";
-    const isClosing = _match.startsWith("</");
-    const lower = tag.toLowerCase();
-    if (isClosing) return `</${lower}>`;
-    if (tag === "BR" || tag === "HR") return `<${lower} />`;
-    return selfClose ? `<${lower}></${lower}>` : `<${lower}>`;
-  });
+  const cleaned = stripped.replace(
+    /<\/?([a-zA-Z0-9-]+)\b[^>]*?(\/?)>/g,
+    (_match, rawTag, selfClose) => {
+      const tag = String(rawTag).toUpperCase();
+      if (!ALLOWED_TAGS.has(tag)) return "";
+      const isClosing = _match.startsWith("</");
+      const lower = tag.toLowerCase();
+      if (isClosing) return `</${lower}>`;
+      if (tag === "BR" || tag === "HR") return `<${lower} />`;
+      return selfClose ? `<${lower}></${lower}>` : `<${lower}>`;
+    },
+  );
 
   // Neutraliza restos de comentarios y secuencias peligrosas.
   return cleaned.replace(/<!--[\s\S]*?-->/g, "");
 }
-
 
 export function htmlToPlainText(html: string): string {
   if (typeof document === "undefined") return html.replace(/<[^>]*>/g, " ");
