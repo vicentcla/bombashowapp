@@ -79,27 +79,34 @@ export function formatTimeComparison(addedSeconds: number, targetMinutes: number
 
 const ALLOWED_TAGS = new Set(["B", "STRONG", "I", "EM", "U", "P", "BR", "DIV", "HR", "SPAN"]);
 
-/** Limpia el HTML del editor dejando solo negrita, cursiva, subrayado y saltos. */
-export function sanitizeLyricsHtml(html: string): string {
-  if (typeof document === "undefined") return html;
-  const root = document.createElement("div");
-  root.innerHTML = html;
+const VOID_CONTENT_TAGS = /<(script|style|iframe|object|embed|svg|math)\b[\s\S]*?<\/\1\s*>/gi;
+const OPEN_CONTENT_TAGS = /<\/?(script|style|iframe|object|embed|svg|math)\b[^>]*>/gi;
 
-  const walk = (node: Element) => {
-    for (const child of Array.from(node.children)) {
-      walk(child);
-      if (!ALLOWED_TAGS.has(child.tagName)) {
-        child.replaceWith(...Array.from(child.childNodes));
-      } else {
-        for (const attr of Array.from(child.attributes)) {
-          child.removeAttribute(attr.name);
-        }
-      }
-    }
-  };
-  walk(root);
-  return root.innerHTML;
+/**
+ * Limpia el HTML de letras dejando solo negrita, cursiva, subrayado y saltos.
+ * Funciona tanto en el navegador como en el servidor (sin DOM) y se aplica
+ * también al renderizar, no solo al guardar.
+ */
+export function sanitizeLyricsHtml(html: string): string {
+  if (!html) return "";
+
+  const stripped = html.replace(VOID_CONTENT_TAGS, "").replace(OPEN_CONTENT_TAGS, "");
+
+  // Elimina cualquier etiqueta no permitida y todos los atributos de las permitidas.
+  const cleaned = stripped.replace(/<\/?([a-zA-Z0-9-]+)\b[^>]*?(\/?)>/g, (_match, rawTag, selfClose) => {
+    const tag = String(rawTag).toUpperCase();
+    if (!ALLOWED_TAGS.has(tag)) return "";
+    const isClosing = _match.startsWith("</");
+    const lower = tag.toLowerCase();
+    if (isClosing) return `</${lower}>`;
+    if (tag === "BR" || tag === "HR") return `<${lower} />`;
+    return selfClose ? `<${lower}></${lower}>` : `<${lower}>`;
+  });
+
+  // Neutraliza restos de comentarios y secuencias peligrosas.
+  return cleaned.replace(/<!--[\s\S]*?-->/g, "");
 }
+
 
 export function htmlToPlainText(html: string): string {
   if (typeof document === "undefined") return html.replace(/<[^>]*>/g, " ");
