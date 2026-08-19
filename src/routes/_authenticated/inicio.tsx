@@ -230,34 +230,6 @@ function NoticeBoard() {
   const deleteNotice = useDeleteNotice();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Notice | null>(null);
-  const [likesCount, setLikesCount] = useState<Record<string, number>>({});
-  const [addingComment, setAddingComment] = useState<{
-    noticeId: string;
-    parentId?: string | null;
-  } | null>(null);
-  const [commentBody, setCommentBody] = useState("");
-  const [pullToRefresh, setPullToRefresh] = useState(false);
-
-  // Eventos táctiles para pull-to-refresh
-  useEffect(() => {
-    let touchStartY = 0;
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartY = e.touches[0].clientY;
-    };
-    const handleTouchMove = (e: TouchEvent) => {
-      if (touchStartY > 0 && e.touches[0].clientY - touchStartY > 100) {
-        e.preventDefault();
-        setPullToRefresh(true);
-        touchStartY = 0;
-      }
-    };
-    window.addEventListener("touchstart", handleTouchStart, { passive: false });
-    window.addEventListener("touchmove", handleTouchMove);
-    return () => {
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-    };
-  }, []);
 
   const nameMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -273,82 +245,6 @@ function NoticeBoard() {
     });
   }
 
-  async function handleLikeClick(noticeId: string) {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    if (!userId) return;
-
-    // Check if already liked
-    const { data: existing } = await supabase
-      .from<{ id: string }>("notice_likes")
-      .select("id")
-      .eq("notice_id", noticeId)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (existing) {
-      // Unlike
-      await supabase
-        .from<{ id: string }>("notice_likes")
-        .delete()
-        .eq("id", existing.id as string);
-      setLikesCount((prev) => ({ ...prev, [noticeId]: (prev[noticeId] ?? 0) - 1 }));
-    } else {
-      // Like
-      await supabase
-        .from<{ id: string; notice_id: string; user_id: string }>("notice_likes")
-        .insert({ notice_id: noticeId, user_id: userId });
-      setLikesCount((prev) => ({ ...prev, [noticeId]: (prev[noticeId] ?? 0) + 1 }));
-    }
-  }
-
-  // Manejar completion de pull-to-refresh
-  useEffect(() => {
-    if (pullToRefresh) {
-      // Resetear estado de likes y comentarios
-      setLikesCount({});
-      setCommentBody("");
-      setAddingComment(null);
-      // Refrescar datos
-      setPullToRefresh(false);
-    }
-  }, [pullToRefresh]);
-
-  async function handleAddComment(noticeId: string, parentId?: string | null) {
-    setAddingComment({ noticeId, parentId });
-  }
-
-  async function handleCloseComment() {
-    setAddingComment(null);
-    setCommentBody("");
-  }
-
-  async function handleSubmitComment() {
-    if (!addingComment || !commentBody.trim()) return;
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    if (!userId) return;
-    await supabase
-      .from<{
-        id: string;
-        notice_id: string;
-        body: string;
-        parent_id?: string | null;
-        user_id: string;
-      }>("notice_comments")
-      .insert({
-        notice_id: addingComment.noticeId,
-        body: commentBody.trim(),
-        parent_id: addingComment.parentId,
-        user_id: userId,
-      });
-    setAddingComment(null);
-    setCommentBody("");
-  }
 
   return (
     <section className="comic mt-8 rounded-xl bg-card p-4 space-y-4 sm:p-5">
@@ -373,7 +269,6 @@ function NoticeBoard() {
 
       <div className="space-y-4">
         {notices.data?.map((n) => {
-          const count = likesCount[n.id] ?? 0;
           return (
             <article key={n.id} className="rounded-lg border border-border/40 bg-background p-3.5">
               <div className="flex items-start justify-between gap-3">
@@ -389,7 +284,7 @@ function NoticeBoard() {
                       onClick={() => setEditing(n)}
                       aria-label="Editar aviso"
                       title="Editar aviso"
-                      className="p-1 text-muted-foreground transition-colors hover:text-primary"
+                      className="p-2 text-muted-foreground transition-colors hover:text-primary"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
@@ -397,7 +292,7 @@ function NoticeBoard() {
                       onClick={() => handleDelete(n)}
                       aria-label="Eliminar aviso"
                       title="Eliminar aviso"
-                      className="p-1 text-muted-foreground transition-colors hover:text-destructive"
+                      className="p-2 text-muted-foreground transition-colors hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -407,58 +302,10 @@ function NoticeBoard() {
               {n.body && (
                 <p className="mt-2 whitespace-pre-line break-words text-sm font-medium">{n.body}</p>
               )}
-
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  onClick={() => handleLikeClick(n.id)}
-                  className="comic-sm rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
-                  aria-label="Me gusta"
-                >
-                  <span className="h-4 w-4" />
-                  <span className="ml-1">Me gusta</span>
-                </button>
-                <span className="text-xs text-muted-foreground">
-                  {count} {count === 1 ? "persona" : "personas"}
-                </span>
-              </div>
-
-              <div className="mt-3 space-y-2">
-                <p className="text-xs text-muted-foreground">Comentar</p>
-                <textarea
-                  value={commentBody}
-                  onChange={(e) => setCommentBody(e.target.value)}
-                  placeholder="Escribe un comentario..."
-                  rows={2}
-                  className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm font-medium focus:border-primary focus:outline-none resize-none"
-                  disabled={!!addingComment}
-                />
-                {addingComment?.noticeId === n.id && (
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={handleSubmitComment}
-                      disabled={addComment.isPending || !commentBody.trim()}
-                      className="comic-sm rounded-lg bg-primary px-2.5 py-1.5 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Enviar
-                    </button>
-                    <button
-                      onClick={handleCloseComment}
-                      className="comic-sm rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-3 space-y-1">
-                {addingComment?.noticeId === n.id && !count && (
-                  <p className="text-xs text-muted-foreground">Sé el primero en comentar</p>
-                )}
-              </div>
             </article>
           );
         })}
+
       </div>
 
       <NoticeModal
