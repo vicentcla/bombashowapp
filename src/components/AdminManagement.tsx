@@ -116,8 +116,10 @@ export function AdminManagement() {
 
   function roleOf(userId: string): AppRole {
     const rows = allRolesQuery.data ?? [];
-    const r = rows.find((x) => x.user_id === userId)?.role;
-    return r ?? "miembro";
+    const userRoles = rows.filter((x) => x.user_id === userId).map((r) => r.role);
+    if (userRoles.includes("superadmin")) return "superadmin";
+    if (userRoles.includes("admin")) return "admin";
+    return "miembro";
   }
 
   function emailOf(userId: string) {
@@ -151,7 +153,7 @@ export function AdminManagement() {
       return;
     }
 
-    invalidate("role_requests", "user_roles", "profiles");
+    invalidate("role_requests", "user_roles", "profiles", "all_user_roles");
     toast.success(approve ? "Rol de administrador concedido" : "Solicitud rechazada");
   }
 
@@ -288,6 +290,117 @@ export function AdminManagement() {
     );
   }
 
+  // Agrupación de usuarios
+  const allUsers = allUsersQuery.data ?? [];
+  const admins = allUsers.filter((u) => roleOf(u.id) === "superadmin" || roleOf(u.id) === "admin");
+  const members = allUsers.filter((u) => roleOf(u.id) === "miembro" && u.status === "approved");
+  const pendingOrRejected = allUsers.filter((u) => u.status !== "approved");
+
+  const renderUserCard = (u: UserWithStatus) => {
+    const userRole = roleOf(u.id);
+    const email = emailOf(u.id);
+    return (
+      <div
+        key={u.id}
+        className="comic-sm flex flex-wrap items-center justify-between gap-3 rounded-lg bg-background p-3"
+      >
+        <div className="min-w-0">
+          <p className="font-extrabold text-base">
+            {u.display_name || email || u.id}
+            {u.id === user?.id && (
+              <span className="ml-1 text-xs font-bold text-muted-foreground">(tú)</span>
+            )}
+          </p>
+          <p className="truncate text-sm text-muted-foreground">{email}</p>
+          <p className="text-sm text-muted-foreground">
+            Registrado el {new Date(u.created_at).toLocaleDateString("es-ES")}
+          </p>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {u.status === "pending" && (
+              <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-amber-600 border border-amber-500/20">
+                Pendiente de aprobación
+              </span>
+            )}
+            {u.status === "rejected" && (
+              <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-destructive border border-destructive/20">
+                Rechazado
+              </span>
+            )}
+            {u.status === "approved" && (
+              <span
+                className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase ${
+                  userRole === "superadmin"
+                    ? "bg-primary/15 text-primary"
+                    : userRole === "admin"
+                      ? "bg-secondary text-secondary-foreground"
+                      : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {userRole === "superadmin" ? (
+                  <Gem className="h-3 w-3" />
+                ) : userRole === "admin" ? (
+                  <Star className="h-3 w-3" />
+                ) : null}
+                {ROLE_LABELS[userRole]}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {u.id !== user?.id && isSuperAdmin && userRole !== "superadmin" && u.status === "approved" && (
+            <button
+              type="button"
+              onClick={() => setUserRole(u.id, userRole === "admin" ? "miembro" : "admin")}
+              className={`comic-sm comic-press flex items-center gap-1 rounded px-3 py-1.5 text-sm font-extrabold uppercase ${
+                userRole === "admin"
+                  ? "bg-muted text-muted-foreground"
+                  : "bg-secondary text-secondary-foreground"
+              }`}
+              title={userRole === "admin" ? "Retirar administrador" : "Hacer administrador"}
+            >
+              {userRole === "admin" ? (
+                <ShieldMinus className="h-4 w-4" />
+              ) : (
+                <ShieldPlus className="h-4 w-4" />
+              )}
+              {userRole === "admin" ? "Quitar admin" : "Hacer admin"}
+            </button>
+          )}
+          {u.status === "pending" && (
+            <>
+              <button
+                type="button"
+                onClick={() => setUserStatus(u.id, "approved")}
+                className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm font-extrabold uppercase text-primary-foreground"
+              >
+                <Check className="h-4 w-4" />
+                Aprobar
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserStatus(u.id, "rejected")}
+                className="comic-sm comic-press flex items-center gap-1 rounded bg-destructive px-3 py-1.5 text-sm font-extrabold uppercase text-destructive-foreground"
+              >
+                <X className="h-4 w-4" />
+                Rechazar
+              </button>
+            </>
+          )}
+          {u.status === "rejected" && (
+            <button
+              type="button"
+              onClick={() => setUserStatus(u.id, "approved")}
+              className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm font-extrabold uppercase text-primary-foreground"
+            >
+              <Check className="h-4 w-4" />
+              Aprobar
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="comic rounded-xl bg-card p-5 space-y-4">
       <div className="flex items-center justify-between border-b pb-2">
@@ -355,115 +468,41 @@ export function AdminManagement() {
 
       {/* Sub-pestaña: Usuarios */}
       {adminSubTab === "usuarios" && (
-        <div className="space-y-3">
+        <div className="space-y-6">
           {!allUsersQuery.data || allUsersQuery.data.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <UserPlus className="h-10 w-10 mx-auto mb-2 text-primary/60" />
               <p className="font-bold">No hay usuarios registrados todavía.</p>
             </div>
           ) : (
-            allUsersQuery.data.map((u) => {
-              const userRole = roleOf(u.id);
-              const email = emailOf(u.id);
-              return (
-                <div
-                  key={u.id}
-                  className="comic-sm flex flex-wrap items-center justify-between gap-3 rounded-lg bg-background p-3"
-                >
-                  <div className="min-w-0">
-                    <p className="font-extrabold text-base">
-                      {u.display_name || email || u.id}
-                      {u.id === user?.id && (
-                        <span className="ml-1 text-xs font-bold text-muted-foreground">(tú)</span>
-                      )}
-                    </p>
-                    <p className="truncate text-sm text-muted-foreground">{email}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Registrado el {new Date(u.created_at).toLocaleDateString("es-ES")}
-                    </p>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {u.status === "pending" && (
-                        <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-amber-600 border border-amber-500/20">
-                          Pendiente de aprobación
-                        </span>
-                      )}
-                      {u.status === "rejected" && (
-                        <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-destructive border border-destructive/20">
-                          Rechazado
-                        </span>
-                      )}
-                      <span
-                        className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase ${
-                          userRole === "superadmin"
-                            ? "bg-primary/15 text-primary"
-                            : userRole === "admin"
-                              ? "bg-secondary text-secondary-foreground"
-                              : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {userRole === "superadmin" ? (
-                          <Gem className="h-3 w-3" />
-                        ) : userRole === "admin" ? (
-                          <Star className="h-3 w-3" />
-                        ) : null}
-                        {ROLE_LABELS[userRole]}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {u.id !== user?.id && isSuperAdmin && userRole !== "superadmin" && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setUserRole(u.id, userRole === "admin" ? "miembro" : "admin")
-                        }
-                        className="comic-sm comic-press flex items-center gap-1 rounded bg-secondary px-3 py-1.5 text-sm font-extrabold uppercase text-secondary-foreground"
-                        title={
-                          userRole === "admin" ? "Retirar administrador" : "Hacer administrador"
-                        }
-                      >
-                        {userRole === "admin" ? (
-                          <ShieldMinus className="h-4 w-4" />
-                        ) : (
-                          <ShieldPlus className="h-4 w-4" />
-                        )}
-                        {userRole === "admin" ? "Quitar admin" : "Hacer admin"}
-                      </button>
-                    )}
-                    {u.status === "pending" && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setUserStatus(u.id, "approved")}
-                          className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm font-extrabold uppercase text-primary-foreground"
-                        >
-                          <Check className="h-4 w-4" />
-                          Aprobar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setUserStatus(u.id, "rejected")}
-                          className="comic-sm comic-press flex items-center gap-1 rounded bg-destructive px-3 py-1.5 text-sm font-extrabold uppercase text-destructive-foreground"
-                        >
-                          <X className="h-4 w-4" />
-                          Rechazar
-                        </button>
-                      </>
-                    )}
-                    {u.status === "rejected" && (
-                      <button
-                        type="button"
-                        onClick={() => setUserStatus(u.id, "approved")}
-                        className="comic-sm comic-press flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm font-extrabold uppercase text-primary-foreground"
-                      >
-                        <Check className="h-4 w-4" />
-                        Aprobar
-                      </button>
-                    )}
-                  </div>
+            <>
+              {pendingOrRejected.length > 0 && (
+                <div>
+                  <h3 className="text-base font-extrabold uppercase mb-2 text-amber-600 flex items-center gap-2">
+                    <UserPlus className="h-4 w-4" /> Pendientes / Rechazados
+                  </h3>
+                  <div className="space-y-2">{pendingOrRejected.map(renderUserCard)}</div>
                 </div>
-              );
-            })
+              )}
+
+              {admins.length > 0 && (
+                <div>
+                  <h3 className="text-base font-extrabold uppercase mb-2 text-primary flex items-center gap-2">
+                    <ShieldPlus className="h-4 w-4" /> Administradores
+                  </h3>
+                  <div className="space-y-2">{admins.map(renderUserCard)}</div>
+                </div>
+              )}
+
+              {members.length > 0 && (
+                <div>
+                  <h3 className="text-base font-extrabold uppercase mb-2 text-muted-foreground flex items-center gap-2">
+                    <UserCheck className="h-4 w-4" /> Miembros
+                  </h3>
+                  <div className="space-y-2">{members.map(renderUserCard)}</div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

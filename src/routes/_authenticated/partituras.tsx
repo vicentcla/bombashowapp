@@ -5,7 +5,7 @@ import { GoogleDriveIcon } from "@/components/BrandIcons";
 import { DriveFoldersManager } from "@/components/DriveFoldersManager";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { useDriveFolders, type DriveFolder } from "@/lib/queries";
-import { INSTRUMENT_ICONS, driveUrl, embedUrl } from "@/lib/drive";
+import { INSTRUMENT_ICONS, INSTRUMENT_EMOJIS, driveUrl, embedUrl } from "@/lib/drive";
 
 function useIsTouch() {
   const [isTouch, setIsTouch] = useState(false);
@@ -54,7 +54,9 @@ function DriveFolderCard({
         <div className="min-w-0">
           <p className="flex items-center gap-1 truncate text-lg font-extrabold leading-tight">
             {pinned && <Pin className="h-3.5 w-3.5 shrink-0 text-primary" />}
-            <span className="truncate">{folder.name}</span>
+            <span className="truncate">
+              {folder.name} {INSTRUMENT_EMOJIS[folder.instrument] || ""}
+            </span>
           </p>
           <p className="text-xs font-bold text-muted-foreground">{folder.instrument}</p>
         </div>
@@ -159,7 +161,12 @@ function Partituras() {
           {myFolders.length > 0 && (
             <section className="space-y-3">
               <h2 className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
-                <Pin className="h-3.5 w-3.5" /> Tu instrumento
+                <Pin className="h-3.5 w-3.5" />
+                {userInstrument && INSTRUMENT_EMOJIS[userInstrument] ? (
+                  <span className="text-2xl leading-none">{INSTRUMENT_EMOJIS[userInstrument]}</span>
+                ) : (
+                  <span className="text-2xl leading-none">🎵</span>
+                )}
               </h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {myFolders.map((f) => (

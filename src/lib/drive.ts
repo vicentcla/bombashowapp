@@ -17,6 +17,13 @@ export const INSTRUMENT_ICONS: Record<string, ElementType> = {
   Sousaphone: SousaphoneIcon,
 };
 
+export const INSTRUMENT_EMOJIS: Record<string, string> = {
+  Percusión: "🥁",
+  Trombón: "🪊",
+  Trompeta: "🎺",
+  Saxo: "🎷",
+};
+
 export function driveUrl(folderId: string) {
   return `https://drive.google.com/drive/folders/${folderId}`;
 }
