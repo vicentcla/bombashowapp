@@ -651,7 +651,7 @@ export function useSaveComment() {
   });
 }
 
-export function useDeleteComment() {
+export function useDeleteNoticeComment() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (id: string) => {

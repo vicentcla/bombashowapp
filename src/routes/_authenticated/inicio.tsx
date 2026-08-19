@@ -14,7 +14,7 @@ import {
   type Notice,
   useNoticeComments,
   useSaveComment,
-  useDeleteComment,
+  useDeleteNoticeComment,
   useNoticeLikes,
   useSaveLike,
   useDeleteLike,
@@ -233,6 +233,10 @@ function NoticeBoard() {
   const notices = useNotices();
   const profiles = useProfiles();
   const deleteNotice = useDeleteNotice();
+  const saveComment = useSaveComment();
+  const deleteComment = useDeleteNoticeComment();
+  const saveLike = useSaveLike();
+  const deleteLike = useDeleteLike();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Notice | null>(null);
 
