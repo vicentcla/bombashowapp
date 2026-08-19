@@ -8,6 +8,7 @@ import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePendingCount, useTabOrder } from "@/lib/queries";
 import { DESKTOP_NAV, orderNav, type NavTo } from "@/lib/nav";
+import { useGlobalRealtime } from "@/hooks/useGlobalRealtime";
 const LOGO_SRC = "/logo-titulo-2.png";
 
 const BAR_LIMIT = 4;
@@ -19,6 +20,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { isAdmin } = useIsAdmin();
   const pendingCountQuery = usePendingCount();
   const pendingCount = isAdmin ? (pendingCountQuery.data ?? 0) : 0;
+
+  useGlobalRealtime();
 
   const tabOrderQuery = useTabOrder(user?.id);
   const orderedNav = useMemo(

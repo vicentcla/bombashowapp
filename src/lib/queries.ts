@@ -633,7 +633,11 @@ export function useNoticeComments(noteId: string) {
 export function useSaveComment() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: async (input: { content: string; notice_id: string; parent_id?: string | null }) => {
+    mutationFn: async (input: {
+      content: string;
+      notice_id: string;
+      parent_id?: string | null;
+    }) => {
       const { content, notice_id, parent_id } = input;
       const { error } = await supabase.from("notice_comments").insert({
         content,
