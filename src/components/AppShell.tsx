@@ -119,7 +119,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       {/* Contenido principal */}
-      <main className="mx-auto max-w-5xl px-3 py-4 sm:px-4 md:py-6">{children}</main>
+      <PullToRefresh>
+        <main className="mx-auto w-full max-w-5xl overflow-x-hidden px-3 py-4 sm:px-4 md:py-6">
+          {children}
+        </main>
+      </PullToRefresh>
+
 
       {/* Barra de navegación inferior móvil — dock flotante de cristal */}
       <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] md:hidden">
