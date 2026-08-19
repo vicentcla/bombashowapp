@@ -548,6 +548,27 @@ export type Notice = {
   updated_at: string;
 };
 
+export type NoticeComment = {
+  id: string;
+  content: string;
+  created_at: string;
+  notice_id: string;
+  parent_id: string | null;
+  user_id: string;
+  user_name: string | null;
+};
+
+export type NoticeCommentForm = {
+  content: string;
+  parent_id: string | null;
+};
+
+export type NoticeLike = {
+  id: string;
+  notice_id: string;
+  user_id: string;
+};
+
 export function useNotices() {
   return useQuery({
     queryKey: ["notices"],
@@ -587,6 +608,102 @@ export function useDeleteNotice() {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("notices").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("notices"),
+  });
+}
+
+export function useNoticeComments(noteId: string) {
+  return useQuery({
+    queryKey: ["notice-comments", noteId],
+    queryFn: async (): Promise<NoticeComment[]> => {
+      const { data, error } = await supabase
+        .from("notice_comments")
+        .select("*")
+        .eq("notice_id", noteId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as NoticeComment[];
+    },
+    staleTime: 30_000,
+  });
+}
+
+export function useSaveComment() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (input: { content: string; notice_id: string; parent_id?: string | null }) => {
+      const { content, notice_id, parent_id } = input;
+      const { error } = await supabase.from("notice_comments").insert({
+        content,
+        notice_id,
+        parent_id,
+        user_id: (await supabase.auth.getSession()).data.session?.user?.id ?? "",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("notices"),
+  });
+}
+
+export function useDeleteComment() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("notice_comments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("notices"),
+  });
+}
+
+export function useNoticeLikes(noteId: string) {
+  return useQuery({
+    queryKey: ["notice-likes", noteId],
+    queryFn: async (): Promise<{ count: number; liked: boolean }> => {
+      const { data, error } = await supabase
+        .from("notice_likes")
+        .select("*")
+        .eq("notice_id", noteId);
+      if (error) throw error;
+      const likes = data ?? [];
+      const userSession = await supabase.auth.getSession();
+      const userId = userSession.data.session?.user?.id ?? "";
+      const liked = likes.some((like: any) => like.user_id === userId);
+      return { count: likes.length, liked };
+    },
+    staleTime: 30_000,
+  });
+}
+
+export function useSaveLike() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (noticeId: string) => {
+      const userSession = await supabase.auth.getSession();
+      const userId = userSession.data.session?.user?.id ?? "";
+      const { error } = await supabase.from("notice_likes").insert({
+        notice_id: noticeId,
+        user_id: userId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("notices"),
+  });
+}
+
+export function useDeleteLike() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async (likeId: string) => {
+      const userSession = await supabase.auth.getSession();
+      const userId = userSession.data.session?.user?.id ?? "";
+      const { error } = await supabase
+        .from("notice_likes")
+        .delete()
+        .eq("notice_id", likeId)
+        .eq("user_id", userId);
       if (error) throw error;
     },
     onSuccess: () => invalidate("notices"),
