@@ -42,7 +42,6 @@ function DriveFolderCard({
   pinned: boolean;
   onOpen: () => void;
 }) {
-  const Icon = INSTRUMENT_ICONS[folder.instrument] ?? Folder;
   return (
     <div
       className={`comic flex flex-col justify-between gap-3 rounded-xl bg-card p-4 ${
@@ -50,13 +49,13 @@ function DriveFolderCard({
       }`}
     >
       <div className="flex items-start gap-3 min-w-0">
-        <Icon className={`h-8 w-8 shrink-0 ${pinned ? "text-primary" : "text-muted-foreground"}`} />
+        <span className="h-8 w-8 shrink-0 text-2xl leading-none">
+          {INSTRUMENT_EMOJIS[folder.instrument] || "🎵"}
+        </span>
         <div className="min-w-0">
           <p className="flex items-center gap-1 truncate text-lg font-extrabold leading-tight">
             {pinned && <Pin className="h-3.5 w-3.5 shrink-0 text-primary" />}
-            <span className="truncate">
-              {folder.name} {INSTRUMENT_EMOJIS[folder.instrument] || ""}
-            </span>
+            <span className="truncate">{folder.name}</span>
           </p>
           <p className="text-xs font-bold text-muted-foreground">{folder.instrument}</p>
         </div>
