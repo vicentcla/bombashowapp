@@ -647,6 +647,33 @@ export function useDeleteNoticeComment() {
   });
 }
 
+export function useToggleNoticeLike() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async ({ noticeId }: { noticeId: string }) => {
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) throw new Error("No session");
+      const { data: existing } = await supabase
+        .from("notice_likes")
+        .select("id")
+        .eq("notice_id", noticeId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (existing) {
+        const { error } = await supabase.from("notice_likes").delete().eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("notice_likes")
+          .insert({ notice_id: noticeId, user_id: userId });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => invalidate("notices", "notice_likes"),
+  });
+}
+
 export function useNoticeComments(noticeId: string | null) {
   return useQuery({
     queryKey: ["notice_comments", noticeId],
