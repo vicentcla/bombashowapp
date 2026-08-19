@@ -546,6 +546,7 @@ export type Notice = {
   created_by: string;
   created_at: string;
   updated_at: string;
+  likes_count: number;
 };
 
 export type NoticeComment = {
@@ -614,6 +615,80 @@ export function useDeleteNotice() {
   });
 }
 
+export function useAddNoticeComment() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async ({
+      noticeId,
+      body,
+      parentId,
+    }: {
+      noticeId: string;
+      body: string;
+      parentId?: string | null;
+    }) => {
+      const { error } = await supabase
+        .from("notice_comments")
+        .insert({ notice_id: noticeId, body, parent_id: parentId });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("notices", "notice_comments"),
+  });
+}
+
+export function useDeleteNoticeComment() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async ({ id, noticeId }: { id: string; noticeId: string }) => {
+      const { error } = await supabase.from("notice_comments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("notices", "notice_comments"),
+  });
+}
+
+export function useToggleNoticeLike() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async ({ noticeId }: { noticeId: string }) => {
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) throw new Error("No session");
+      const { data: existing } = await supabase
+        .from("notice_likes")
+        .select("id")
+        .eq("notice_id", noticeId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (existing) {
+        const { error } = await supabase.from("notice_likes").delete().eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("notice_likes")
+          .insert({ notice_id: noticeId, user_id: userId });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => invalidate("notices", "notice_likes"),
+  });
+}
+
+export function useNoticeComments(postId: string | null) {
+  return useQuery({
+    queryKey: ["notice_comments", postId],
+    enabled: !!postId,
+    queryFn: async (): Promise<NoticeComment[]> => {
+      const { data, error } = await supabase
+        .from("notice_comments")
+        .select("*")
+        .eq("notice_id", postId!)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as NoticeComment[];
+    },
+  });
+}
 
 export type BoloTemplate = "fiestas" | "suelto" | "generico";
 

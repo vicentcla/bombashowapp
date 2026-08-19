@@ -13,6 +13,7 @@ import {
   useSaveNotice,
   type Notice,
 } from "@/lib/queries";
+import { supabase } from "@/integrations/supabase/client";
 
 const DRIVE_URL = "https://drive.google.com/drive/folders/1SJs1eIj7suxJL_eD9W0_m5rCBdva5jUi";
 const INSTAGRAM_URL = "https://www.instagram.com/showlabomba?igsh=MTIweG1tM2luN3Jjbw==";
@@ -199,23 +200,23 @@ function NoticeModal({
             rows={4}
             className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
           />
-        </div>
 
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="comic-sm rounded-lg bg-secondary px-3 py-2 text-xs font-extrabold uppercase text-secondary-foreground"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={submit}
-            disabled={save.isPending}
-            className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {notice ? "Guardar" : "Publicar"}
-          </button>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={onClose}
+              className="comic-sm rounded-lg bg-secondary px-3 py-2 text-xs font-extrabold uppercase text-secondary-foreground"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={submit}
+              disabled={save.isPending}
+              className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {notice ? "Guardar" : "Publicar"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -229,6 +230,12 @@ function NoticeBoard() {
   const deleteNotice = useDeleteNotice();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Notice | null>(null);
+  const [likesCount, setLikesCount] = useState<Record<string, number>>({});
+  const [addingComment, setAddingComment] = useState<{
+    noticeId: string;
+    parentId?: string | null;
+  } | null>(null);
+  const [commentBody, setCommentBody] = useState("");
 
   const nameMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -242,6 +249,71 @@ function NoticeBoard() {
       onSuccess: () => toast.success("Aviso eliminado"),
       onError: () => toast.error("No se pudo eliminar el aviso"),
     });
+  }
+
+  async function handleLikeClick(noticeId: string) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    // Check if already liked
+    const { data: existing } = await supabase
+      .from<{ id: string }>("notice_likes")
+      .select("id")
+      .eq("notice_id", noticeId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existing) {
+      // Unlike
+      await supabase
+        .from<{ id: string }>("notice_likes")
+        .delete()
+        .eq("id", existing.id as string);
+      setLikesCount((prev) => ({ ...prev, [noticeId]: (prev[noticeId] ?? 0) - 1 }));
+    } else {
+      // Like
+      await supabase
+        .from<{ id: string; notice_id: string; user_id: string }>("notice_likes")
+        .insert({ notice_id: noticeId, user_id: userId });
+      setLikesCount((prev) => ({ ...prev, [noticeId]: (prev[noticeId] ?? 0) + 1 }));
+    }
+  }
+
+  async function handleAddComment(noticeId: string, parentId?: string | null) {
+    setAddingComment({ noticeId, parentId });
+  }
+
+  async function handleCloseComment() {
+    setAddingComment(null);
+    setCommentBody("");
+  }
+
+  async function handleSubmitComment() {
+    if (!addingComment || !commentBody.trim()) return;
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) return;
+    await supabase
+      .from<{
+        id: string;
+        notice_id: string;
+        body: string;
+        parent_id?: string | null;
+        user_id: string;
+      }>("notice_comments")
+      .insert({
+        notice_id: addingComment.noticeId,
+        body: commentBody.trim(),
+        parent_id: addingComment.parentId,
+        user_id: userId,
+      });
+    setAddingComment(null);
+    setCommentBody("");
   }
 
   return (
@@ -265,42 +337,94 @@ function NoticeBoard() {
         <p className="text-sm font-bold text-muted-foreground">No hay avisos publicados.</p>
       )}
 
-      <div className="space-y-3">
-        {notices.data?.map((n) => (
-          <article key={n.id} className="rounded-lg border border-border/40 bg-background p-3.5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h3 className="font-extrabold leading-tight">{n.title}</h3>
-                <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">
-                  {nameMap[n.created_by] ?? "Admin"} · {formatDate(n.updated_at)}
-                </p>
-              </div>
-              {isAdmin && (
-                <div className="flex shrink-0 gap-1">
-                  <button
-                    onClick={() => setEditing(n)}
-                    aria-label="Editar aviso"
-                    title="Editar aviso"
-                    className="p-1 text-muted-foreground transition-colors hover:text-primary"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(n)}
-                    aria-label="Eliminar aviso"
-                    title="Eliminar aviso"
-                    className="p-1 text-muted-foreground transition-colors hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+      <div className="space-y-4">
+        {notices.data?.map((n) => {
+          const count = likesCount[n.id] ?? 0;
+          return (
+            <article key={n.id} className="rounded-lg border border-border/40 bg-background p-3.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="font-extrabold leading-tight">{n.title}</h3>
+                  <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">
+                    {nameMap[n.created_by] ?? "Admin"} · {formatDate(n.updated_at)}
+                  </p>
                 </div>
+                {isAdmin && (
+                  <div className="flex shrink-0 gap-1">
+                    <button
+                      onClick={() => setEditing(n)}
+                      aria-label="Editar aviso"
+                      title="Editar aviso"
+                      className="p-1 text-muted-foreground transition-colors hover:text-primary"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(n)}
+                      aria-label="Eliminar aviso"
+                      title="Eliminar aviso"
+                      className="p-1 text-muted-foreground transition-colors hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              {n.body && (
+                <p className="mt-2 whitespace-pre-line break-words text-sm font-medium">{n.body}</p>
               )}
-            </div>
-            {n.body && (
-              <p className="mt-2 whitespace-pre-line break-words text-sm font-medium">{n.body}</p>
-            )}
-          </article>
-        ))}
+
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  onClick={() => handleLikeClick(n.id)}
+                  className="comic-sm rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                  aria-label="Me gusta"
+                >
+                  <span className="h-4 w-4" />
+                  <span className="ml-1">Me gusta</span>
+                </button>
+                <span className="text-xs text-muted-foreground">
+                  {count} {count === 1 ? "persona" : "personas"}
+                </span>
+              </div>
+
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-muted-foreground">Comentar</p>
+                <textarea
+                  value={commentBody}
+                  onChange={(e) => setCommentBody(e.target.value)}
+                  placeholder="Escribe un comentario..."
+                  rows={2}
+                  className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm font-medium focus:border-primary focus:outline-none resize-none"
+                  disabled={!!addingComment}
+                />
+                {addingComment?.noticeId === n.id && (
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={handleSubmitComment}
+                      disabled={addComment.isPending || !commentBody.trim()}
+                      className="comic-sm rounded-lg bg-primary px-2.5 py-1.5 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Enviar
+                    </button>
+                    <button
+                      onClick={handleCloseComment}
+                      className="comic-sm rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-3 space-y-1">
+                {addingComment?.noticeId === n.id && !count && (
+                  <p className="text-xs text-muted-foreground">Sé el primero en comentar</p>
+                )}
+              </div>
+            </article>
+          );
+        })}
       </div>
 
       <NoticeModal
