@@ -12,12 +12,6 @@ import {
   useProfiles,
   useSaveNotice,
   type Notice,
-  useNoticeComments,
-  useSaveComment,
-  useDeleteComment,
-  useNoticeLikes,
-  useSaveLike,
-  useDeleteLike,
 } from "@/lib/queries";
 
 const DRIVE_URL = "https://drive.google.com/drive/folders/1SJs1eIj7suxJL_eD9W0_m5rCBdva5jUi";
