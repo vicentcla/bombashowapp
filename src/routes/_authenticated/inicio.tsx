@@ -269,7 +269,6 @@ function NoticeBoard() {
 
       <div className="space-y-4">
         {notices.data?.map((n) => {
-          const count = likesCount[n.id] ?? 0;
           return (
             <article key={n.id} className="rounded-lg border border-border/40 bg-background p-3.5">
               <div className="flex items-start justify-between gap-3">
@@ -285,7 +284,7 @@ function NoticeBoard() {
                       onClick={() => setEditing(n)}
                       aria-label="Editar aviso"
                       title="Editar aviso"
-                      className="p-1 text-muted-foreground transition-colors hover:text-primary"
+                      className="p-2 text-muted-foreground transition-colors hover:text-primary"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
@@ -293,7 +292,7 @@ function NoticeBoard() {
                       onClick={() => handleDelete(n)}
                       aria-label="Eliminar aviso"
                       title="Eliminar aviso"
-                      className="p-1 text-muted-foreground transition-colors hover:text-destructive"
+                      className="p-2 text-muted-foreground transition-colors hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -303,58 +302,10 @@ function NoticeBoard() {
               {n.body && (
                 <p className="mt-2 whitespace-pre-line break-words text-sm font-medium">{n.body}</p>
               )}
-
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  onClick={() => handleLikeClick(n.id)}
-                  className="comic-sm rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
-                  aria-label="Me gusta"
-                >
-                  <span className="h-4 w-4" />
-                  <span className="ml-1">Me gusta</span>
-                </button>
-                <span className="text-xs text-muted-foreground">
-                  {count} {count === 1 ? "persona" : "personas"}
-                </span>
-              </div>
-
-              <div className="mt-3 space-y-2">
-                <p className="text-xs text-muted-foreground">Comentar</p>
-                <textarea
-                  value={commentBody}
-                  onChange={(e) => setCommentBody(e.target.value)}
-                  placeholder="Escribe un comentario..."
-                  rows={2}
-                  className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm font-medium focus:border-primary focus:outline-none resize-none"
-                  disabled={!!addingComment}
-                />
-                {addingComment?.noticeId === n.id && (
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={handleSubmitComment}
-                      disabled={addComment.isPending || !commentBody.trim()}
-                      className="comic-sm rounded-lg bg-primary px-2.5 py-1.5 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Enviar
-                    </button>
-                    <button
-                      onClick={handleCloseComment}
-                      className="comic-sm rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-3 space-y-1">
-                {addingComment?.noticeId === n.id && !count && (
-                  <p className="text-xs text-muted-foreground">Sé el primero en comentar</p>
-                )}
-              </div>
             </article>
           );
         })}
+
       </div>
 
       <NoticeModal
