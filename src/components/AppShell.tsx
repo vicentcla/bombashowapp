@@ -9,6 +9,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { usePendingCount, useTabOrder } from "@/lib/queries";
 import { DESKTOP_NAV, orderNav, type NavTo } from "@/lib/nav";
 import { useGlobalRealtime } from "@/hooks/useGlobalRealtime";
+import { PullToRefresh } from "@/components/PullToRefresh";
+
 const LOGO_SRC = "/logo-titulo-2.png";
 
 const BAR_LIMIT = 4;
