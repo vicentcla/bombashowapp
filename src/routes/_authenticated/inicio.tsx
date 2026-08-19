@@ -230,34 +230,6 @@ function NoticeBoard() {
   const deleteNotice = useDeleteNotice();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Notice | null>(null);
-  const [likesCount, setLikesCount] = useState<Record<string, number>>({});
-  const [addingComment, setAddingComment] = useState<{
-    noticeId: string;
-    parentId?: string | null;
-  } | null>(null);
-  const [commentBody, setCommentBody] = useState("");
-  const [pullToRefresh, setPullToRefresh] = useState(false);
-
-  // Eventos táctiles para pull-to-refresh
-  useEffect(() => {
-    let touchStartY = 0;
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartY = e.touches[0].clientY;
-    };
-    const handleTouchMove = (e: TouchEvent) => {
-      if (touchStartY > 0 && e.touches[0].clientY - touchStartY > 100) {
-        e.preventDefault();
-        setPullToRefresh(true);
-        touchStartY = 0;
-      }
-    };
-    window.addEventListener("touchstart", handleTouchStart, { passive: false });
-    window.addEventListener("touchmove", handleTouchMove);
-    return () => {
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-    };
-  }, []);
 
   const nameMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -273,82 +245,6 @@ function NoticeBoard() {
     });
   }
 
-  async function handleLikeClick(noticeId: string) {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    if (!userId) return;
-
-    // Check if already liked
-    const { data: existing } = await supabase
-      .from<{ id: string }>("notice_likes")
-      .select("id")
-      .eq("notice_id", noticeId)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (existing) {
-      // Unlike
-      await supabase
-        .from<{ id: string }>("notice_likes")
-        .delete()
-        .eq("id", existing.id as string);
-      setLikesCount((prev) => ({ ...prev, [noticeId]: (prev[noticeId] ?? 0) - 1 }));
-    } else {
-      // Like
-      await supabase
-        .from<{ id: string; notice_id: string; user_id: string }>("notice_likes")
-        .insert({ notice_id: noticeId, user_id: userId });
-      setLikesCount((prev) => ({ ...prev, [noticeId]: (prev[noticeId] ?? 0) + 1 }));
-    }
-  }
-
-  // Manejar completion de pull-to-refresh
-  useEffect(() => {
-    if (pullToRefresh) {
-      // Resetear estado de likes y comentarios
-      setLikesCount({});
-      setCommentBody("");
-      setAddingComment(null);
-      // Refrescar datos
-      setPullToRefresh(false);
-    }
-  }, [pullToRefresh]);
-
-  async function handleAddComment(noticeId: string, parentId?: string | null) {
-    setAddingComment({ noticeId, parentId });
-  }
-
-  async function handleCloseComment() {
-    setAddingComment(null);
-    setCommentBody("");
-  }
-
-  async function handleSubmitComment() {
-    if (!addingComment || !commentBody.trim()) return;
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    if (!userId) return;
-    await supabase
-      .from<{
-        id: string;
-        notice_id: string;
-        body: string;
-        parent_id?: string | null;
-        user_id: string;
-      }>("notice_comments")
-      .insert({
-        notice_id: addingComment.noticeId,
-        body: commentBody.trim(),
-        parent_id: addingComment.parentId,
-        user_id: userId,
-      });
-    setAddingComment(null);
-    setCommentBody("");
-  }
 
   return (
     <section className="comic mt-8 rounded-xl bg-card p-4 space-y-4 sm:p-5">
