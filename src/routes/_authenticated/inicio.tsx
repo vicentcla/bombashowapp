@@ -236,6 +236,28 @@ function NoticeBoard() {
     parentId?: string | null;
   } | null>(null);
   const [commentBody, setCommentBody] = useState("");
+  const [pullToRefresh, setPullToRefresh] = useState(false);
+
+  // Eventos táctiles para pull-to-refresh
+  useEffect(() => {
+    let touchStartY = 0;
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches[0].clientY;
+    };
+    const handleTouchMove = (e: TouchEvent) => {
+      if (touchStartY > 0 && e.touches[0].clientY - touchStartY > 100) {
+        e.preventDefault();
+        setPullToRefresh(true);
+        touchStartY = 0;
+      }
+    };
+    window.addEventListener("touchstart", handleTouchStart, { passive: false });
+    window.addEventListener("touchmove", handleTouchMove);
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
+    };
+  }, []);
 
   const nameMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -281,6 +303,18 @@ function NoticeBoard() {
       setLikesCount((prev) => ({ ...prev, [noticeId]: (prev[noticeId] ?? 0) + 1 }));
     }
   }
+
+  // Manejar completion de pull-to-refresh
+  useEffect(() => {
+    if (pullToRefresh) {
+      // Resetear estado de likes y comentarios
+      setLikesCount({});
+      setCommentBody("");
+      setAddingComment(null);
+      // Refrescar datos
+      setPullToRefresh(false);
+    }
+  }, [pullToRefresh]);
 
   async function handleAddComment(noticeId: string, parentId?: string | null) {
     setAddingComment({ noticeId, parentId });
