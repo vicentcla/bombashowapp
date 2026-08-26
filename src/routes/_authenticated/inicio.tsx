@@ -344,19 +344,7 @@ function NoticeBoard() {
                 <p className="mt-2 whitespace-pre-line break-words text-sm font-medium">{n.body}</p>
               )}
 
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  onClick={() => handleLikeClick(n.id)}
-                  className="comic-sm rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
-                  aria-label="Me gusta"
-                >
-                  <span className="h-4 w-4" />
-                  <span className="ml-1">Me gusta</span>
-                </button>
-                <span className="text-xs text-muted-foreground">
-                  {count} {count === 1 ? "persona" : "personas"}
-                </span>
-              </div>
+
 
               <div className="mt-3 space-y-2">
                 <p className="text-xs text-muted-foreground">Comentar</p>
@@ -396,11 +384,6 @@ function NoticeBoard() {
                 )}
               </div>
 
-              <div className="mt-3 space-y-1">
-                {addingComment?.noticeId === n.id && !count && (
-                  <p className="text-xs text-muted-foreground">Sé el primero en comentar</p>
-                )}
-              </div>
             </article>
           );
         })}
