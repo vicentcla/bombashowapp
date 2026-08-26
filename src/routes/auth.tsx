@@ -212,7 +212,7 @@ function AuthPage() {
 
         <div className="my-4 flex items-center gap-3 text-xs font-bold uppercase text-muted-foreground">
           <span className="h-px flex-1 bg-border" />
-          o
+          o bien
           <span className="h-px flex-1 bg-border" />
         </div>
 
