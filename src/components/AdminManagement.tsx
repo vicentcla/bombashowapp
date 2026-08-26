@@ -347,25 +347,28 @@ export function AdminManagement() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {u.id !== user?.id && isSuperAdmin && userRole !== "superadmin" && u.status === "approved" && (
-            <button
-              type="button"
-              onClick={() => setUserRole(u.id, userRole === "admin" ? "miembro" : "admin")}
-              className={`comic-sm comic-press flex items-center gap-1 rounded px-3 py-1.5 text-sm font-extrabold uppercase ${
-                userRole === "admin"
-                  ? "bg-muted text-muted-foreground"
-                  : "bg-secondary text-secondary-foreground"
-              }`}
-              title={userRole === "admin" ? "Retirar administrador" : "Hacer administrador"}
-            >
-              {userRole === "admin" ? (
-                <ShieldMinus className="h-4 w-4" />
-              ) : (
-                <ShieldPlus className="h-4 w-4" />
-              )}
-              {userRole === "admin" ? "Quitar admin" : "Hacer admin"}
-            </button>
-          )}
+          {u.id !== user?.id &&
+            isSuperAdmin &&
+            userRole !== "superadmin" &&
+            u.status === "approved" && (
+              <button
+                type="button"
+                onClick={() => setUserRole(u.id, userRole === "admin" ? "miembro" : "admin")}
+                className={`comic-sm comic-press flex items-center gap-1 rounded px-3 py-1.5 text-sm font-extrabold uppercase ${
+                  userRole === "admin"
+                    ? "bg-muted text-muted-foreground"
+                    : "bg-secondary text-secondary-foreground"
+                }`}
+                title={userRole === "admin" ? "Retirar administrador" : "Hacer administrador"}
+              >
+                {userRole === "admin" ? (
+                  <ShieldMinus className="h-4 w-4" />
+                ) : (
+                  <ShieldPlus className="h-4 w-4" />
+                )}
+                {userRole === "admin" ? "Quitar admin" : "Hacer admin"}
+              </button>
+            )}
           {u.status === "pending" && (
             <>
               <button

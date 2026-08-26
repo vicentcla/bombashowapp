@@ -235,7 +235,6 @@ function NoticeBoard() {
   const [commentBody, setCommentBody] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
-
   const nameMap = useMemo(() => {
     const map: Record<string, string> = {};
     for (const p of profiles.data ?? []) map[p.id] = p.display_name ?? "Miembro";
@@ -274,9 +273,8 @@ function NoticeBoard() {
       user_id: userId,
     });
 
-      
     setIsSubmittingComment(false);
-    
+
     if (error) {
       toast.error("Error al publicar el comentario");
     } else {
@@ -310,7 +308,6 @@ function NoticeBoard() {
       <div className="space-y-4">
         {notices.data?.map((n) => {
           return (
-
             <article key={n.id} className="rounded-lg border border-border/40 bg-background p-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -343,8 +340,6 @@ function NoticeBoard() {
               {n.body && (
                 <p className="mt-2 whitespace-pre-line break-words text-sm font-medium">{n.body}</p>
               )}
-
-
 
               <div className="mt-3 space-y-2">
                 <p className="text-xs text-muted-foreground">Comentar</p>
@@ -383,11 +378,9 @@ function NoticeBoard() {
                   </div>
                 )}
               </div>
-
             </article>
           );
         })}
-
       </div>
 
       <NoticeModal

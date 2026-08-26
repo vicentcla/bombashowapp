@@ -647,9 +647,6 @@ export function useDeleteNoticeComment() {
   });
 }
 
-
-
-
 export function useNoticeComments(noticeId: string | null) {
   return useQuery({
     queryKey: ["notice_comments", noticeId],
@@ -665,7 +662,6 @@ export function useNoticeComments(noticeId: string | null) {
     },
   });
 }
-
 
 export type BoloTemplate = "fiestas" | "suelto" | "generico";
 
