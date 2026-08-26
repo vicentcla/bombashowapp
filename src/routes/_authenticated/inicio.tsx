@@ -255,12 +255,6 @@ function NoticeBoard() {
     setCommentBody("");
   }
 
-
-  async function handleCloseComment() {
-    setAddingComment(null);
-    setCommentBody("");
-  }
-
   async function handleSubmitComment() {
     if (!addingComment || !commentBody.trim()) return;
     setIsSubmittingComment(true);
@@ -272,15 +266,14 @@ function NoticeBoard() {
       setIsSubmittingComment(false);
       return;
     }
-    
-    const { error } = await supabase
-      .from("notice_comments")
-      .insert({
-        notice_id: addingComment.noticeId,
-        content: commentBody.trim(),
-        parent_id: addingComment.parentId ?? null,
-        user_id: userId,
-      });
+
+    const { error } = await supabase.from("notice_comments").insert({
+      notice_id: addingComment.noticeId,
+      content: commentBody.trim(),
+      parent_id: null,
+      user_id: userId,
+    });
+
       
     setIsSubmittingComment(false);
     
