@@ -309,8 +309,8 @@ function NoticeBoard() {
 
       <div className="space-y-4">
         {notices.data?.map((n) => {
-          const count = likesCount[n.id] ?? 0;
           return (
+
             <article key={n.id} className="rounded-lg border border-border/40 bg-background p-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
