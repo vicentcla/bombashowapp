@@ -231,13 +231,10 @@ function NoticeBoard() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Notice | null>(null);
 
-  const [likesCount, setLikesCount] = useState<Record<string, number>>({});
-  const [addingComment, setAddingComment] = useState<{
-    noticeId: string;
-    parentId?: string | null;
-  } | null>(null);
+  const [addingComment, setAddingComment] = useState<{ noticeId: string } | null>(null);
   const [commentBody, setCommentBody] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
 
   const nameMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -253,39 +250,7 @@ function NoticeBoard() {
     });
   }
 
-  async function handleLikeClick(noticeId: string) {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    if (!userId) return;
-
-    const { data: existing } = await supabase
-      .from<{ id: string }>("notice_likes")
-      .select("id")
-      .eq("notice_id", noticeId)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (existing) {
-      await supabase
-        .from<{ id: string }>("notice_likes")
-        .delete()
-        .eq("id", existing.id as string);
-      setLikesCount((prev) => ({ ...prev, [noticeId]: Math.max(0, (prev[noticeId] ?? 0) - 1) }));
-    } else {
-      await supabase
-        .from<{ notice_id: string; user_id: string }>("notice_likes")
-        .insert({ notice_id: noticeId, user_id: userId });
-      setLikesCount((prev) => ({ ...prev, [noticeId]: (prev[noticeId] ?? 0) + 1 }));
-    }
-  }
-
-  async function handleAddComment(noticeId: string, parentId?: string | null) {
-    setAddingComment({ noticeId, parentId });
-  }
-
-  async function handleCloseComment() {
+  function handleCloseComment() {
     setAddingComment(null);
     setCommentBody("");
   }
@@ -301,15 +266,14 @@ function NoticeBoard() {
       setIsSubmittingComment(false);
       return;
     }
-    
-    const { error } = await supabase
-      .from("notice_comments")
-      .insert({
-        notice_id: addingComment.noticeId,
-        content: commentBody.trim(),
-        parent_id: addingComment.parentId ?? null,
-        user_id: userId,
-      });
+
+    const { error } = await supabase.from("notice_comments").insert({
+      notice_id: addingComment.noticeId,
+      content: commentBody.trim(),
+      parent_id: null,
+      user_id: userId,
+    });
+
       
     setIsSubmittingComment(false);
     
@@ -345,8 +309,8 @@ function NoticeBoard() {
 
       <div className="space-y-4">
         {notices.data?.map((n) => {
-          const count = likesCount[n.id] ?? 0;
           return (
+
             <article key={n.id} className="rounded-lg border border-border/40 bg-background p-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -380,19 +344,7 @@ function NoticeBoard() {
                 <p className="mt-2 whitespace-pre-line break-words text-sm font-medium">{n.body}</p>
               )}
 
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  onClick={() => handleLikeClick(n.id)}
-                  className="comic-sm rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
-                  aria-label="Me gusta"
-                >
-                  <span className="h-4 w-4" />
-                  <span className="ml-1">Me gusta</span>
-                </button>
-                <span className="text-xs text-muted-foreground">
-                  {count} {count === 1 ? "persona" : "personas"}
-                </span>
-              </div>
+
 
               <div className="mt-3 space-y-2">
                 <p className="text-xs text-muted-foreground">Comentar</p>
@@ -432,11 +384,6 @@ function NoticeBoard() {
                 )}
               </div>
 
-              <div className="mt-3 space-y-1">
-                {addingComment?.noticeId === n.id && !count && (
-                  <p className="text-xs text-muted-foreground">Sé el primero en comentar</p>
-                )}
-              </div>
             </article>
           );
         })}
