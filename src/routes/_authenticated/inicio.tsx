@@ -231,13 +231,10 @@ function NoticeBoard() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Notice | null>(null);
 
-  const [likesCount, setLikesCount] = useState<Record<string, number>>({});
-  const [addingComment, setAddingComment] = useState<{
-    noticeId: string;
-    parentId?: string | null;
-  } | null>(null);
+  const [addingComment, setAddingComment] = useState<{ noticeId: string } | null>(null);
   const [commentBody, setCommentBody] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
 
   const nameMap = useMemo(() => {
     const map: Record<string, string> = {};
