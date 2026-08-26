@@ -647,9 +647,6 @@ export function useDeleteNoticeComment() {
   });
 }
 
-
-
-
 export function useNoticeComments(noticeId: string | null) {
   return useQuery({
     queryKey: ["notice_comments", noticeId],
@@ -666,6 +663,24 @@ export function useNoticeComments(noticeId: string | null) {
   });
 }
 
+/** Todos los comentarios de avisos, agrupados por aviso. */
+export function useAllNoticeComments() {
+  return useQuery({
+    queryKey: ["notice_comments", "all"],
+    queryFn: async (): Promise<Record<string, NoticeComment[]>> => {
+      const { data, error } = await supabase
+        .from("notice_comments")
+        .select("*")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      const grouped: Record<string, NoticeComment[]> = {};
+      for (const row of (data ?? []) as unknown as NoticeComment[]) {
+        (grouped[row.notice_id] ??= []).push(row);
+      }
+      return grouped;
+    },
+  });
+}
 
 export type BoloTemplate = "fiestas" | "suelto" | "generico";
 
