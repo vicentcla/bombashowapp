@@ -225,15 +225,18 @@ function NoticeModal({
 
 function NoticeBoard() {
   const { isAdmin } = useIsAdmin();
+  const { user } = useAuth();
   const notices = useNotices();
   const profiles = useProfiles();
   const deleteNotice = useDeleteNotice();
+  const comments = useAllNoticeComments();
+  const addComment = useAddNoticeComment();
+  const deleteComment = useDeleteNoticeComment();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Notice | null>(null);
 
   const [addingComment, setAddingComment] = useState<{ noticeId: string } | null>(null);
   const [commentBody, setCommentBody] = useState("");
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   const nameMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -254,35 +257,31 @@ function NoticeBoard() {
     setCommentBody("");
   }
 
-  async function handleSubmitComment() {
+  function handleSubmitComment() {
     if (!addingComment || !commentBody.trim()) return;
-    setIsSubmittingComment(true);
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    if (!userId) {
-      setIsSubmittingComment(false);
-      return;
-    }
-
-    const { error } = await supabase.from("notice_comments").insert({
-      notice_id: addingComment.noticeId,
-      content: commentBody.trim(),
-      parent_id: null,
-      user_id: userId,
-    });
-
-    setIsSubmittingComment(false);
-
-    if (error) {
-      toast.error("Error al publicar el comentario");
-    } else {
-      toast.success("Comentario publicado");
-      setAddingComment(null);
-      setCommentBody("");
-    }
+    addComment.mutate(
+      { noticeId: addingComment.noticeId, content: commentBody.trim() },
+      {
+        onSuccess: () => {
+          toast.success("Comentario publicado");
+          handleCloseComment();
+        },
+        onError: () => toast.error("Error al publicar el comentario"),
+      },
+    );
   }
+
+  function handleDeleteComment(id: string) {
+    if (!confirm("¿Eliminar este comentario?")) return;
+    deleteComment.mutate(
+      { id },
+      {
+        onSuccess: () => toast.success("Comentario eliminado"),
+        onError: () => toast.error("No se pudo eliminar el comentario"),
+      },
+    );
+  }
+
 
   return (
     <section className="comic mt-8 rounded-xl bg-card p-4 space-y-4 sm:p-5">
