@@ -250,37 +250,11 @@ function NoticeBoard() {
     });
   }
 
-  async function handleLikeClick(noticeId: string) {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    if (!userId) return;
-
-    const { data: existing } = await supabase
-      .from<{ id: string }>("notice_likes")
-      .select("id")
-      .eq("notice_id", noticeId)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (existing) {
-      await supabase
-        .from<{ id: string }>("notice_likes")
-        .delete()
-        .eq("id", existing.id as string);
-      setLikesCount((prev) => ({ ...prev, [noticeId]: Math.max(0, (prev[noticeId] ?? 0) - 1) }));
-    } else {
-      await supabase
-        .from<{ notice_id: string; user_id: string }>("notice_likes")
-        .insert({ notice_id: noticeId, user_id: userId });
-      setLikesCount((prev) => ({ ...prev, [noticeId]: (prev[noticeId] ?? 0) + 1 }));
-    }
+  function handleCloseComment() {
+    setAddingComment(null);
+    setCommentBody("");
   }
 
-  async function handleAddComment(noticeId: string, parentId?: string | null) {
-    setAddingComment({ noticeId, parentId });
-  }
 
   async function handleCloseComment() {
     setAddingComment(null);
