@@ -284,7 +284,6 @@ function NoticeBoard() {
     );
   }
 
-
   return (
     <section className="comic mt-8 rounded-xl bg-card p-4 space-y-4 sm:p-5">
       <div className="flex items-center justify-between gap-2">
@@ -398,7 +397,6 @@ function NoticeBoard() {
                   </div>
                 )}
               </div>
-
             </article>
           );
         })}
