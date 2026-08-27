@@ -5,15 +5,17 @@ import { toast } from "sonner";
 const ANIVERSARIO_SRC = "/logo-x-final-3.png";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { GoogleDriveIcon, InstagramIcon } from "@/components/BrandIcons";
-import { useIsAdmin } from "@/hooks/useAuth";
+import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import {
+  useAddNoticeComment,
+  useAllNoticeComments,
   useDeleteNotice,
+  useDeleteNoticeComment,
   useNotices,
   useProfiles,
   useSaveNotice,
   type Notice,
 } from "@/lib/queries";
-import { supabase } from "@/integrations/supabase/client";
 
 const DRIVE_URL = "https://drive.google.com/drive/folders/1SJs1eIj7suxJL_eD9W0_m5rCBdva5jUi";
 const INSTAGRAM_URL = "https://www.instagram.com/showlabomba?igsh=MTIweG1tM2luN3Jjbw==";
@@ -282,7 +284,6 @@ function NoticeBoard() {
     );
   }
 
-
   return (
     <section className="comic mt-8 rounded-xl bg-card p-4 space-y-4 sm:p-5">
       <div className="flex items-center justify-between gap-2">
@@ -340,8 +341,27 @@ function NoticeBoard() {
                 <p className="mt-2 whitespace-pre-line break-words text-sm font-medium">{n.body}</p>
               )}
 
-              <div className="mt-3 space-y-2">
-                <p className="text-xs text-muted-foreground">Comentar</p>
+              <div className="mt-3 space-y-2 border-t border-border/40 pt-3">
+                {(comments.data?.[n.id] ?? []).map((c) => (
+                  <div key={c.id} className="flex items-start justify-between gap-2">
+                    <p className="min-w-0 break-words text-sm font-medium">
+                      <span className="mr-1 font-extrabold">
+                        {nameMap[c.user_id] ?? "Miembro"}:
+                      </span>
+                      {c.content}
+                    </p>
+                    {(isAdmin || c.user_id === user?.id) && (
+                      <button
+                        onClick={() => handleDeleteComment(c.id)}
+                        aria-label="Eliminar comentario"
+                        className="shrink-0 p-1 text-muted-foreground transition-colors hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+
                 <textarea
                   value={addingComment?.noticeId === n.id ? commentBody : ""}
                   onChange={(e) => {
@@ -356,21 +376,21 @@ function NoticeBoard() {
                   }}
                   placeholder="Escribe un comentario..."
                   rows={2}
-                  className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm font-medium focus:border-primary focus:outline-none resize-none"
-                  disabled={isSubmittingComment}
+                  className="w-full resize-none rounded-lg border border-border bg-background px-2 py-1.5 text-sm font-medium focus:border-primary focus:outline-none"
+                  disabled={addComment.isPending}
                 />
                 {addingComment?.noticeId === n.id && (
-                  <div className="flex gap-2 mt-2">
+                  <div className="mt-2 flex gap-2">
                     <button
                       onClick={handleSubmitComment}
-                      disabled={isSubmittingComment || !commentBody.trim()}
-                      className="comic-sm rounded-lg bg-primary px-2.5 py-1.5 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+                      disabled={addComment.isPending || !commentBody.trim()}
+                      className="comic-sm flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
                     >
                       <Plus className="h-3.5 w-3.5" /> Enviar
                     </button>
                     <button
                       onClick={handleCloseComment}
-                      className="comic-sm rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                      className="comic-sm rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
                     >
                       Cancelar
                     </button>
