@@ -5,15 +5,17 @@ import { toast } from "sonner";
 const ANIVERSARIO_SRC = "/logo-x-final-3.png";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { GoogleDriveIcon, InstagramIcon } from "@/components/BrandIcons";
-import { useIsAdmin } from "@/hooks/useAuth";
+import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import {
+  useAddNoticeComment,
+  useAllNoticeComments,
   useDeleteNotice,
+  useDeleteNoticeComment,
   useNotices,
   useProfiles,
   useSaveNotice,
   type Notice,
 } from "@/lib/queries";
-import { supabase } from "@/integrations/supabase/client";
 
 const DRIVE_URL = "https://drive.google.com/drive/folders/1SJs1eIj7suxJL_eD9W0_m5rCBdva5jUi";
 const INSTAGRAM_URL = "https://www.instagram.com/showlabomba?igsh=MTIweG1tM2luN3Jjbw==";
