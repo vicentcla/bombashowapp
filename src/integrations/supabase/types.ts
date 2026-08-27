@@ -215,6 +215,45 @@ export type Database = {
           },
         ]
       }
+      notice_likes: {
+        Row: {
+          comment_id: string | null
+          created_at: string
+          id: string
+          notice_id: string | null
+          user_id: string
+        }
+        Insert: {
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          notice_id?: string | null
+          user_id?: string
+        }
+        Update: {
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          notice_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notice_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "notice_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notice_likes_notice_id_fkey"
+            columns: ["notice_id"]
+            isOneToOne: false
+            referencedRelation: "notices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notices: {
         Row: {
           body: string

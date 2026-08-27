@@ -225,6 +225,169 @@ function NoticeModal({
   );
 }
 
+type CommentNode = NoticeComment & { children: CommentNode[] };
+
+function buildCommentTree(list: NoticeComment[]): CommentNode[] {
+  const byId = new Map<string, CommentNode>();
+  for (const c of list) byId.set(c.id, { ...c, children: [] });
+  const roots: CommentNode[] = [];
+  for (const node of byId.values()) {
+    const parent = node.parent_id ? byId.get(node.parent_id) : null;
+    if (parent) parent.children.push(node);
+    else roots.push(node);
+  }
+  return roots;
+}
+
+function LikeButton({
+  count,
+  liked,
+  onClick,
+  disabled,
+}: {
+  count: number;
+  liked: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={liked}
+      aria-label={liked ? "Quitar me gusta" : "Me gusta"}
+      className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs font-extrabold transition-colors disabled:opacity-50 ${
+        liked ? "text-destructive" : "text-muted-foreground hover:text-destructive"
+      }`}
+    >
+      <Heart className={`h-3.5 w-3.5 ${liked ? "fill-current" : ""}`} />
+      {count > 0 && count}
+    </button>
+  );
+}
+
+function CommentItem({
+  node,
+  depth,
+  nameMap,
+  canDelete,
+  likesFor,
+  onToggleLike,
+  onDelete,
+  onReply,
+  replyingTo,
+  replyBody,
+  setReplyBody,
+  onSubmitReply,
+  onCancelReply,
+  busy,
+}: {
+  node: CommentNode;
+  depth: number;
+  nameMap: Record<string, string>;
+  canDelete: (userId: string) => boolean;
+  likesFor: (commentId: string) => { count: number; likeId: string | null };
+  onToggleLike: (commentId: string) => void;
+  onDelete: (id: string) => void;
+  onReply: (id: string) => void;
+  replyingTo: string | null;
+  replyBody: string;
+  setReplyBody: (v: string) => void;
+  onSubmitReply: () => void;
+  onCancelReply: () => void;
+  busy: boolean;
+}) {
+  const { count, likeId } = likesFor(node.id);
+  return (
+    <div className={depth > 0 ? "ml-4 border-l border-border/40 pl-3" : ""}>
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 break-words text-sm font-medium">
+          <span className="mr-1 font-extrabold">{nameMap[node.user_id] ?? "Miembro"}:</span>
+          {node.content}
+        </p>
+        {canDelete(node.user_id) && (
+          <button
+            onClick={() => onDelete(node.id)}
+            aria-label="Eliminar comentario"
+            className="shrink-0 p-1 text-muted-foreground transition-colors hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1">
+        <LikeButton
+          count={count}
+          liked={!!likeId}
+          onClick={() => onToggleLike(node.id)}
+          disabled={busy}
+        />
+        <button
+          type="button"
+          onClick={() => onReply(node.id)}
+          className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-extrabold text-muted-foreground transition-colors hover:text-primary"
+        >
+          <MessageCircle className="h-3.5 w-3.5" /> Responder
+        </button>
+      </div>
+
+      {replyingTo === node.id && (
+        <div className="mb-2 space-y-2">
+          <textarea
+            value={replyBody}
+            onChange={(e) => setReplyBody(e.target.value)}
+            placeholder={`Responder a ${nameMap[node.user_id] ?? "Miembro"}...`}
+            rows={2}
+            autoFocus
+            className="w-full resize-none rounded-lg border border-border bg-background px-2 py-1.5 text-sm font-medium focus:border-primary focus:outline-none"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={onSubmitReply}
+              disabled={busy || !replyBody.trim()}
+              className="comic-sm rounded-lg bg-primary px-2.5 py-1.5 text-xs font-extrabold uppercase text-primary-foreground disabled:opacity-50"
+            >
+              Responder
+            </button>
+            <button
+              onClick={onCancelReply}
+              className="comic-sm rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {node.children.length > 0 && (
+        <div className="space-y-1">
+          {node.children.map((child) => (
+            <CommentItem
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              nameMap={nameMap}
+              canDelete={canDelete}
+              likesFor={likesFor}
+              onToggleLike={onToggleLike}
+              onDelete={onDelete}
+              onReply={onReply}
+              replyingTo={replyingTo}
+              replyBody={replyBody}
+              setReplyBody={setReplyBody}
+              onSubmitReply={onSubmitReply}
+              onCancelReply={onCancelReply}
+              busy={busy}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NoticeBoard() {
   const { isAdmin } = useIsAdmin();
   const { user } = useAuth();
@@ -234,17 +397,59 @@ function NoticeBoard() {
   const comments = useAllNoticeComments();
   const addComment = useAddNoticeComment();
   const deleteComment = useDeleteNoticeComment();
+  const likes = useNoticeLikes();
+  const toggleLike = useToggleNoticeLike();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Notice | null>(null);
 
   const [addingComment, setAddingComment] = useState<{ noticeId: string } | null>(null);
   const [commentBody, setCommentBody] = useState("");
+  const [replyingTo, setReplyingTo] = useState<{ noticeId: string; commentId: string } | null>(
+    null,
+  );
+  const [replyBody, setReplyBody] = useState("");
 
   const nameMap = useMemo(() => {
     const map: Record<string, string> = {};
     for (const p of profiles.data ?? []) map[p.id] = p.display_name ?? "Miembro";
     return map;
   }, [profiles.data]);
+
+  const likeIndex = useMemo(() => {
+    const notice: Record<string, { count: number; likeId: string | null }> = {};
+    const comment: Record<string, { count: number; likeId: string | null }> = {};
+    for (const l of likes.data ?? []) {
+      const bucket = l.notice_id ? notice : comment;
+      const key = (l.notice_id ?? l.comment_id)!;
+      const entry = (bucket[key] ??= { count: 0, likeId: null });
+      entry.count += 1;
+      if (l.user_id === user?.id) entry.likeId = l.id;
+    }
+    return { notice, comment };
+  }, [likes.data, user?.id]);
+
+  function noticeLikes(id: string) {
+    return likeIndex.notice[id] ?? { count: 0, likeId: null };
+  }
+  function commentLikes(id: string) {
+    return likeIndex.comment[id] ?? { count: 0, likeId: null };
+  }
+
+  function handleToggleNoticeLike(id: string) {
+    const { likeId } = noticeLikes(id);
+    toggleLike.mutate(
+      { noticeId: id, likeId },
+      { onError: () => toast.error("No se pudo actualizar el me gusta") },
+    );
+  }
+
+  function handleToggleCommentLike(id: string) {
+    const { likeId } = commentLikes(id);
+    toggleLike.mutate(
+      { commentId: id, likeId },
+      { onError: () => toast.error("No se pudo actualizar el me gusta") },
+    );
+  }
 
   function handleDelete(n: Notice) {
     if (!confirm(`¿Eliminar el aviso "${n.title}"?`)) return;
@@ -269,6 +474,25 @@ function NoticeBoard() {
           handleCloseComment();
         },
         onError: () => toast.error("Error al publicar el comentario"),
+      },
+    );
+  }
+
+  function handleSubmitReply() {
+    if (!replyingTo || !replyBody.trim()) return;
+    addComment.mutate(
+      {
+        noticeId: replyingTo.noticeId,
+        content: replyBody.trim(),
+        parentId: replyingTo.commentId,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Respuesta publicada");
+          setReplyingTo(null);
+          setReplyBody("");
+        },
+        onError: () => toast.error("Error al publicar la respuesta"),
       },
     );
   }
@@ -307,6 +531,8 @@ function NoticeBoard() {
 
       <div className="space-y-4">
         {notices.data?.map((n) => {
+          const tree = buildCommentTree(comments.data?.[n.id] ?? []);
+          const nl = noticeLikes(n.id);
           return (
             <article key={n.id} className="rounded-lg border border-border/40 bg-background p-3.5">
               <div className="flex items-start justify-between gap-3">
@@ -341,25 +567,40 @@ function NoticeBoard() {
                 <p className="mt-2 whitespace-pre-line break-words text-sm font-medium">{n.body}</p>
               )}
 
+              <div className="mt-2">
+                <LikeButton
+                  count={nl.count}
+                  liked={!!nl.likeId}
+                  onClick={() => handleToggleNoticeLike(n.id)}
+                  disabled={toggleLike.isPending}
+                />
+              </div>
+
               <div className="mt-3 space-y-2 border-t border-border/40 pt-3">
-                {(comments.data?.[n.id] ?? []).map((c) => (
-                  <div key={c.id} className="flex items-start justify-between gap-2">
-                    <p className="min-w-0 break-words text-sm font-medium">
-                      <span className="mr-1 font-extrabold">
-                        {nameMap[c.user_id] ?? "Miembro"}:
-                      </span>
-                      {c.content}
-                    </p>
-                    {(isAdmin || c.user_id === user?.id) && (
-                      <button
-                        onClick={() => handleDeleteComment(c.id)}
-                        aria-label="Eliminar comentario"
-                        className="shrink-0 p-1 text-muted-foreground transition-colors hover:text-destructive"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
+                {tree.map((node) => (
+                  <CommentItem
+                    key={node.id}
+                    node={node}
+                    depth={0}
+                    nameMap={nameMap}
+                    canDelete={(uid) => isAdmin || uid === user?.id}
+                    likesFor={commentLikes}
+                    onToggleLike={handleToggleCommentLike}
+                    onDelete={handleDeleteComment}
+                    onReply={(commentId) => {
+                      setReplyingTo({ noticeId: n.id, commentId });
+                      setReplyBody("");
+                    }}
+                    replyingTo={replyingTo?.commentId ?? null}
+                    replyBody={replyBody}
+                    setReplyBody={setReplyBody}
+                    onSubmitReply={handleSubmitReply}
+                    onCancelReply={() => {
+                      setReplyingTo(null);
+                      setReplyBody("");
+                    }}
+                    busy={addComment.isPending || toggleLike.isPending}
+                  />
                 ))}
 
                 <textarea
@@ -398,6 +639,7 @@ function NoticeBoard() {
                 )}
               </div>
             </article>
+
           );
         })}
       </div>

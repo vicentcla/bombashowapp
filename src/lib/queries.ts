@@ -682,6 +682,58 @@ export function useAllNoticeComments() {
   });
 }
 
+export type NoticeLikeRow = {
+  id: string;
+  notice_id: string | null;
+  comment_id: string | null;
+  user_id: string;
+};
+
+/** Todos los "me gusta" del tablón (avisos y comentarios). */
+export function useNoticeLikes() {
+  return useQuery({
+    queryKey: ["notice_likes"],
+    queryFn: async (): Promise<NoticeLikeRow[]> => {
+      const { data, error } = await supabase
+        .from("notice_likes")
+        .select("id, notice_id, comment_id, user_id");
+      if (error) throw error;
+      return (data ?? []) as NoticeLikeRow[];
+    },
+  });
+}
+
+export function useToggleNoticeLike() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: async ({
+      noticeId,
+      commentId,
+      likeId,
+    }: {
+      noticeId?: string | null;
+      commentId?: string | null;
+      likeId?: string | null;
+    }) => {
+      if (likeId) {
+        const { error } = await supabase.from("notice_likes").delete().eq("id", likeId);
+        if (error) throw error;
+        return;
+      }
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) throw new Error("Sesión no válida");
+      const { error } = await supabase.from("notice_likes").insert({
+        notice_id: noticeId ?? null,
+        comment_id: commentId ?? null,
+        user_id: userId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate("notice_likes"),
+  });
+}
+
 export type BoloTemplate = "fiestas" | "suelto" | "generico";
 
 export type BoloMessage = {
