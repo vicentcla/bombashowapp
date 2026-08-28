@@ -1,6 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Gamepad2, Link2, Megaphone, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+  Gamepad2,
+  Heart,
+  Link2,
+  Megaphone,
+  MessageCircle,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 const ANIVERSARIO_SRC = "/logo-x-final-3.png";
 import { GlobalSearch } from "@/components/GlobalSearch";
