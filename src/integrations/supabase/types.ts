@@ -341,6 +341,7 @@ export type Database = {
           id: string
           onboarded_at: string | null
           status: string
+          tab_order: string[] | null
         }
         Insert: {
           created_at?: string
@@ -349,6 +350,7 @@ export type Database = {
           id: string
           onboarded_at?: string | null
           status?: string
+          tab_order?: string[] | null
         }
         Update: {
           created_at?: string
@@ -357,6 +359,7 @@ export type Database = {
           id?: string
           onboarded_at?: string | null
           status?: string
+          tab_order?: string[] | null
         }
         Relationships: []
       }
