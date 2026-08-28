@@ -1,0 +1,1 @@
+GRANT SELECT (tab_order), UPDATE (tab_order) ON public.profiles TO authenticated;
