@@ -652,7 +652,6 @@ function NoticeBoard() {
                 )}
               </div>
             </article>
-
           );
         })}
       </div>
