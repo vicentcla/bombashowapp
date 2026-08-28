@@ -21,10 +21,13 @@ import {
   useAllNoticeComments,
   useDeleteNotice,
   useDeleteNoticeComment,
+  useNoticeLikes,
   useNotices,
   useProfiles,
   useSaveNotice,
+  useToggleNoticeLike,
   type Notice,
+  type NoticeComment,
 } from "@/lib/queries";
 
 const DRIVE_URL = "https://drive.google.com/drive/folders/1SJs1eIj7suxJL_eD9W0_m5rCBdva5jUi";
