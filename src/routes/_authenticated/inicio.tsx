@@ -1,6 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Gamepad2, Link2, Megaphone, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+  Gamepad2,
+  Heart,
+  Link2,
+  Megaphone,
+  MessageCircle,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 const ANIVERSARIO_SRC = "/logo-x-final-3.png";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -11,10 +21,13 @@ import {
   useAllNoticeComments,
   useDeleteNotice,
   useDeleteNoticeComment,
+  useNoticeLikes,
   useNotices,
   useProfiles,
   useSaveNotice,
+  useToggleNoticeLike,
   type Notice,
+  type NoticeComment,
 } from "@/lib/queries";
 
 const DRIVE_URL = "https://drive.google.com/drive/folders/1SJs1eIj7suxJL_eD9W0_m5rCBdva5jUi";
@@ -639,7 +652,6 @@ function NoticeBoard() {
                 )}
               </div>
             </article>
-
           );
         })}
       </div>
