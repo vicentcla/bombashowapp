@@ -1,3 +1,4 @@
+import { haptic } from "@/lib/haptics";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -154,6 +155,7 @@ export function AdminManagement() {
     }
 
     invalidate("role_requests", "user_roles", "profiles", "all_user_roles");
+    haptic(approve ? "success" : "double");
     toast.success(approve ? "Rol de administrador concedido" : "Solicitud rechazada");
   }
 
@@ -164,6 +166,7 @@ export function AdminManagement() {
       return;
     }
     invalidate("profiles", "all_users", "profile-status");
+    haptic(status === "approved" ? "success" : "double");
     toast.success(status === "approved" ? "Acceso aprobado" : "Acceso rechazado");
   }
 
@@ -281,6 +284,7 @@ export function AdminManagement() {
     }
 
     invalidate("setlists", "setlist_items");
+    haptic("success");
     toast.success(
       approve
         ? proposal.kind === "bulk_edit"

@@ -20,12 +20,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { haptic } from "@/lib/haptics";
 
-function buzz() {
-  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-    navigator.vibrate(15);
-  }
-}
 
 // ─── Wrapper de lista ordenable ────────────────────────────────────────────────
 
@@ -55,7 +51,7 @@ export function SortableList<T extends { id: string }>({
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(String(event.active.id));
-    buzz();
+    haptic("medium");
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -65,7 +61,7 @@ export function SortableList<T extends { id: string }>({
     const oldIndex = items.findIndex((i) => i.id === active.id);
     const newIndex = items.findIndex((i) => i.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
-    buzz();
+    haptic("light");
     onReorder(arrayMove(items, oldIndex, newIndex));
   }
 
