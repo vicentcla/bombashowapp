@@ -71,6 +71,8 @@ import {
 } from "@/lib/format";
 import { SortableList, SortableItem } from "@/components/SortableList";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
+import { SetlistGeneratorDialog } from "@/components/SetlistGeneratorDialog";
+import { haptic } from "@/lib/haptics";
 
 export const Route = createFileRoute("/_authenticated/setlists")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -1967,6 +1969,7 @@ function SetlistDetail({
 
   // Modo propuesta para no-admins: bufferiza cambios sin guardar en DB
   const [isProposalMode, setIsProposalMode] = useState(false);
+  const [showGenerator, setShowGenerator] = useState(false);
   const [proposalItems, setProposalItems] = useState<VirtualItem[]>([]);
   const [proposalPassMap, setProposalPassMap] = useState<Record<string, string>>({});
   const proposalStartRef = useRef<{ items: VirtualItem[]; passMap: Record<string, string> } | null>(
@@ -2149,6 +2152,7 @@ function SetlistDetail({
 
     invalidate("setlists");
     setEditingConfig(false);
+    haptic("success");
     toast.success("Configuración del setlist actualizada");
   }
 
@@ -2596,19 +2600,19 @@ function SetlistDetail({
     setIsProposalMode(false);
     setIsEditingItems(false);
     proposalStartRef.current = null;
+    haptic("success");
     toast.success("Propuesta de cambio enviada a los administradores ✓");
   }
 
   // Handlers de cross-container DnD
   function handleDragStart(event: DragStartEvent) {
     setDraggingItemId(String(event.active.id));
-    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      navigator.vibrate(15);
-    }
+    haptic("medium");
   }
 
   async function handleDragEnd(event: DragEndEvent) {
     setDraggingItemId(null);
+    if (event.over) haptic("light");
     const { active, over } = event;
     if (!over) return;
 
@@ -2686,7 +2690,23 @@ function SetlistDetail({
           ← Volver a setlists
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {isEditingItems && (
+            <button
+              onClick={() => setShowGenerator(true)}
+              className="comic-sm comic-press flex items-center gap-1.5 rounded-lg bg-card px-3 py-1.5 text-xs font-extrabold uppercase hover:bg-accent"
+            >
+              <Sparkles className="h-3.5 w-3.5" /> Generar
+            </button>
+          )}
+          <SetlistGeneratorDialog
+            open={showGenerator}
+            onOpenChange={setShowGenerator}
+            arrangements={arrangements.data ?? []}
+            passes={config.passes}
+            excludeIds={activeItems.flatMap((i) => (i.arrangement_id ? [i.arrangement_id] : []))}
+            onApply={handleAddMultipleSongsToPass}
+          />
           {/* Admin: Editar/Guardar | No-admin: Proponer Cambio/Enviar propuesta */}
           {isAdmin ? (
             // ADMIN: cambios directos
