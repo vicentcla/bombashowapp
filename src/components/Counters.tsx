@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useAddPlay, usePlayEvents, usePeriods, useResetCounters, type Scope } from "@/lib/queries";
 import { normalize } from "@/lib/format";
 import { SortableList, SortableItem } from "@/components/SortableList";
+import { haptic } from "@/lib/haptics";
 
 export type CounterItem = {
   id: string;
@@ -57,6 +58,7 @@ export function Counters({
   }, [items, search]);
 
   async function change(songId: string, delta: 1 | -1) {
+    haptic(delta === 1 ? "light" : "double");
     try {
       await addPlay.mutateAsync({ songId, delta });
     } catch (err) {
