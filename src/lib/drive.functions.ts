@@ -10,12 +10,18 @@ export const listDriveFiles = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data }) => {
+    const lovable = process.env["LOVABLE_API_KEY"];
     const key = process.env["GOOGLE_DRIVE_API_KEY"];
-    if (!key) return { files: [] as DriveFile[], missingKey: true };
+    if (!lovable || !key) return { files: [] as DriveFile[], missingKey: true };
     const q = encodeURIComponent(`'${data.folderId}' in parents and trashed = false`);
-    const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType)&orderBy=name&pageSize=500&key=${key}`;
-    const res = await fetch(url);
-    if (!res.ok) return { files: [] as DriveFile[], missingKey: false, error: res.status };
+    const url = `https://connector-gateway.lovable.dev/google_drive/drive/v3/files?q=${q}&fields=files(id,name,mimeType)&orderBy=name&pageSize=500&supportsAllDrives=true&includeItemsFromAllDrives=true`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${lovable}`, "X-Connection-Api-Key": key },
+    });
+    if (!res.ok) {
+      console.error(`Drive list failed [${res.status}]: ${await res.text()}`);
+      return { files: [] as DriveFile[], missingKey: false, error: res.status };
+    }
     const json = (await res.json()) as { files?: DriveFile[] };
     const files = (json.files ?? []).filter(
       (f) => f.mimeType === "application/pdf" || f.mimeType.startsWith("image/"),
