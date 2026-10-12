@@ -72,8 +72,7 @@ export function SetlistGeneratorDialog({
     const cands = arrangements
       .filter((a) => !used.has(a.id) && a.duration_seconds > 0)
       .sort(
-        (a, b) =>
-          Math.abs(a.duration_seconds - current) - Math.abs(b.duration_seconds - current),
+        (a, b) => Math.abs(a.duration_seconds - current) - Math.abs(b.duration_seconds - current),
       )
       .slice(0, 5);
     const pick = cands[Math.floor(Math.random() * cands.length)];
@@ -133,7 +132,9 @@ export function SetlistGeneratorDialog({
           </div>
           {passes.length > 1 && (
             <div className="space-y-2">
-              <p className="text-xs font-extrabold uppercase text-muted-foreground">Añadir al pase</p>
+              <p className="text-xs font-extrabold uppercase text-muted-foreground">
+                Añadir al pase
+              </p>
               <select
                 value={passId}
                 onChange={(e) => setPassId(e.target.value)}
@@ -159,8 +160,14 @@ export function SetlistGeneratorDialog({
           {ids.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm font-extrabold">
-                <span>{ids.length} temas · {formatDuration(total)}</span>
-                <span className={inWindow ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}>
+                <span>
+                  {ids.length} temas · {formatDuration(total)}
+                </span>
+                <span
+                  className={
+                    inWindow ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                  }
+                >
                   {diff >= 0 ? "+" : "−"}
                   {formatDuration(Math.abs(diff))}
                 </span>
@@ -169,7 +176,10 @@ export function SetlistGeneratorDialog({
                 {ids.map((id, i) => {
                   const a = byId.get(id);
                   return (
-                    <li key={id} className="comic-sm flex items-center gap-2 rounded-lg bg-card px-3 py-2">
+                    <li
+                      key={id}
+                      className="comic-sm flex items-center gap-2 rounded-lg bg-card px-3 py-2"
+                    >
                       <span className="w-5 text-xs font-bold text-muted-foreground">{i + 1}</span>
                       <span className="flex-1 truncate text-sm font-bold">{a?.title}</span>
                       <span className="text-xs font-bold text-muted-foreground">

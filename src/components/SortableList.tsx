@@ -22,7 +22,6 @@ import { GripVertical } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { haptic } from "@/lib/haptics";
 
-
 // ─── Wrapper de lista ordenable ────────────────────────────────────────────────
 
 /**
