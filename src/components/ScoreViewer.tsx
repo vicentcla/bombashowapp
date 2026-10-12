@@ -27,7 +27,10 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
     };
     const acquire = () => {
       if (document.visibilityState === "visible" && nav.wakeLock) {
-        nav.wakeLock.request("screen").then((l) => (lock = l)).catch(() => {});
+        nav.wakeLock
+          .request("screen")
+          .then((l) => (lock = l))
+          .catch(() => {});
       }
     };
     acquire();
@@ -61,7 +64,11 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
       className={`fixed inset-0 z-[60] flex flex-col bg-background ${full ? "" : "p-2 sm:p-4"}`}
     >
       <div className="flex items-center gap-2 border-b border-border px-2 py-2">
-        <button onClick={onClose} aria-label="Cerrar" className="comic-sm comic-press rounded-md bg-secondary p-2">
+        <button
+          onClick={onClose}
+          aria-label="Cerrar"
+          className="comic-sm comic-press rounded-md bg-secondary p-2"
+        >
           <X className="h-4 w-4" />
         </button>
         <p className="min-w-0 flex-1 truncate text-sm font-extrabold">
@@ -81,7 +88,11 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
         >
           <GoogleDriveIcon className="h-4 w-4" />
         </a>
-        <button onClick={toggleFull} aria-label="Pantalla completa" className="comic-sm comic-press rounded-md bg-secondary p-2">
+        <button
+          onClick={toggleFull}
+          aria-label="Pantalla completa"
+          className="comic-sm comic-press rounded-md bg-secondary p-2"
+        >
           {full ? <Minimize className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
         </button>
       </div>
@@ -104,7 +115,9 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
 
       <div className="relative flex-1">
         {files.isLoading ? (
-          <p className="p-6 text-center text-sm font-bold text-muted-foreground">Cargando partituras…</p>
+          <p className="p-6 text-center text-sm font-bold text-muted-foreground">
+            Cargando partituras…
+          </p>
         ) : current ? (
           <iframe
             key={current.id}

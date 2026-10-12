@@ -10,7 +10,7 @@ export const listDriveFiles = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data }) => {
-    const key = process.env.GOOGLE_DRIVE_API_KEY;
+    const key = process.env["GOOGLE_DRIVE_API_KEY"];
     if (!key) return { files: [] as DriveFile[], missingKey: true };
     const q = encodeURIComponent(`'${data.folderId}' in parents and trashed = false`);
     const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType)&orderBy=name&pageSize=500&key=${key}`;

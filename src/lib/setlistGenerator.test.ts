@@ -17,7 +17,11 @@ describe("generateSetlist", () => {
   });
 
   it("mantiene transiciones de setlists anteriores", () => {
-    const history = [["s1", "s2"], ["s1", "s2"], ["s1", "s2"]];
+    const history = [
+      ["s1", "s2"],
+      ["s1", "s2"],
+      ["s1", "s2"],
+    ];
     const two = [
       { id: "s1", duration: 600 },
       { id: "s2", duration: 600 },
