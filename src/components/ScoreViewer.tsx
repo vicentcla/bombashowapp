@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Expand, Minimize, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Expand, Minimize, Search, X } from "lucide-react";
+import { normalize } from "@/lib/format";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { GoogleDriveIcon } from "@/components/BrandIcons";
 import { listDriveFiles } from "@/lib/drive.functions";
-import { driveUrl, embedUrl } from "@/lib/drive";
+import { driveUrl } from "@/lib/drive";
 import { haptic } from "@/lib/haptics";
 import type { DriveFolder } from "@/lib/queries";
 
@@ -18,6 +19,7 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
     staleTime: 10 * 60 * 1000,
   });
   const [index, setIndex] = useState(0);
+  const [query, setQuery] = useState("");
   const [full, setFull] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -99,18 +101,39 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
       </div>
 
       {list_.length > 1 && (
+        <div className="px-2 pt-2">
+          <label className="comic-sm flex items-center gap-2 rounded-lg bg-card px-3 py-2">
+            <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar partitura…"
+              className="w-full bg-transparent text-sm font-bold outline-none"
+            />
+            {query && (
+              <button onClick={() => setQuery("")} aria-label="Borrar búsqueda">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </label>
+        </div>
+      )}
+      {list_.length > 1 && (
         <div className="flex gap-2 overflow-x-auto px-2 py-2">
-          {list_.map((f, i) => (
-            <button
-              key={f.id}
-              onClick={() => setIndex(i)}
-              className={`comic-sm shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold ${
-                i === index ? "bg-primary text-primary-foreground" : "bg-card"
-              }`}
-            >
-              {f.name.replace(/\.pdf$/i, "")}
-            </button>
-          ))}
+          {list_
+            .map((f, i) => ({ f, i }))
+            .filter(({ f }) => !query || normalize(f.name).includes(normalize(query)))
+            .map(({ f, i }) => (
+              <button
+                key={f.id}
+                onClick={() => setIndex(i)}
+                className={`comic-sm shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold ${
+                  i === index ? "bg-primary text-primary-foreground" : "bg-card"
+                }`}
+              >
+                {f.name.replace(/\.pdf$/i, "")}
+              </button>
+            ))}
         </div>
       )}
 
@@ -128,7 +151,17 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
             className="h-full w-full"
           />
         ) : (
-          <iframe src={embedUrl(folder.folder_id)} title={folder.name} className="h-full w-full" />
+          <div className="p-6 text-center text-sm font-bold text-muted-foreground">
+            <p>No se han podido cargar las partituras de esta carpeta.</p>
+            <a
+              href={driveUrl(folder.folder_id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-block text-primary underline"
+            >
+              Abrir en Drive
+            </a>
+          </div>
         )}
         {list_.length > 1 && (
           <>
