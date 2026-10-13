@@ -15,6 +15,7 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   const files = useQuery({
     queryKey: ["drive_files", folder.folder_id],
     queryFn: () => list({ data: { folderId: folder.folder_id } }),
+    staleTime: 10 * 60 * 1000,
   });
   const [index, setIndex] = useState(0);
   const [full, setFull] = useState(false);
