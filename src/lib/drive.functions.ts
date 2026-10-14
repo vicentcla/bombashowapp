@@ -53,9 +53,12 @@ export const listDriveFiles = createServerFn({ method: "POST" })
         `https://www.googleapis.com/drive/v3/files?${params}&key=${encodeURIComponent(googleKey)}`,
       );
     } else if (lovable && key) {
-      res = await fetch(`https://connector-gateway.lovable.dev/google_drive/drive/v3/files?${params}`, {
-        headers: { Authorization: `Bearer ${lovable}`, "X-Connection-Api-Key": key },
-      });
+      res = await fetch(
+        `https://connector-gateway.lovable.dev/google_drive/drive/v3/files?${params}`,
+        {
+          headers: { Authorization: `Bearer ${lovable}`, "X-Connection-Api-Key": key },
+        },
+      );
     } else {
       console.log(`[drive] hasGoogleKey=false`);
       return { status: "missing_key", files: [] };
@@ -78,7 +81,11 @@ export const listDriveFiles = createServerFn({ method: "POST" })
     const files = (json.files ?? [])
       .map((f) =>
         f.shortcutDetails
-          ? { id: f.shortcutDetails.targetId, name: f.name, mimeType: f.shortcutDetails.targetMimeType }
+          ? {
+              id: f.shortcutDetails.targetId,
+              name: f.name,
+              mimeType: f.shortcutDetails.targetMimeType,
+            }
           : { id: f.id, name: f.name, mimeType: f.mimeType },
       )
       .filter((f) => f.mimeType === "application/pdf" || f.mimeType.startsWith("image/"));

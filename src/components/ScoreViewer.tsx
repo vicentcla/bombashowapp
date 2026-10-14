@@ -64,7 +64,8 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
     }
     const d = files.data;
     if (!d) return "No se han podido cargar las partituras de esta carpeta.";
-    if (d.status === "missing_key") return "El servidor no puede acceder a la clave de Google Drive";
+    if (d.status === "missing_key")
+      return "El servidor no puede acceder a la clave de Google Drive";
     if (d.status === "google_error")
       return `Google Drive ha devuelto un error (HTTP ${d.httpStatus}): ${d.message}`;
     if (d.status === "empty")
