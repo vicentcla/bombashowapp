@@ -1,11 +1,12 @@
-import { ArrowDownAZ, ListOrdered, Flame, Clock } from "lucide-react";
+import { ArrowDownAZ, ListOrdered, Flame, Clock, Snowflake } from "lucide-react";
 
-export type SortMode = "alfabetico" | "manual" | "mas" | "duracion";
+export type SortMode = "alfabetico" | "manual" | "mas" | "menos" | "duracion";
 
 const ICONS = {
   alfabetico: ArrowDownAZ,
   manual: ListOrdered,
   mas: Flame,
+  menos: Snowflake,
   duracion: Clock,
 } as const;
 
@@ -13,6 +14,7 @@ const LABELS = {
   alfabetico: "A-Z",
   manual: "Manual",
   mas: "Más tocadas",
+  menos: "Menos tocadas",
   duracion: "Duración",
 } as const;
 

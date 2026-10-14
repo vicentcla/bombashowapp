@@ -111,9 +111,22 @@ function ContadoresCalle() {
         (a, b) =>
           (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0) || a.title.localeCompare(b.title, "es"),
       );
+    if (sort === "menos")
+      sorted.sort(
+        (a, b) =>
+          (counts.get(a.id) ?? 0) - (counts.get(b.id) ?? 0) || a.title.localeCompare(b.title, "es"),
+      );
     if (sort === "manual") sorted.sort((a, b) => a.sort_order - b.sort_order);
     return sorted;
   }, [songs.data, tag, sort, counts]);
+
+  const [ideas, setIdeas] = useState<string[] | null>(null);
+
+  function generateIdeas() {
+    const zero = (songs.data ?? []).filter((s) => (counts.get(s.id) ?? 0) === 0);
+    const shuffled = [...zero].sort(() => Math.random() - 0.5);
+    setIdeas(shuffled.slice(0, 4).map((s) => s.title));
+  }
 
   function handleReorder(newItems: { id: string; title: string }[]) {
     reorder.mutate(newItems.map((i) => i.id));
@@ -124,6 +137,33 @@ function ContadoresCalle() {
       <div className="mb-4">
         <h2 className="text-2xl font-bold">Canciones de calle</h2>
       </div>
+
+      <button
+        onClick={generateIdeas}
+        className="comic comic-press mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3 text-lg font-extrabold uppercase text-primary-foreground"
+      >
+        💡 Ideas
+      </button>
+      {ideas && (
+        <div className="comic mb-4 rounded-xl bg-card p-3">
+          {ideas.length === 0 ? (
+            <p className="text-sm font-bold text-muted-foreground">
+              ¡Ya habéis tocado todas en este periodo!
+            </p>
+          ) : (
+            <ul className="grid grid-cols-2 gap-2">
+              {ideas.map((t) => (
+                <li key={t} className="comic-sm rounded-lg bg-background px-3 py-2 text-sm font-extrabold">
+                  {t}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-2 text-[11px] font-bold text-muted-foreground">
+            Canciones con 0 toques en el periodo actual · pulsa otra vez para cambiar
+          </p>
+        </div>
+      )}
 
       {allTags.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-1.5">
@@ -159,7 +199,7 @@ function ContadoresCalle() {
         />
       </div>
 
-      <SortBar value={sort} onChange={setSort} options={["alfabetico", "mas", "manual"]} />
+      <SortBar value={sort} onChange={setSort} options={["alfabetico", "mas", "menos", "manual"]} />
 
       <Counters
         scope="calle"

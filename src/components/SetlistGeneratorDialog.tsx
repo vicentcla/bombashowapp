@@ -70,7 +70,12 @@ export function SetlistGeneratorDialog({
     const current = byId.get(ids[index]!)?.duration_seconds ?? 0;
     const used = new Set([...ids, ...excludeIds]);
     const cands = arrangements
-      .filter((a) => !used.has(a.id) && a.duration_seconds > 0)
+      .filter(
+        (a) =>
+          !used.has(a.id) &&
+          a.duration_seconds > 0 &&
+          total - current + a.duration_seconds <= minutes * 60,
+      )
       .sort(
         (a, b) => Math.abs(a.duration_seconds - current) - Math.abs(b.duration_seconds - current),
       )
@@ -92,7 +97,7 @@ export function SetlistGeneratorDialog({
     onOpenChange(false);
   }
 
-  const inWindow = Math.abs(diff) <= 300;
+  const inWindow = diff <= 0 && diff >= -300;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -105,7 +110,7 @@ export function SetlistGeneratorDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <p className="text-xs font-extrabold uppercase text-muted-foreground">
-              Duración objetivo (±5 min)
+              Duración objetivo (hasta −5 min, nunca más)
             </p>
             <div className="flex flex-wrap items-center gap-2">
               {PRESETS.map((m) => (
