@@ -4,10 +4,11 @@ import { generateSetlist } from "./setlistGenerator";
 const songs = Array.from({ length: 30 }, (_, i) => ({ id: `s${i}`, duration: 150 + (i % 7) * 30 }));
 
 describe("generateSetlist", () => {
-  it("queda dentro de ±5 minutos del objetivo", () => {
+  it("nunca sobrepasa el objetivo y queda como mucho 5 minutos por debajo", () => {
     for (const minutes of [30, 45, 60]) {
       const r = generateSetlist({ songs, history: [], targetSeconds: minutes * 60 });
-      expect(Math.abs(r.total - minutes * 60)).toBeLessThanOrEqual(300);
+      expect(r.total).toBeLessThanOrEqual(minutes * 60);
+      expect(minutes * 60 - r.total).toBeLessThanOrEqual(300);
     }
   });
 

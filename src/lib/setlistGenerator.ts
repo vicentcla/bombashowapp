@@ -27,6 +27,15 @@ export function buildTransitions(history: string[][]) {
   return map;
 }
 
+function buildOpeners(history: string[][]) {
+  const map = new Map<string, number>();
+  for (const seq of history) {
+    const first = seq[0];
+    if (first) map.set(first, (map.get(first) ?? 0) + 1);
+  }
+  return map;
+}
+
 export function generateSetlist(opts: GenOptions): GenResult {
   const tol = opts.toleranceSeconds ?? 300;
   const target = opts.targetSeconds;
@@ -34,6 +43,7 @@ export function generateSetlist(opts: GenOptions): GenResult {
   const excluded = new Set(opts.exclude ?? []);
   const pool = opts.songs.filter((s) => s.duration > 0 && !excluded.has(s.id));
   const trans = buildTransitions(opts.history);
+  const openers = buildOpeners(opts.history);
   const attempts = opts.attempts ?? 300;
 
   let best: GenResult = { ids: [], total: 0, knownTransitions: 0 };
@@ -46,9 +56,11 @@ export function generateSetlist(opts: GenOptions): GenResult {
     let known = 0;
     while (total < target - tol) {
       const last = ids[ids.length - 1];
-      const cands = pool.filter((s) => !used.has(s.id) && total + s.duration <= target + tol);
+      const cands = pool.filter((s) => !used.has(s.id) && total + s.duration <= target);
       if (!cands.length) break;
-      const weights = cands.map((c) => 1 + 4 * (last ? (trans.get(last)?.get(c.id) ?? 0) : 0));
+      const weights = cands.map((c) =>
+        last ? 1 + 8 * (trans.get(last)?.get(c.id) ?? 0) : 1 + 4 * (openers.get(c.id) ?? 0),
+      );
       const sum = weights.reduce((x, y) => x + y, 0);
       let r = rnd() * sum;
       let pick = cands[cands.length - 1]!;
@@ -64,9 +76,9 @@ export function generateSetlist(opts: GenOptions): GenResult {
       ids.push(pick.id);
       total += pick.duration;
     }
-    const diff = Math.abs(total - target);
-    const inWindow = diff <= tol;
-    const score = (inWindow ? 0 : 100000) + diff - known * 30 + rnd() * 60;
+    const diff = target - total;
+    const inWindow = diff >= 0 && diff <= tol;
+    const score = (inWindow ? 0 : 100000 + diff) - known * 120 + rnd() * 60;
     if (score < bestScore) {
       bestScore = score;
       best = { ids, total, knownTransitions: known };
