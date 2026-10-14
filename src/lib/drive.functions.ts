@@ -1,7 +1,39 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type DriveFile = { id: string; name: string; mimeType: string };
+
+export type DriveListResult =
+  | { status: "ok"; files: DriveFile[] }
+  | { status: "missing_key"; files: DriveFile[] }
+  | { status: "empty"; files: DriveFile[] }
+  | { status: "google_error"; files: DriveFile[]; httpStatus: number; message: string };
+
+type RawFile = DriveFile & { shortcutDetails?: { targetId: string; targetMimeType: string } };
+
+function readEnv(name: string): string | undefined {
+  try {
+    const req = getRequest() as Request & {
+      runtime?: { cloudflare?: { env?: Record<string, unknown> } };
+    };
+    const v = req.runtime?.cloudflare?.env?.[name];
+    if (typeof v === "string" && v) return v;
+  } catch {
+    /* empty */
+  }
+  const v = process.env[name];
+  return v ? v : undefined;
+}
+
+function sanitize(msg: unknown): string {
+  if (typeof msg !== "string") return "Error desconocido";
+  return msg
+    .replace(/https?:\/\/\S+/g, "[url]")
+    .replace(/AIza[\w-]{20,}/g, "[clave]")
+    .replace(/key=[^&\s]+/gi, "key=[clave]")
+    .slice(0, 200);
+}
 
 export const listDriveFiles = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -9,10 +41,10 @@ export const listDriveFiles = createServerFn({ method: "POST" })
     if (!/^[\w-]{10,}$/.test(d.folderId)) throw new Error("Carpeta no válida");
     return d;
   })
-  .handler(async ({ data }) => {
-    const googleKey = process.env["GOOGLE_API_KEY"];
-    const lovable = process.env["LOVABLE_API_KEY"];
-    const key = process.env["GOOGLE_DRIVE_API_KEY"];
+  .handler(async ({ data }): Promise<DriveListResult> => {
+    const googleKey = readEnv("GOOGLE_API_KEY");
+    const lovable = readEnv("LOVABLE_API_KEY");
+    const key = readEnv("GOOGLE_DRIVE_API_KEY");
     const q = encodeURIComponent(`'${data.folderId}' in parents and trashed = false`);
     const params = `q=${q}&fields=files(id,name,mimeType,shortcutDetails(targetId,targetMimeType))&orderBy=name&pageSize=500&supportsAllDrives=true&includeItemsFromAllDrives=true`;
     let res: Response;
@@ -25,25 +57,30 @@ export const listDriveFiles = createServerFn({ method: "POST" })
         headers: { Authorization: `Bearer ${lovable}`, "X-Connection-Api-Key": key },
       });
     } else {
-      return { files: [] as DriveFile[], missingKey: true };
+      console.log(`[drive] hasGoogleKey=false`);
+      return { status: "missing_key", files: [] };
+    }
+    console.log(`[drive] hasGoogleKey=${!!googleKey} googleStatus=${res.status}`);
+    let json: { files?: RawFile[]; error?: { message?: string } } = {};
+    try {
+      json = (await res.json()) as typeof json;
+    } catch {
+      json = {};
     }
     if (!res.ok) {
-      console.error(`Drive list failed [${res.status}]: ${await res.text()}`);
-      return { files: [] as DriveFile[], missingKey: false, error: res.status };
+      return {
+        status: "google_error",
+        files: [],
+        httpStatus: res.status,
+        message: sanitize(json.error?.message),
+      };
     }
-    const json = (await res.json()) as {
-      files?: (DriveFile & { shortcutDetails?: { targetId: string; targetMimeType: string } })[];
-    };
     const files = (json.files ?? [])
       .map((f) =>
         f.shortcutDetails
-          ? {
-              id: f.shortcutDetails.targetId,
-              name: f.name,
-              mimeType: f.shortcutDetails.targetMimeType,
-            }
+          ? { id: f.shortcutDetails.targetId, name: f.name, mimeType: f.shortcutDetails.targetMimeType }
           : { id: f.id, name: f.name, mimeType: f.mimeType },
       )
       .filter((f) => f.mimeType === "application/pdf" || f.mimeType.startsWith("image/"));
-    return { files, missingKey: false };
+    return files.length ? { status: "ok", files } : { status: "empty", files };
   });

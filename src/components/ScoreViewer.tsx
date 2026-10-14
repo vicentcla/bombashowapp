@@ -55,6 +55,22 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
 
   const list_ = files.data?.files ?? [];
   const current = list_[index];
+  function errorText() {
+    if (files.error) {
+      const msg = files.error instanceof Error ? files.error.message : String(files.error);
+      if (/unauthor|401|403|jwt|sesi/i.test(msg))
+        return "Error de autenticación de la app: vuelve a iniciar sesión.";
+      return `Error de ejecución en el servidor: ${msg.slice(0, 150)}`;
+    }
+    const d = files.data;
+    if (!d) return "No se han podido cargar las partituras de esta carpeta.";
+    if (d.status === "missing_key") return "El servidor no puede acceder a la clave de Google Drive";
+    if (d.status === "google_error")
+      return `Google Drive ha devuelto un error (HTTP ${d.httpStatus}): ${d.message}`;
+    if (d.status === "empty")
+      return "Google Drive ha respondido correctamente, pero no ha devuelto PDF o imágenes visibles en esta carpeta";
+    return "No se han podido cargar las partituras de esta carpeta.";
+  }
   const go = (d: number) => {
     if (!list_.length) return;
     setIndex((i) => (i + d + list_.length) % list_.length);
@@ -152,7 +168,7 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
           />
         ) : (
           <div className="p-6 text-center text-sm font-bold text-muted-foreground">
-            <p>No se han podido cargar las partituras de esta carpeta.</p>
+            <p>{errorText()}</p>
             <a
               href={driveUrl(folder.folder_id)}
               target="_blank"
