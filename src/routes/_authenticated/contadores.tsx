@@ -153,7 +153,10 @@ function ContadoresCalle() {
           ) : (
             <ul className="grid grid-cols-2 gap-2">
               {ideas.map((t) => (
-                <li key={t} className="comic-sm rounded-lg bg-background px-3 py-2 text-sm font-extrabold">
+                <li
+                  key={t}
+                  className="comic-sm rounded-lg bg-background px-3 py-2 text-sm font-extrabold"
+                >
                   {t}
                 </li>
               ))}
