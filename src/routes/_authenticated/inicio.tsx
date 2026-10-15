@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Gamepad2,
-  Music2,
   Heart,
   Link2,
   Megaphone,
@@ -56,7 +55,6 @@ export const Route = createFileRoute("/_authenticated/inicio")({
 
 function Inicio() {
   const [linksOpen, setLinksOpen] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(false);
 
   useEffect(() => {
     if (!linksOpen) return;
@@ -83,16 +81,7 @@ function Inicio() {
 
       {/* Accesos del grupo (desplegable, solo iconos) */}
       <div className="mt-6 flex justify-center gap-3">
-        <button
-          type="button"
-          onClick={() => setToolsOpen(true)}
-          aria-label="Afinador y metrónomo"
-          title="Afinador y metrónomo"
-          className="comic-sm comic-press flex items-center justify-center rounded-lg bg-secondary p-2 text-secondary-foreground"
-        >
-          <Music2 className="h-5 w-5 shrink-0" />
-        </button>
-        <TunerMetronome open={toolsOpen} onOpenChange={setToolsOpen} />
+        <TunerMetronome className="comic-sm comic-press flex items-center justify-center rounded-lg bg-secondary p-2 text-secondary-foreground" />
         <a
           href={GAME_URL}
           target="_blank"

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Minus, Plus, Play, Square } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const NOTES = ["Do", "Do♯", "Re", "Mi♭", "Mi", "Fa", "Fa♯", "Sol", "La♭", "La", "Si♭", "Si"];
 const METERS = ["2/4", "3/4", "4/4", "3/8", "6/8", "9/8", "12/8"] as const;
@@ -26,13 +26,13 @@ function detectPitch(buf: Float32Array, rate: number) {
 function Tuner() {
   const [a4, setA4] = useState(442);
   const [freq, setFreq] = useState<number | null>(null);
-  const [on, setOn] = useState(false);
   const [error, setError] = useState("");
   const stop = useRef<() => void>(() => {});
 
   useEffect(() => {
     const saved = Number(localStorage.getItem("tuner_a4"));
     if (saved >= 400 && saved <= 480) setA4(saved);
+    void start();
     return () => stop.current();
   }, []);
 
@@ -47,6 +47,7 @@ function Tuner() {
       setError("");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const ctx = new AudioContext();
+      void ctx.resume();
       const an = ctx.createAnalyser();
       an.fftSize = 2048;
       ctx.createMediaStreamSource(stream).connect(an);
@@ -64,16 +65,9 @@ function Tuner() {
         stream.getTracks().forEach((t) => t.stop());
         void ctx.close();
       };
-      setOn(true);
     } catch {
       setError("No se ha podido usar el micrófono. Revisa los permisos.");
     }
-  }
-
-  function halt() {
-    stop.current();
-    setOn(false);
-    setFreq(null);
   }
 
   let note = "—";
@@ -128,13 +122,17 @@ function Tuner() {
         </button>
         <span className="text-xs font-extrabold text-muted-foreground">Hz</span>
       </div>
-      <button
-        onClick={on ? halt : start}
-        className="comic comic-press w-full rounded-lg bg-primary py-3 font-extrabold uppercase text-primary-foreground"
-      >
-        {on ? "Parar" : "Empezar a afinar"}
-      </button>
-      {error && <p className="text-sm font-bold text-destructive">{error}</p>}
+      {error && (
+        <div className="space-y-2">
+          <p className="text-sm font-bold text-destructive">{error}</p>
+          <button
+            onClick={() => void start()}
+            className="comic-sm comic-press rounded-lg bg-card px-3 py-1.5 text-sm font-extrabold"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -275,21 +273,94 @@ function Metronome() {
   );
 }
 
-export function TunerMetronome({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-}) {
-  const [tab, setTab] = useState<"afinador" | "metronomo">("afinador");
+type Tab = "afinador" | "metronomo";
+const TAB_KEY = "tuner_last_tab";
+const TAB_EVENT = "tuner-tab-change";
+
+function readTab(): Tab {
+  return localStorage.getItem(TAB_KEY) === "metronomo" ? "metronomo" : "afinador";
+}
+
+export function TuningForkIcon({ className }: { className?: string }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Afinador y metrónomo</DialogTitle>
-        </DialogHeader>
-        <div className="comic-sm mb-2 flex overflow-hidden rounded-lg">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M8 2v8a4 4 0 0 0 8 0V2" />
+      <path d="M12 14v8" />
+    </svg>
+  );
+}
+
+export function MetronomeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M9.5 3h5l4.5 18H5L9.5 3Z" />
+      <path d="M5.8 17h12.4" />
+      <path d="M12 17 16.5 6" />
+    </svg>
+  );
+}
+
+export function TunerMetronome({ className }: { className?: string }) {
+  const [open, setOpen] = useState(false);
+  const [tab, setTabState] = useState<Tab>("afinador");
+
+  useEffect(() => {
+    setTabState(readTab());
+    const sync = () => setTabState(readTab());
+    window.addEventListener(TAB_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(TAB_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  function setTab(t: Tab) {
+    localStorage.setItem(TAB_KEY, t);
+    setTabState(t);
+    window.dispatchEvent(new Event(TAB_EVENT));
+  }
+
+  const Icon = tab === "metronomo" ? MetronomeIcon : TuningForkIcon;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="Afinador y metrónomo"
+          title="Afinador y metrónomo"
+          className={
+            className ??
+            "comic-sm comic-press flex items-center justify-center rounded-xl p-2.5 text-foreground"
+          }
+        >
+          <Icon className="h-5 w-5 shrink-0" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={8}
+        collisionPadding={8}
+        className="w-[min(22rem,calc(100vw-1rem))] max-h-[80svh] overflow-y-auto p-3"
+      >
+        <div className="comic-sm mb-3 flex overflow-hidden rounded-lg">
           {(
             [
               ["afinador", "Afinador"],
@@ -306,7 +377,7 @@ export function TunerMetronome({
           ))}
         </div>
         {tab === "afinador" ? <Tuner /> : <Metronome />}
-      </DialogContent>
-    </Dialog>
+      </PopoverContent>
+    </Popover>
   );
 }
