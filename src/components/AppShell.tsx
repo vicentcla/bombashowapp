@@ -10,6 +10,7 @@ import { usePendingCount, useTabOrder } from "@/lib/queries";
 import { DESKTOP_NAV, orderNav, type NavTo } from "@/lib/nav";
 import { useGlobalRealtime } from "@/hooks/useGlobalRealtime";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { TunerMetronome } from "@/components/TunerMetronome";
 
 const LOGO_SRC = "/logo-titulo-2.png";
 
@@ -51,13 +52,16 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Cabecera: fluye con la página en móvil, sticky en escritorio */}
       <header className="glass-strong rounded-none border-x-0 border-t-0 pt-[env(safe-area-inset-top)] md:sticky md:top-0 md:z-40">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-3 py-2.5 sm:px-4">
-          <Link to="/inicio" className="shrink-0 min-w-0">
-            <img
-              src={LOGO_SRC}
-              alt="La Bomba Show Xaranga"
-              className="h-10 w-auto object-contain md:h-12"
-            />
-          </Link>
+          <div className="flex min-w-0 items-center gap-2">
+            <Link to="/inicio" className="shrink-0 min-w-0">
+              <img
+                src={LOGO_SRC}
+                alt="La Bomba Show Xaranga"
+                className="h-10 w-auto object-contain md:h-12"
+              />
+            </Link>
+            <TunerMetronome />
+          </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <ThemeToggle />
