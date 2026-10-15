@@ -105,7 +105,11 @@ function Tuner() {
       </div>
       <div className="flex items-center justify-center gap-2">
         <span className="text-xs font-extrabold uppercase text-muted-foreground">La =</span>
-        <button onClick={() => changeA4(a4 - 1)} className="comic-sm comic-press rounded-lg bg-card p-2" aria-label="Bajar referencia">
+        <button
+          onClick={() => changeA4(a4 - 1)}
+          className="comic-sm comic-press rounded-lg bg-card p-2"
+          aria-label="Bajar referencia"
+        >
           <Minus className="h-4 w-4" />
         </button>
         <input
@@ -115,7 +119,11 @@ function Tuner() {
           className="comic-sm w-20 rounded-lg bg-card px-2 py-2 text-center font-extrabold"
           aria-label="Frecuencia de referencia"
         />
-        <button onClick={() => changeA4(a4 + 1)} className="comic-sm comic-press rounded-lg bg-card p-2" aria-label="Subir referencia">
+        <button
+          onClick={() => changeA4(a4 + 1)}
+          className="comic-sm comic-press rounded-lg bg-card p-2"
+          aria-label="Subir referencia"
+        >
           <Plus className="h-4 w-4" />
         </button>
         <span className="text-xs font-extrabold text-muted-foreground">Hz</span>
@@ -205,7 +213,13 @@ function Metronome() {
             <span
               key={k}
               className={`h-4 w-4 rounded-full transition-colors ${
-                beat === k ? (k === 0 ? "bg-primary" : "bg-foreground") : den === 8 && k % 3 === 0 ? "bg-muted-foreground/40" : "bg-muted"
+                beat === k
+                  ? k === 0
+                    ? "bg-primary"
+                    : "bg-foreground"
+                  : den === 8 && k % 3 === 0
+                    ? "bg-muted-foreground/40"
+                    : "bg-muted"
               }`}
             />
           ))}
@@ -243,7 +257,10 @@ function Metronome() {
         ))}
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <button onClick={tap} className="comic comic-press rounded-lg bg-secondary py-3 font-extrabold uppercase text-secondary-foreground">
+        <button
+          onClick={tap}
+          className="comic comic-press rounded-lg bg-secondary py-3 font-extrabold uppercase text-secondary-foreground"
+        >
           Tap
         </button>
         <button
@@ -258,7 +275,13 @@ function Metronome() {
   );
 }
 
-export function TunerMetronome({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+export function TunerMetronome({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
   const [tab, setTab] = useState<"afinador" | "metronomo">("afinador");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
