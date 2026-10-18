@@ -376,3 +376,24 @@ export function composeUnicodeStyle(
 ): UnicodeStyle | null {
   return FAMILY_STYLE_COMPOSITION[family][style] ?? null;
 }
+
+const WHATSAPP_RE =
+  /```([^\n`]+?)```|\*_([^\n*_]+?)_\*|_\*([^\n*_]+?)\*_|\*([^\s*](?:[^\n*]*?[^\s*])?)\*|_([^\s_](?:[^\n_]*?[^\s_])?)_/g;
+
+/** Convierte las marcas de WhatsApp (*negrita*, _cursiva_, ```mono```) a tipografías Unicode. */
+export function whatsappToUnicode(text: string, base: UnicodeStyle | null = null): string {
+  const plain = (s: string) => (base ? toUnicodeStyle(s, base) : s);
+  let out = "";
+  let last = 0;
+  for (const m of text.matchAll(WHATSAPP_RE)) {
+    const idx = m.index ?? 0;
+    out += plain(text.slice(last, idx));
+    if (m[1] !== undefined) out += toUnicodeStyle(m[1], "mono");
+    else if (m[2] !== undefined) out += toUnicodeStyle(m[2], "boldItalic");
+    else if (m[3] !== undefined) out += toUnicodeStyle(m[3], "boldItalic");
+    else if (m[4] !== undefined) out += toUnicodeStyle(m[4], "bold");
+    else if (m[5] !== undefined) out += toUnicodeStyle(m[5], "italic");
+    last = idx + m[0].length;
+  }
+  return out + plain(text.slice(last));
+}
