@@ -1295,7 +1295,6 @@ function SocialDetail({
                   )}
                 </div>
 
-
                 <button
                   onClick={applyTypography}
                   title="Aplicar tipografía y estilo a la selección"
