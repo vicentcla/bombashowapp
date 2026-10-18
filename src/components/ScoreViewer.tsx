@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Expand, Minimize, Search, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Expand,
+  FileMusic,
+  Minimize,
+  Search,
+  X,
+} from "lucide-react";
 import { normalize } from "@/lib/format";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -21,6 +30,7 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   const [index, setIndex] = useState(0);
   const [query, setQuery] = useState("");
   const [full, setFull] = useState(false);
+  const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -49,8 +59,17 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   }, []);
 
   function toggleFull() {
-    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
-    else void ref.current?.requestFullscreen?.().catch(() => setFull((f) => !f));
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {});
+      return;
+    }
+    if (full) {
+      setFull(false);
+      return;
+    }
+    const el = ref.current;
+    if (el?.requestFullscreen) void el.requestFullscreen().catch(() => setFull(true));
+    else setFull(true);
   }
 
   const list_ = files.data?.files ?? [];
@@ -78,121 +97,163 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
     haptic("selection");
   };
 
+  const filtered = list_
+    .map((f, i) => ({ f, i }))
+    .filter(({ f }) => !query || normalize(f.name).includes(normalize(query)));
+
+  if (!open || !current) {
+    return (
+      <div className="fixed inset-0 z-[60] flex flex-col bg-background p-2 sm:p-4">
+        <div className="flex items-center gap-2 border-b border-border px-2 py-2">
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="comic-sm comic-press rounded-md bg-secondary p-2"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <p className="min-w-0 flex-1 truncate text-sm font-extrabold">{folder.name}</p>
+          {list_.length > 0 && (
+            <span className="text-xs font-bold text-muted-foreground">{list_.length}</span>
+          )}
+          <a
+            href={driveUrl(folder.folder_id)}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Abrir en Drive"
+            className="comic-sm comic-press rounded-md bg-secondary p-2"
+          >
+            <GoogleDriveIcon className="h-4 w-4" />
+          </a>
+        </div>
+        {list_.length > 0 && (
+          <div className="px-2 pt-2">
+            <label className="comic-sm flex items-center gap-2 rounded-lg bg-card px-3 py-2.5">
+              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar partitura…"
+                className="w-full bg-transparent text-base font-bold outline-none"
+              />
+              {query && (
+                <button onClick={() => setQuery("")} aria-label="Borrar búsqueda">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </label>
+          </div>
+        )}
+        <div className="flex-1 overflow-y-auto px-2 py-2">
+          {files.isLoading ? (
+            <p className="p-6 text-center text-sm font-bold text-muted-foreground">
+              Cargando partituras…
+            </p>
+          ) : list_.length === 0 ? (
+            <div className="p-6 text-center text-sm font-bold text-muted-foreground">
+              <p>{errorText()}</p>
+              <a
+                href={driveUrl(folder.folder_id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-block text-primary underline"
+              >
+                Abrir en Drive
+              </a>
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="p-6 text-center text-sm font-bold text-muted-foreground">
+              Ninguna partitura coincide con «{query}».
+            </p>
+          ) : (
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {filtered.map(({ f, i }) => (
+                <li key={f.id}>
+                  <button
+                    onClick={() => {
+                      setIndex(i);
+                      setOpen(true);
+                      haptic("selection");
+                    }}
+                    className="comic-sm comic-press flex w-full items-center gap-3 rounded-lg bg-card px-3 py-3 text-left"
+                  >
+                    <FileMusic className="h-5 w-5 shrink-0 text-primary" />
+                    <span className="min-w-0 flex-1 truncate text-sm font-extrabold">
+                      {f.name.replace(/\.pdf$/i, "")}
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      ref={ref}
-      className={`fixed inset-0 z-[60] flex flex-col bg-background ${full ? "" : "p-2 sm:p-4"}`}
-    >
-      <div className="flex items-center gap-2 border-b border-border px-2 py-2">
-        <button
-          onClick={onClose}
-          aria-label="Cerrar"
-          className="comic-sm comic-press rounded-md bg-secondary p-2"
-        >
-          <X className="h-4 w-4" />
-        </button>
-        <p className="min-w-0 flex-1 truncate text-sm font-extrabold">
-          {current ? current.name : folder.name}
-        </p>
-        {list_.length > 1 && (
+    <div ref={ref} className="fixed inset-0 z-[60] flex flex-col bg-background">
+      {!full && (
+        <div className="flex items-center gap-2 border-b border-border px-2 py-2">
+          <button
+            onClick={() => setOpen(false)}
+            aria-label="Volver a la lista"
+            className="comic-sm comic-press rounded-md bg-secondary p-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <p className="min-w-0 flex-1 truncate text-sm font-extrabold">
+            {current.name.replace(/\.pdf$/i, "")}
+          </p>
           <span className="text-xs font-bold text-muted-foreground">
             {index + 1}/{list_.length}
           </span>
-        )}
-        <a
-          href={driveUrl(folder.folder_id)}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Abrir en Drive"
-          className="comic-sm comic-press rounded-md bg-secondary p-2"
-        >
-          <GoogleDriveIcon className="h-4 w-4" />
-        </a>
-        <button
-          onClick={toggleFull}
-          aria-label="Pantalla completa"
-          className="comic-sm comic-press rounded-md bg-secondary p-2"
-        >
-          {full ? <Minimize className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
-        </button>
-      </div>
-
-      {list_.length > 1 && (
-        <div className="px-2 pt-2">
-          <label className="comic-sm flex items-center gap-2 rounded-lg bg-card px-3 py-2">
-            <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar partitura…"
-              className="w-full bg-transparent text-sm font-bold outline-none"
-            />
-            {query && (
-              <button onClick={() => setQuery("")} aria-label="Borrar búsqueda">
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </label>
+          <button
+            onClick={toggleFull}
+            aria-label="Pantalla completa"
+            className="comic-sm comic-press rounded-md bg-secondary p-2"
+          >
+            <Expand className="h-4 w-4" />
+          </button>
         </div>
       )}
-      {list_.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto px-2 py-2">
-          {list_
-            .map((f, i) => ({ f, i }))
-            .filter(({ f }) => !query || normalize(f.name).includes(normalize(query)))
-            .map(({ f, i }) => (
-              <button
-                key={f.id}
-                onClick={() => setIndex(i)}
-                className={`comic-sm shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold ${
-                  i === index ? "bg-primary text-primary-foreground" : "bg-card"
-                }`}
-              >
-                {f.name.replace(/\.pdf$/i, "")}
-              </button>
-            ))}
-        </div>
-      )}
-
-      <div className="relative flex-1">
-        {files.isLoading ? (
-          <p className="p-6 text-center text-sm font-bold text-muted-foreground">
-            Cargando partituras…
-          </p>
-        ) : current ? (
-          <iframe
-            key={current.id}
-            src={`https://drive.google.com/file/d/${current.id}/preview`}
-            title={current.name}
-            allow="fullscreen"
-            className="h-full w-full"
-          />
-        ) : (
-          <div className="p-6 text-center text-sm font-bold text-muted-foreground">
-            <p>{errorText()}</p>
-            <a
-              href={driveUrl(folder.folder_id)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-block text-primary underline"
+      <div className="relative flex-1 overflow-hidden">
+        <iframe
+          key={current.id}
+          src={`https://drive.google.com/file/d/${current.id}/preview`}
+          title={current.name}
+          allow="fullscreen"
+          className="absolute left-0 w-full"
+          style={{ top: -56, height: "calc(100% + 56px)" }}
+        />
+        {full && (
+          <>
+            <button
+              onClick={toggleFull}
+              aria-label="Salir de pantalla completa"
+              className="absolute right-2 top-2 rounded-full bg-card/70 p-2 backdrop-blur"
             >
-              Abrir en Drive
-            </a>
-          </div>
+              <Minimize className="h-4 w-4" />
+            </button>
+            <span className="pointer-events-none absolute left-2 top-2 max-w-[70%] truncate rounded-full bg-card/60 px-3 py-1 text-[11px] font-bold backdrop-blur">
+              {index + 1}/{list_.length} · {current.name.replace(/\.pdf$/i, "")}
+            </span>
+          </>
         )}
         {list_.length > 1 && (
           <>
             <button
               onClick={() => go(-1)}
               aria-label="Anterior"
-              className="comic-sm comic-press absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-card/90 p-3"
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-card/60 p-3 backdrop-blur"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             <button
               onClick={() => go(1)}
               aria-label="Siguiente"
-              className="comic-sm comic-press absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-card/90 p-3"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-card/60 p-3 backdrop-blur"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
