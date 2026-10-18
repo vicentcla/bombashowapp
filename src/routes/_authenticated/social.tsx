@@ -26,7 +26,6 @@ import {
   Loader2,
   Quote,
   RefreshCw,
-  PenLine,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -51,6 +50,7 @@ import {
   composeUnicodeStyle,
   supportsUnicodeStyle,
   toUnicodeStyle,
+  whatsappToUnicode,
   type UnicodeFontFamily,
   type UnicodeFontStyle,
 } from "@/lib/format";
@@ -594,7 +594,6 @@ function SocialDetail({
   const [status, setStatus] = useState<SocialPostStatus>("borrador");
   const [fontFamily, setFontFamily] = useState<UnicodeFontFamily>("normal");
   const [fontStyle, setFontStyle] = useState<UnicodeFontStyle>("normal");
-  const [liveMode, setLiveMode] = useState(false);
   const [showFamilyMenu, setShowFamilyMenu] = useState(false);
   const [showStyleMenu, setShowStyleMenu] = useState(false);
   const [comment, setComment] = useState("");
@@ -821,10 +820,28 @@ function SocialDetail({
     applyStyleToSelection(fontFamily, style);
   }
 
+  function handlePaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const text = e.clipboardData.getData("text/plain");
+    if (!text) return;
+    e.preventDefault();
+    const el = e.currentTarget;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const styled = whatsappToUnicode(text, composeUnicodeStyle(fontFamily, fontStyle));
+    const next = content.slice(0, start) + styled + content.slice(end);
+    prevContentRef.current = next;
+    setContent(next);
+    const caret = start + styled.length;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(caret, caret);
+    });
+  }
+
   function handleContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const el = e.target;
     const newVal = el.value;
-    const composed = liveMode ? composeUnicodeStyle(fontFamily, fontStyle) : null;
+    const composed = composeUnicodeStyle(fontFamily, fontStyle);
     if (!composed) {
       prevContentRef.current = newVal;
       setContent(newVal);
@@ -1180,7 +1197,8 @@ function SocialDetail({
                 }}
                 onMouseUp={trackSelection}
                 onKeyUp={trackSelection}
-                placeholder="Escribe aquí el texto... Activa el modo escritura directa para escribir con la tipografía elegida, o selecciona una palabra y elige una tipografía llamativa."
+                onPaste={handlePaste}
+                placeholder="Escribe aquí el texto con la tipografía elegida. Pega desde WhatsApp y *negrita* o _cursiva_ se convierten solas. Para cambiar una parte, selecciónala y elige otra tipografía."
                 rows={7}
                 className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium focus:border-primary focus:outline-none"
               />
@@ -1277,21 +1295,6 @@ function SocialDetail({
                   )}
                 </div>
 
-                <button
-                  onClick={() => setLiveMode((v) => !v)}
-                  title={
-                    liveMode
-                      ? "Escribir con la tipografía actual: activado"
-                      : "Escribir con la tipografía actual: desactivado"
-                  }
-                  className={`comic-sm comic-press flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-extrabold uppercase transition-colors ${
-                    liveMode
-                      ? "bg-primary text-primary-foreground ring-2 ring-primary/40"
-                      : "bg-secondary text-secondary-foreground hover:bg-accent"
-                  }`}
-                >
-                  <PenLine className="h-3.5 w-3.5" /> Escribir directo
-                </button>
 
                 <button
                   onClick={applyTypography}
