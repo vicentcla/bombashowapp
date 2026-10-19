@@ -111,10 +111,6 @@ const FONT_FAMILIES: { value: UnicodeFontFamily; name: string }[] = [
   { value: "squared", name: "Cuadrados" },
   { value: "squaredNegative", name: "Cuadrados negros" },
   { value: "parenthesized", name: "Paréntesis" },
-  { value: "smallCaps", name: "Versalitas" },
-  { value: "superscript", name: "Superíndice" },
-  { value: "underline", name: "Subrayado" },
-  { value: "strike", name: "Tachado" },
 ];
 
 const FONT_STYLES: { value: UnicodeFontStyle; name: string }[] = [
@@ -1232,19 +1228,19 @@ function SocialDetail({
                         className="fixed inset-0 z-40"
                         onClick={() => setShowFamilyMenu(false)}
                       />
-                      <div className="comic absolute left-0 top-full z-50 mt-1.5 max-h-72 w-64 overflow-y-auto rounded-xl border border-border glass-strong py-1 shadow-lg">
+                      <div className="absolute left-0 top-full z-50 mt-1.5 max-h-[min(20rem,50svh)] w-[min(20rem,calc(100vw-2.5rem))] overflow-y-auto overscroll-contain rounded-xl border border-border bg-popover py-1 text-popover-foreground shadow-2xl">
                         {FONT_FAMILIES.map((f) => (
                           <button
                             key={f.value}
                             onClick={() => changeFamily(f.value)}
-                            className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-accent ${
+                            className={`flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-accent ${
                               f.value === fontFamily ? "bg-accent" : ""
                             }`}
                           >
-                            <span className="w-36 shrink-0 text-[10px] font-extrabold uppercase text-muted-foreground">
+                            <span className="min-w-0 flex-1 truncate text-[10px] font-extrabold uppercase text-muted-foreground">
                               {f.name}
                             </span>
-                            <span className="min-w-0 flex-1 truncate text-base leading-tight">
+                            <span className="shrink-0 text-base leading-tight">
                               {familySample(f.value)}
                             </span>
                             {f.value === fontFamily && (
@@ -1276,7 +1272,7 @@ function SocialDetail({
                   {showStyleMenu && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setShowStyleMenu(false)} />
-                      <div className="comic absolute left-0 top-full z-50 mt-1.5 w-48 overflow-hidden rounded-xl border border-border glass-strong py-1 shadow-lg">
+                      <div className="absolute left-0 top-full z-50 mt-1.5 w-[min(12rem,calc(100vw-2.5rem))] overflow-hidden rounded-xl border border-border bg-popover py-1 text-popover-foreground shadow-2xl max-sm:fixed max-sm:inset-x-4 max-sm:bottom-24 max-sm:top-auto max-sm:w-auto">
                         {FONT_STYLES.map((s) => {
                           const supported = supportsUnicodeStyle(fontFamily, s.value);
                           return (
