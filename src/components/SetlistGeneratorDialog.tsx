@@ -101,13 +101,13 @@ export function SetlistGeneratorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg min-w-0">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" /> Generar setlist
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div className="space-y-2">
             <p className="text-xs font-extrabold uppercase text-muted-foreground">
               Duración objetivo (hasta −5 min, nunca más)
@@ -177,26 +177,26 @@ export function SetlistGeneratorDialog({
                   {formatDuration(Math.abs(diff))}
                 </span>
               </div>
-              <ul className="max-h-72 space-y-1 overflow-y-auto">
+              <ul className="max-h-[45svh] min-w-0 space-y-1 overflow-y-auto">
                 {ids.map((id, i) => {
                   const a = byId.get(id);
                   return (
                     <li
                       key={id}
-                      className="comic-sm flex items-center gap-2 rounded-lg bg-card px-3 py-2"
+                      className="comic-sm flex min-w-0 items-center gap-1 rounded-lg bg-card px-2 py-2 sm:gap-2 sm:px-3"
                     >
-                      <span className="w-5 text-xs font-bold text-muted-foreground">{i + 1}</span>
-                      <span className="flex-1 truncate text-sm font-bold">{a?.title}</span>
-                      <span className="text-xs font-bold text-muted-foreground">
+                      <span className="w-5 shrink-0 text-xs font-bold text-muted-foreground">{i + 1}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-bold">{a?.title}</span>
+                      <span className="shrink-0 text-xs font-bold text-muted-foreground">
                         {formatDuration(a?.duration_seconds ?? 0)}
                       </span>
-                      <button onClick={() => swap(i)} aria-label="Cambiar tema" className="p-1.5">
+                      <button onClick={() => swap(i)} aria-label="Cambiar tema" className="shrink-0 p-1.5">
                         <Shuffle className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => setIds(ids.filter((x) => x !== id))}
                         aria-label="Quitar tema"
-                        className="p-1.5"
+                        className="shrink-0 p-1.5"
                       >
                         <X className="h-4 w-4" />
                       </button>
