@@ -169,6 +169,10 @@ export function normalize(value: string): string {
 }
 
 export type UnicodeStyle =
+  | "smallCaps"
+  | "superscript"
+  | "underline"
+  | "strike"
   | "bold"
   | "italic"
   | "boldItalic"
@@ -200,7 +204,23 @@ const LATIN_UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const LATIN_LOWER = "abcdefghijklmnopqrstuvwxyz";
 const LATIN_DIGITS = "0123456789";
 
+const COMBINING: Partial<Record<UnicodeStyle, string>> = {
+  underline: "\u0332",
+  strike: "\u0336",
+};
+
 const UNICODE_STYLES: Record<UnicodeStyle, UnicodeFont> = {
+  smallCaps: {
+    upper: LATIN_UPPER,
+    lower: "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ",
+  },
+  superscript: {
+    upper: "ᴬᴮᶜᴰᴱᶠᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾQᴿˢᵀᵁⱽᵂˣʸᶻ",
+    lower: "ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖqʳˢᵗᵘᵛʷˣʸᶻ",
+    digits: "⁰¹²³⁴⁵⁶⁷⁸⁹",
+  },
+  underline: { upper: LATIN_UPPER, lower: LATIN_LOWER },
+  strike: { upper: LATIN_UPPER, lower: LATIN_LOWER },
   bold: {
     upper: "𝐀𝐁𝐂𝐃𝐄𝐅𝐆𝐇𝐈𝐉𝐊𝐋𝐌𝐍𝐎𝐏𝐐𝐑𝐒𝐓𝐔𝐕𝐖𝐗𝐘𝐙",
     lower: "𝐚𝐛𝐜𝐝𝐞𝐟𝐠𝐡𝐢𝐣𝐤𝐥𝐦𝐧𝐨𝐩𝐪𝐫𝐬𝐭𝐮𝐯𝐰𝐱𝐲𝐳",
@@ -286,6 +306,12 @@ const UNICODE_STYLES: Record<UnicodeStyle, UnicodeFont> = {
 
 /** Convierte un texto a una tipografía Unicode (negrita, círculos, escritura a mano, etc.). */
 export function toUnicodeStyle(text: string, style: UnicodeStyle): string {
+  const mark = COMBINING[style];
+  if (mark) {
+    return Array.from(text)
+      .map((char) => (/\s/.test(char) ? char : char + mark))
+      .join("");
+  }
   const font = UNICODE_STYLES[style];
   const upper = Array.from(font.upper);
   const lower = Array.from(font.lower);
@@ -311,7 +337,7 @@ export function cleanUnicodeStyle(text: string): string {
     for (let i = 0; i < chars.length; i++) {
       const s = chars[i];
       const b = base[i];
-      if (s && b && s !== b) reverse.set(s, b);
+      if (s && b && s !== b && !reverse.has(s)) reverse.set(s, b);
     }
   };
   for (const font of Object.values(UNICODE_STYLES)) {
@@ -319,7 +345,7 @@ export function cleanUnicodeStyle(text: string): string {
     if (!font.upperForLower) add(font.lower, LATIN_LOWER);
     if (font.digits) add(font.digits, LATIN_DIGITS);
   }
-  return Array.from(text)
+  return Array.from(text.replace(/[\u0332\u0336]/g, ""))
     .map((char) => reverse.get(char) ?? char)
     .join("");
 }
@@ -339,7 +365,11 @@ export type UnicodeFontFamily =
   | "sansBold"
   | "sansBoldItalic"
   | "scriptBold"
-  | "fullwidth";
+  | "fullwidth"
+  | "smallCaps"
+  | "superscript"
+  | "underline"
+  | "strike";
 
 /** Estilo (peso/inclinación) aplicable a una familia. */
 export type UnicodeFontStyle = "normal" | "bold" | "italic" | "boldItalic";
@@ -351,7 +381,7 @@ const FAMILY_STYLE_COMPOSITION: Record<
   normal: { normal: null, bold: "bold", italic: "italic", boldItalic: "boldItalic" },
   sans: { normal: "sans", bold: "sansBold", italic: "sansItalic", boldItalic: "sansBoldItalic" },
   mono: { normal: "mono" },
-  script: { normal: "script" },
+  script: { normal: "script", bold: "scriptBold" },
   fraktur: { normal: "fraktur", bold: "frakturBold" },
   doubleStruck: { normal: "doubleStruck" },
   circled: { normal: "circled" },
@@ -362,6 +392,10 @@ const FAMILY_STYLE_COMPOSITION: Record<
   sansBoldItalic: { normal: "sansBoldItalic" },
   scriptBold: { normal: "scriptBold" },
   fullwidth: { normal: "fullwidth" },
+  smallCaps: { normal: "smallCaps" },
+  superscript: { normal: "superscript" },
+  underline: { normal: "underline" },
+  strike: { normal: "strike" },
 };
 
 /** Devuelve true si una familia soporta un estilo dado (ej. Círculos no tiene negrita). */
