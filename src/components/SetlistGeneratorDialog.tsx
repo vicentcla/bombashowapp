@@ -101,7 +101,7 @@ export function SetlistGeneratorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg grid-cols-[minmax(0,1fr)]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" /> Generar setlist
@@ -112,7 +112,7 @@ export function SetlistGeneratorDialog({
             <p className="text-xs font-extrabold uppercase text-muted-foreground">
               Duración objetivo (hasta −5 min, nunca más)
             </p>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
               {PRESETS.map((m) => (
                 <button
                   key={m}
@@ -186,17 +186,17 @@ export function SetlistGeneratorDialog({
                       className="comic-sm flex items-center gap-2 rounded-lg bg-card px-3 py-2"
                     >
                       <span className="w-5 text-xs font-bold text-muted-foreground">{i + 1}</span>
-                      <span className="flex-1 truncate text-sm font-bold">{a?.title}</span>
-                      <span className="text-xs font-bold text-muted-foreground">
+                      <span className="min-w-0 flex-1 truncate text-sm font-bold">{a?.title}</span>
+                      <span className="shrink-0 text-xs font-bold text-muted-foreground">
                         {formatDuration(a?.duration_seconds ?? 0)}
                       </span>
-                      <button onClick={() => swap(i)} aria-label="Cambiar tema" className="p-1.5">
+                      <button onClick={() => swap(i)} aria-label="Cambiar tema" className="shrink-0 p-1.5">
                         <Shuffle className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => setIds(ids.filter((x) => x !== id))}
                         aria-label="Quitar tema"
-                        className="p-1.5"
+                        className="shrink-0 p-1.5"
                       >
                         <X className="h-4 w-4" />
                       </button>

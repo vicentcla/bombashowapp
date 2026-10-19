@@ -99,11 +99,17 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
 
   const filtered = list_
     .map((f, i) => ({ f, i }))
-    .filter(({ f }) => !query || normalize(f.name).includes(normalize(query)));
+    .filter(({ f }) => {
+      const q = normalize(query.trim());
+      if (!q) return true;
+      const name = normalize(f.name.replace(/\.pdf$/i, ""));
+      const esc = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return new RegExp(`(^|[^a-z0-9])${esc}`).test(name);
+    });
 
   if (!open || !current) {
     return (
-      <div className="fixed inset-0 z-[60] flex flex-col bg-background p-2 sm:p-4">
+      <div className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-background px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-[max(env(safe-area-inset-top),0.5rem)] sm:px-4">
         <div className="flex items-center gap-2 border-b border-border px-2 py-2">
           <button
             onClick={onClose}
@@ -134,7 +140,7 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar partitura…"
-                className="w-full bg-transparent text-base font-bold outline-none"
+                className="min-w-0 w-full bg-transparent text-base font-bold outline-none"
               />
               {query && (
                 <button onClick={() => setQuery("")} aria-label="Borrar búsqueda">
@@ -166,9 +172,9 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
               Ninguna partitura coincide con «{query}».
             </p>
           ) : (
-            <ul className="grid gap-2 sm:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {filtered.map(({ f, i }) => (
-                <li key={f.id}>
+                <li key={f.id} className="min-w-0">
                   <button
                     onClick={() => {
                       setIndex(i);
@@ -193,7 +199,7 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   }
 
   return (
-    <div ref={ref} className="fixed inset-0 z-[60] flex flex-col bg-background">
+    <div ref={ref} className="fixed inset-0 z-[60] flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {!full && (
         <div className="flex items-center gap-2 border-b border-border px-2 py-2">
           <button
@@ -224,8 +230,7 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
           src={`https://drive.google.com/file/d/${current.id}/preview`}
           title={current.name}
           allow="fullscreen"
-          className="absolute left-0 w-full"
-          style={{ top: -56, height: "calc(100% + 56px)" }}
+          className="absolute inset-0 h-full w-full"
         />
         {full && (
           <>
