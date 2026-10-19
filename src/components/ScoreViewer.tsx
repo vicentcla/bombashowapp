@@ -97,9 +97,17 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
     haptic("selection");
   };
 
+  const needle = normalize(query.trim()).replace(/\s+/g, " ");
   const filtered = list_
     .map((f, i) => ({ f, i }))
-    .filter(({ f }) => !query || normalize(f.name).includes(normalize(query)));
+    .filter(
+      ({ f }) =>
+        !needle ||
+        normalize(f.name.replace(/\.pdf$/i, ""))
+          .replace(/[_\-.]+/g, " ")
+          .replace(/\s+/g, " ")
+          .includes(needle),
+    );
 
   if (!open || !current) {
     return (
