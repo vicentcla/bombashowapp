@@ -3,7 +3,7 @@ import { Minus, Plus, Play, Square } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const NOTES = ["Do", "Do♯", "Re", "Mi♭", "Mi", "Fa", "Fa♯", "Sol", "La♭", "La", "Si♭", "Si"];
-const METERS = ["2/4", "3/4", "4/4", "3/8", "6/8", "9/8", "12/8"] as const;
+const METERS = ["1", "2/4", "3/4", "4/4", "3/8", "6/8", "9/8", "12/8"] as const;
 
 function detectPitch(buf: Float32Array, rate: number) {
   let rms = 0;
@@ -158,7 +158,7 @@ function Metronome() {
         const [num, den] = state.current.meter.split("/").map(Number) as [number, number];
         const pos = i % num;
         const strong = pos === 0;
-        const mid = den === 8 && pos % 3 === 0;
+        const mid = num > 1 && den === 8 && pos % 3 === 0;
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
         osc.frequency.value = strong ? 1600 : mid ? 1200 : 900;
