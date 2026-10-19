@@ -111,10 +111,6 @@ const FONT_FAMILIES: { value: UnicodeFontFamily; name: string }[] = [
   { value: "squared", name: "Cuadrados" },
   { value: "squaredNegative", name: "Cuadrados negros" },
   { value: "parenthesized", name: "Paréntesis" },
-  { value: "smallCaps", name: "Versalitas" },
-  { value: "superscript", name: "Superíndice" },
-  { value: "underline", name: "Subrayado" },
-  { value: "strike", name: "Tachado" },
 ];
 
 const FONT_STYLES: { value: UnicodeFontStyle; name: string }[] = [
