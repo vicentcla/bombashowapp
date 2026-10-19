@@ -97,21 +97,13 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
     haptic("selection");
   };
 
-  const needle = normalize(query.trim()).replace(/\s+/g, " ");
   const filtered = list_
     .map((f, i) => ({ f, i }))
-    .filter(
-      ({ f }) =>
-        !needle ||
-        normalize(f.name.replace(/\.pdf$/i, ""))
-          .replace(/[_\-.]+/g, " ")
-          .replace(/\s+/g, " ")
-          .includes(needle),
-    );
+    .filter(({ f }) => !query || normalize(f.name).includes(normalize(query)));
 
   if (!open || !current) {
     return (
-      <div className="fixed inset-0 z-[60] flex flex-col bg-background px-2 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-4 sm:pb-4">
+      <div className="fixed inset-0 z-[60] flex flex-col bg-background p-2 sm:p-4">
         <div className="flex items-center gap-2 border-b border-border px-2 py-2">
           <button
             onClick={onClose}
@@ -174,7 +166,7 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
               Ninguna partitura coincide con «{query}».
             </p>
           ) : (
-            <ul className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+            <ul className="grid gap-2 sm:grid-cols-2">
               {filtered.map(({ f, i }) => (
                 <li key={f.id}>
                   <button
@@ -201,7 +193,7 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   }
 
   return (
-    <div ref={ref} className={`fixed inset-0 z-[60] flex flex-col bg-background ${full ? "" : "pt-[env(safe-area-inset-top)]"}`}>
+    <div ref={ref} className="fixed inset-0 z-[60] flex flex-col bg-background">
       {!full && (
         <div className="flex items-center gap-2 border-b border-border px-2 py-2">
           <button
@@ -232,7 +224,8 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
           src={`https://drive.google.com/file/d/${current.id}/preview`}
           title={current.name}
           allow="fullscreen"
-          className="absolute inset-0 h-full w-full"
+          className="absolute left-0 w-full"
+          style={{ top: -56, height: "calc(100% + 56px)" }}
         />
         {full && (
           <>

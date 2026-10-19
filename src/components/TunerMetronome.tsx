@@ -3,7 +3,7 @@ import { Minus, Plus, Play, Square } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const NOTES = ["Do", "Do♯", "Re", "Mi♭", "Mi", "Fa", "Fa♯", "Sol", "La♭", "La", "Si♭", "Si"];
-const METERS = ["1", "2/4", "3/4", "4/4", "3/8", "6/8", "9/8", "12/8"] as const;
+const METERS = ["2/4", "3/4", "4/4", "3/8", "6/8", "9/8", "12/8"] as const;
 
 function detectPitch(buf: Float32Array, rate: number) {
   let rms = 0;
@@ -155,9 +155,9 @@ function Metronome() {
     let i = 0;
     const timer = window.setInterval(() => {
       while (next < ctx.currentTime + 0.12) {
-        const [num, den = 4] = state.current.meter.split("/").map(Number) as [number, number?];
+        const [num, den] = state.current.meter.split("/").map(Number) as [number, number];
         const pos = i % num;
-        const strong = num > 1 && pos === 0;
+        const strong = pos === 0;
         const mid = den === 8 && pos % 3 === 0;
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
@@ -199,7 +199,7 @@ function Metronome() {
   }
 
   const num = Number(meter.split("/")[0]);
-  const den = Number(meter.split("/")[1] ?? 4);
+  const den = Number(meter.split("/")[1]);
 
   return (
     <div className="space-y-4 text-center">
@@ -212,7 +212,7 @@ function Metronome() {
               key={k}
               className={`h-4 w-4 rounded-full transition-colors ${
                 beat === k
-                  ? k === 0 && num > 1
+                  ? k === 0
                     ? "bg-primary"
                     : "bg-foreground"
                   : den === 8 && k % 3 === 0
@@ -250,7 +250,7 @@ function Metronome() {
             onClick={() => setMeter(m)}
             className={`comic-sm comic-press rounded-lg px-3 py-2 text-sm font-extrabold ${meter === m ? "bg-primary text-primary-foreground" : "bg-card"}`}
           >
-            {m === "1" ? "1 (sin compás)" : m}
+            {m}
           </button>
         ))}
       </div>
