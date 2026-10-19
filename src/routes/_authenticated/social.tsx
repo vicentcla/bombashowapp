@@ -1240,7 +1240,7 @@ function SocialDetail({
                             <span className="min-w-0 flex-1 truncate text-[10px] font-extrabold uppercase text-muted-foreground">
                               {f.name}
                             </span>
-                            <span className="min-w-0 flex-1 truncate text-base leading-tight">
+                            <span className="shrink-0 text-base leading-tight">
                               {familySample(f.value)}
                             </span>
                             {f.value === fontFamily && (
@@ -1272,7 +1272,7 @@ function SocialDetail({
                   {showStyleMenu && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setShowStyleMenu(false)} />
-                      <div className="comic absolute left-0 top-full z-50 mt-1.5 w-48 overflow-hidden rounded-xl border border-border glass-strong py-1 shadow-lg">
+                      <div className="absolute left-0 top-full z-50 mt-1.5 w-[min(12rem,calc(100vw-2.5rem))] overflow-hidden rounded-xl border border-border bg-popover py-1 text-popover-foreground shadow-2xl max-sm:fixed max-sm:inset-x-4 max-sm:bottom-24 max-sm:top-auto max-sm:w-auto">
                         {FONT_STYLES.map((s) => {
                           const supported = supportsUnicodeStyle(fontFamily, s.value);
                           return (
