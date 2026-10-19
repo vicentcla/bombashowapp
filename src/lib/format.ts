@@ -169,6 +169,10 @@ export function normalize(value: string): string {
 }
 
 export type UnicodeStyle =
+  | "smallCaps"
+  | "superscript"
+  | "underline"
+  | "strike"
   | "bold"
   | "italic"
   | "boldItalic"
@@ -200,7 +204,23 @@ const LATIN_UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const LATIN_LOWER = "abcdefghijklmnopqrstuvwxyz";
 const LATIN_DIGITS = "0123456789";
 
+const COMBINING: Partial<Record<UnicodeStyle, string>> = {
+  underline: "\u0332",
+  strike: "\u0336",
+};
+
 const UNICODE_STYLES: Record<UnicodeStyle, UnicodeFont> = {
+  smallCaps: {
+    upper: LATIN_UPPER,
+    lower: "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ",
+  },
+  superscript: {
+    upper: "ᴬᴮᶜᴰᴱᶠᴳᴴᴵᴶᴷᴸᴹᴺᴼᴾQᴿˢᵀᵁⱽᵂˣʸᶻ",
+    lower: "ᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐⁿᵒᵖqʳˢᵗᵘᵛʷˣʸᶻ",
+    digits: "⁰¹²³⁴⁵⁶⁷⁸⁹",
+  },
+  underline: { upper: LATIN_UPPER, lower: LATIN_LOWER },
+  strike: { upper: LATIN_UPPER, lower: LATIN_LOWER },
   bold: {
     upper: "𝐀𝐁𝐂𝐃𝐄𝐅𝐆𝐇𝐈𝐉𝐊𝐋𝐌𝐍𝐎𝐏𝐐𝐑𝐒𝐓𝐔𝐕𝐖𝐗𝐘𝐙",
     lower: "𝐚𝐛𝐜𝐝𝐞𝐟𝐠𝐡𝐢𝐣𝐤𝐥𝐦𝐧𝐨𝐩𝐪𝐫𝐬𝐭𝐮𝐯𝐰𝐱𝐲𝐳",
