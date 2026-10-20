@@ -199,7 +199,10 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   }
 
   return (
-    <div ref={ref} className="fixed inset-0 z-[60] flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <div
+      ref={ref}
+      className="fixed inset-0 z-[60] flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+    >
       {!full && (
         <div className="flex items-center gap-2 border-b border-border px-2 py-2">
           <button

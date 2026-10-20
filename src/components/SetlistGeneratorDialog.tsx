@@ -190,7 +190,11 @@ export function SetlistGeneratorDialog({
                       <span className="shrink-0 text-xs font-bold text-muted-foreground">
                         {formatDuration(a?.duration_seconds ?? 0)}
                       </span>
-                      <button onClick={() => swap(i)} aria-label="Cambiar tema" className="shrink-0 p-1.5">
+                      <button
+                        onClick={() => swap(i)}
+                        aria-label="Cambiar tema"
+                        className="shrink-0 p-1.5"
+                      >
                         <Shuffle className="h-4 w-4" />
                       </button>
                       <button
