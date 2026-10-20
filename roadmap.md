@@ -1,4 +1,4 @@
-- [ ] Metrónomo: compás "1"
-- [ ] Generador setlist: ventana ajustada en móvil
-- [ ] Visor PDF: no cortar parte superior
-- [ ] Carpeta Drive: ajustar pantalla y buscador exacto
+- [x] Metrónomo: compás "1"
+- [x] Generador setlist: ventana ajustada en móvil
+- [x] Visor PDF: no cortar parte superior
+- [x] Carpeta Drive: ajustar pantalla y buscador exacto
