@@ -39,7 +39,11 @@ export function ZoomLayer({ children }: { children: ReactNode }) {
     };
     const twoInfo = () => {
       const [a, b] = [...pts.values()];
-      return { d: Math.hypot(a!.x - b!.x, a!.y - b!.y), cx: (a!.x + b!.x) / 2, cy: (a!.y + b!.y) / 2 };
+      return {
+        d: Math.hypot(a!.x - b!.x, a!.y - b!.y),
+        cx: (a!.x + b!.x) / 2,
+        cy: (a!.y + b!.y) / 2,
+      };
     };
 
     const down = (e: PointerEvent) => {
