@@ -16,7 +16,7 @@ import { GoogleDriveIcon } from "@/components/BrandIcons";
 import { listDriveFiles } from "@/lib/drive.functions";
 import { driveUrl } from "@/lib/drive";
 import { haptic } from "@/lib/haptics";
-import { ZoomLayer } from "@/components/ZoomLayer";
+import { NativeScore } from "@/components/NativeScore";
 import type { DriveFolder } from "@/lib/queries";
 
 type WakeLockLike = { release: () => Promise<void> };
@@ -228,14 +228,7 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
         </div>
       )}
       <div className="relative flex-1 overflow-hidden">
-        <ZoomLayer key={current.id}>
-          <iframe
-            src={`https://drive.google.com/file/d/${current.id}/preview`}
-            title={current.name}
-            allow="fullscreen"
-            className="pointer-events-none absolute inset-0 h-full w-full"
-          />
-        </ZoomLayer>
+        <NativeScore key={current.id} fileId={current.id} name={current.name} />
         {full && (
           <>
             <button

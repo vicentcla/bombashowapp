@@ -91,3 +91,51 @@ export const listDriveFiles = createServerFn({ method: "POST" })
       .filter((f) => f.mimeType === "application/pdf" || f.mimeType.startsWith("image/"));
     return files.length ? { status: "ok", files } : { status: "empty", files };
   });
+
+export type DriveFileResult =
+  | { status: "ok"; mimeType: string; base64: string }
+  | { status: "error"; message: string };
+
+export const getDriveFile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { fileId: string }) => {
+    if (!/^[\w-]{10,}$/.test(d.fileId)) throw new Error("Archivo no válido");
+    return d;
+  })
+  .handler(async ({ data }): Promise<DriveFileResult> => {
+    const googleKey = readEnv("GOOGLE_API_KEY");
+    const lovable = readEnv("LOVABLE_API_KEY");
+    const key = readEnv("GOOGLE_DRIVE_API_KEY");
+    const path = `files/${data.fileId}?alt=media&supportsAllDrives=true`;
+    let res: Response;
+    if (googleKey) {
+      res = await fetch(
+        `https://www.googleapis.com/drive/v3/${path}&key=${encodeURIComponent(googleKey)}`,
+      );
+    } else if (lovable && key) {
+      res = await fetch(`https://connector-gateway.lovable.dev/google_drive/drive/v3/${path}`, {
+        headers: { Authorization: `Bearer ${lovable}`, "X-Connection-Api-Key": key },
+      });
+    } else {
+      return { status: "error", message: "Falta la clave de Google Drive en el servidor" };
+    }
+    if (!res.ok) {
+      let msg = "";
+      try {
+        msg = ((await res.json()) as { error?: { message?: string } }).error?.message ?? "";
+      } catch {
+        /* empty */
+      }
+      return { status: "error", message: `Google Drive (HTTP ${res.status}): ${sanitize(msg)}` };
+    }
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    }
+    return {
+      status: "ok",
+      mimeType: res.headers.get("content-type") ?? "application/pdf",
+      base64: btoa(bin),
+    };
+  });
