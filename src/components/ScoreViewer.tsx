@@ -101,11 +101,10 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   const filtered = list_
     .map((f, i) => ({ f, i }))
     .filter(({ f }) => {
-      const q = normalize(query.trim());
+      const q = normalize(query.trim()).replace(/\s+/g, " ");
       if (!q) return true;
-      const name = normalize(f.name.replace(/\.pdf$/i, ""));
-      const esc = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      return new RegExp(`(^|[^a-z0-9])${esc}`).test(name);
+      const name = normalize(f.name.replace(/\.pdf$/i, "")).replace(/[\s_]+/g, " ");
+      return name.includes(q);
     });
 
   if (!open || !current) {
