@@ -2,3 +2,4 @@
 - [x] Generador setlist: ventana ajustada en móvil
 - [x] Visor PDF: no cortar parte superior
 - [x] Carpeta Drive: ajustar pantalla y buscador exacto
+- [x] Zoom con pellizco y doble toque en visor de partituras (iPhone y Android)
