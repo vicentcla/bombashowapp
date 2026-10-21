@@ -270,7 +270,11 @@ export function NativeScore({ fileId, name }: { fileId: string; name: string }) 
       className="absolute inset-0 overflow-auto overscroll-contain bg-muted/40"
       style={{ WebkitOverflowScrolling: "touch" }}
     >
-      <div ref={inner} className="flex flex-col items-start gap-2 py-2" style={{ width: pageW || "100%" }}>
+      <div
+        ref={inner}
+        className="flex flex-col items-start gap-2 py-2"
+        style={{ width: pageW || "100%" }}
+      >
         {imgUrl && <img src={imgUrl} alt={name} style={{ width: pageW }} className="block" />}
         {doc &&
           sizes.map((sz, i) => (
