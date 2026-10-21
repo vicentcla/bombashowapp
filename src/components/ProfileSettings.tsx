@@ -186,6 +186,12 @@ export function ProfileSettings() {
 
   return (
     <form onSubmit={handleSaveProfile} className="space-y-4">
+      <div className="comic rounded-xl bg-card p-5 space-y-3">
+        <h2 className="text-xl font-bold uppercase text-muted-foreground border-b pb-2">
+          Instalar la app
+        </h2>
+        <InstallButton className="w-full" />
+      </div>
       <div className="comic rounded-xl bg-card p-5 space-y-4">
         <h2 className="text-xl font-bold uppercase text-muted-foreground border-b pb-2">
           Información de la Cuenta
