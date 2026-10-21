@@ -93,8 +93,7 @@ export const listDriveFiles = createServerFn({ method: "POST" })
   });
 
 export type DriveFileResult =
-  | { status: "ok"; mimeType: string; base64: string }
-  | { status: "error"; message: string };
+  { status: "ok"; mimeType: string; base64: string } | { status: "error"; message: string };
 
 export const getDriveFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
