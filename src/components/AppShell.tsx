@@ -11,6 +11,7 @@ import { DESKTOP_NAV, orderNav, type NavTo } from "@/lib/nav";
 import { useGlobalRealtime } from "@/hooks/useGlobalRealtime";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { TunerMetronome } from "@/components/TunerMetronome";
+import { InstallInvite } from "@/components/InstallApp";
 
 const LOGO_SRC = "/logo-titulo-2.png";
 
@@ -123,6 +124,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
       </header>
+      <InstallInvite />
 
       {/* Contenido principal */}
       <PullToRefresh>

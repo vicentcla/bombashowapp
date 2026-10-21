@@ -115,8 +115,8 @@ function Guide({ platform, onClose }: { platform: Platform; onClose: () => void 
           pantalla).
         </Step>
         <Step n={3}>
-          Baja y toca <b>«Añadir a pantalla de inicio»</b>{" "}
-          <PlusSquare className="inline h-4 w-4" />.
+          Baja y toca <b>«Añadir a pantalla de inicio»</b> <PlusSquare className="inline h-4 w-4" />
+          .
         </Step>
         <Step n={4}>
           Pulsa <b>«Añadir»</b>. Abre La Bomba desde su icono.
