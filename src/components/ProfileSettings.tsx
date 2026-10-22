@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { User, Shield, Clock, KeyRound, Mail, Save, Star, Gem } from "lucide-react";
 import { SousaphoneIcon } from "@/components/InstrumentIcons";
+import { InstallButton } from "@/components/InstallApp";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useRole, type AppRole } from "@/hooks/useAuth";
 import { useRoleRequests, useInvalidate } from "@/lib/queries";
