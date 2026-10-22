@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  AlertTriangle,
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
@@ -17,7 +18,11 @@ import { listDriveFiles } from "@/lib/drive.functions";
 import { driveUrl } from "@/lib/drive";
 import { haptic } from "@/lib/haptics";
 import { NativeScore } from "@/components/NativeScore";
-import type { DriveFolder } from "@/lib/queries";
+import { useSetlists, useSetlistItems, type DriveFolder } from "@/lib/queries";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { matchScores, passRanks } from "@/lib/scoreMatch";
 
 type WakeLockLike = { release: () => Promise<void> };
 
@@ -29,6 +34,21 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
     staleTime: 10 * 60 * 1000,
   });
   const [index, setIndex] = useState(0);
+  const [setlistId, setSetlistId] = useState("");
+  const qc = useQueryClient();
+  const setlists = useSetlists();
+  const setlistItems = useSetlistItems(setlistId || null);
+  const links = useQuery({
+    queryKey: ["score_links", folder.folder_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("score_links")
+        .select("arrangement_id, file_id")
+        .eq("folder_id", folder.folder_id);
+      if (error) throw error;
+      return data;
+    },
+  });
   const [query, setQuery] = useState("");
   const [full, setFull] = useState(false);
   const [open, setOpen] = useState(false);
@@ -74,7 +94,37 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   }
 
   const list_ = files.data?.files ?? [];
-  const current = list_[index];
+  const items = setlistItems.data ?? [];
+  const ranks = passRanks(setlists.data?.find((s) => s.id === setlistId)?.notes ?? null);
+  const entries = setlistId
+    ? matchScores(
+        items.map((it) => ({
+          id: it.id,
+          position: it.position,
+          arrangement_id: it.arrangement_id,
+          title: it.arrangements?.title ?? it.manual_title ?? "",
+          pass_rank: ranks[it.id] ?? 0,
+        })),
+        list_,
+        links.data ?? [],
+      )
+    : [];
+  const seq = entries.flatMap((e) => (e.state === "ok" ? [{ e, f: e.file }] : []));
+  const viewList = setlistId ? seq.map((s) => s.f) : list_;
+  const current = viewList[index];
+  async function saveLink(arrangementId: string, fileId: string) {
+    const { error } = await supabase
+      .from("score_links")
+      .upsert(
+        { folder_id: folder.folder_id, arrangement_id: arrangementId, file_id: fileId },
+        { onConflict: "folder_id,arrangement_id" },
+      );
+    if (error) toast.error("No se pudo guardar la asociación");
+    else {
+      toast.success("Partitura asociada");
+      void qc.invalidateQueries({ queryKey: ["score_links", folder.folder_id] });
+    }
+  }
   function errorText() {
     if (files.error) {
       const msg = files.error instanceof Error ? files.error.message : String(files.error);
@@ -93,8 +143,8 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
     return "No se han podido cargar las partituras de esta carpeta.";
   }
   const go = (d: number) => {
-    if (!list_.length) return;
-    setIndex((i) => (i + d + list_.length) % list_.length);
+    if (!viewList.length) return;
+    setIndex((i) => (i + d + viewList.length) % viewList.length);
     haptic("selection");
   };
 
@@ -133,8 +183,26 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
           </a>
         </div>
         {list_.length > 0 && (
-          <div className="px-2 pt-2">
-            <label className="comic-sm flex items-center gap-2 rounded-lg bg-card px-3 py-2.5">
+          <div className="space-y-2 px-2 pt-2">
+            <select
+              value={setlistId}
+              onChange={(e) => {
+                setSetlistId(e.target.value);
+                setIndex(0);
+              }}
+              aria-label="Filtrar por setlist"
+              className="comic-sm w-full rounded-lg bg-card px-3 py-2.5 text-base font-bold"
+            >
+              <option value="">Todas las partituras</option>
+              {(setlists.data ?? []).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <label
+              className={`comic-sm flex items-center gap-2 rounded-lg bg-card px-3 py-2.5 ${setlistId ? "hidden" : ""}`}
+            >
               <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
               <input
                 value={query}
@@ -167,6 +235,96 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
                 Abrir en Drive
               </a>
             </div>
+          ) : setlistId ? (
+            setlistItems.isLoading ? (
+              <p className="p-6 text-center text-sm font-bold text-muted-foreground">
+                Cargando setlist…
+              </p>
+            ) : entries.length === 0 ? (
+              <p className="p-6 text-center text-sm font-bold text-muted-foreground">
+                Este setlist no tiene canciones.
+              </p>
+            ) : (
+              <ol className="space-y-2">
+                {entries.map((e, n) => {
+                  const pos = n + 1;
+                  const title = e.item.title || "Sin título";
+                  if (e.state === "ok") {
+                    const si = seq.findIndex((s) => s.e === e);
+                    return (
+                      <li key={e.item.id}>
+                        <button
+                          onClick={() => {
+                            setIndex(si);
+                            setOpen(true);
+                            haptic("selection");
+                          }}
+                          className="comic-sm comic-press flex w-full items-center gap-3 rounded-lg bg-card px-3 py-3 text-left"
+                        >
+                          <span className="w-6 shrink-0 text-center text-xs font-extrabold text-muted-foreground">
+                            {pos}
+                          </span>
+                          <FileMusic className="h-5 w-5 shrink-0 text-primary" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-extrabold">{title}</span>
+                            <span className="block truncate text-[11px] font-bold text-muted-foreground">
+                              {e.file.name}
+                            </span>
+                          </span>
+                          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        </button>
+                      </li>
+                    );
+                  }
+                  return (
+                    <li
+                      key={e.item.id}
+                      className="flex items-start gap-3 rounded-lg border-2 border-dashed border-destructive/60 px-3 py-3"
+                    >
+                      <span className="w-6 shrink-0 text-center text-xs font-extrabold text-muted-foreground">
+                        {pos}
+                      </span>
+                      <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-extrabold">{title}</p>
+                        {e.state === "missing" ? (
+                          <p className="text-xs font-bold text-destructive">
+                            Falta la partitura en esta carpeta.
+                          </p>
+                        ) : (
+                          <>
+                            <p className="text-xs font-bold text-destructive">
+                              Hay {e.candidates.length} PDF posibles. Elige cuál es:
+                            </p>
+                            {e.item.arrangement_id ? (
+                              <select
+                                defaultValue=""
+                                onChange={(ev) =>
+                                  ev.target.value &&
+                                  void saveLink(e.item.arrangement_id!, ev.target.value)
+                                }
+                                className="mt-1 w-full rounded-md border border-border bg-background px-2 py-2 text-sm font-bold"
+                              >
+                                <option value="">Elegir partitura…</option>
+                                {e.candidates.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.name}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <p className="text-[11px] font-bold text-muted-foreground">
+                                {e.candidates.map((c) => c.name).join(" · ")}
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            )
           ) : filtered.length === 0 ? (
             <p className="p-6 text-center text-sm font-bold text-muted-foreground">
               Ninguna partitura coincide con «{query}».
@@ -216,7 +374,7 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
             {current.name.replace(/\.pdf$/i, "")}
           </p>
           <span className="text-xs font-bold text-muted-foreground">
-            {index + 1}/{list_.length}
+            {index + 1}/{viewList.length}
           </span>
           <button
             onClick={toggleFull}
@@ -239,11 +397,11 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
               <Minimize className="h-4 w-4" />
             </button>
             <span className="pointer-events-none absolute left-2 top-2 max-w-[70%] truncate rounded-full bg-card/60 px-3 py-1 text-[11px] font-bold backdrop-blur">
-              {index + 1}/{list_.length} · {current.name.replace(/\.pdf$/i, "")}
+              {index + 1}/{viewList.length} · {current.name.replace(/\.pdf$/i, "")}
             </span>
           </>
         )}
-        {list_.length > 1 && (
+        {viewList.length > 1 && (
           <>
             <button
               onClick={() => go(-1)}
