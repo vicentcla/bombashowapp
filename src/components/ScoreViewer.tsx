@@ -17,7 +17,11 @@ import { listDriveFiles } from "@/lib/drive.functions";
 import { driveUrl } from "@/lib/drive";
 import { haptic } from "@/lib/haptics";
 import { NativeScore } from "@/components/NativeScore";
-import type { DriveFolder } from "@/lib/queries";
+import { useSetlists, useSetlistItems, type DriveFolder } from "@/lib/queries";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { matchScores, passRanks } from "@/lib/scoreMatch";
 
 type WakeLockLike = { release: () => Promise<void> };
 
@@ -29,6 +33,21 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
     staleTime: 10 * 60 * 1000,
   });
   const [index, setIndex] = useState(0);
+  const [setlistId, setSetlistId] = useState("");
+  const qc = useQueryClient();
+  const setlists = useSetlists();
+  const setlistItems = useSetlistItems(setlistId || null);
+  const links = useQuery({
+    queryKey: ["score_links", folder.folder_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("score_links")
+        .select("arrangement_id, file_id")
+        .eq("folder_id", folder.folder_id);
+      if (error) throw error;
+      return data;
+    },
+  });
   const [query, setQuery] = useState("");
   const [full, setFull] = useState(false);
   const [open, setOpen] = useState(false);
@@ -74,7 +93,37 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   }
 
   const list_ = files.data?.files ?? [];
-  const current = list_[index];
+  const items = setlistItems.data ?? [];
+  const ranks = passRanks(setlists.data?.find((s) => s.id === setlistId)?.notes ?? null);
+  const entries = setlistId
+    ? matchScores(
+        items.map((it) => ({
+          id: it.id,
+          position: it.position,
+          arrangement_id: it.arrangement_id,
+          title: it.arrangements?.title ?? it.manual_title ?? "",
+          pass_rank: ranks[it.id] ?? 0,
+        })),
+        list_,
+        links.data ?? [],
+      )
+    : [];
+  const seq = entries.flatMap((e) => (e.state === "ok" ? [{ e, f: e.file }] : []));
+  const viewList = setlistId ? seq.map((s) => s.f) : list_;
+  const current = viewList[index];
+  async function saveLink(arrangementId: string, fileId: string) {
+    const { error } = await supabase
+      .from("score_links")
+      .upsert(
+        { folder_id: folder.folder_id, arrangement_id: arrangementId, file_id: fileId },
+        { onConflict: "folder_id,arrangement_id" },
+      );
+    if (error) toast.error("No se pudo guardar la asociación");
+    else {
+      toast.success("Partitura asociada");
+      void qc.invalidateQueries({ queryKey: ["score_links", folder.folder_id] });
+    }
+  }
   function errorText() {
     if (files.error) {
       const msg = files.error instanceof Error ? files.error.message : String(files.error);
@@ -93,8 +142,8 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
     return "No se han podido cargar las partituras de esta carpeta.";
   }
   const go = (d: number) => {
-    if (!list_.length) return;
-    setIndex((i) => (i + d + list_.length) % list_.length);
+    if (!viewList.length) return;
+    setIndex((i) => (i + d + viewList.length) % viewList.length);
     haptic("selection");
   };
 
