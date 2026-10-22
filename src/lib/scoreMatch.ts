@@ -56,7 +56,9 @@ export function matchScores(
     const t = clean(item.title);
     if (!t) return { item, state: "missing" };
     const exact = files.filter((f) => clean(f.name) === t);
-    const cands = exact.length ? exact : files.filter((f) => ` ${clean(f.name)} `.includes(` ${t} `));
+    const cands = exact.length
+      ? exact
+      : files.filter((f) => ` ${clean(f.name)} `.includes(` ${t} `));
     if (cands.length === 1) return { item, state: "ok", file: cands[0]!, linked: false };
     if (cands.length === 0) return { item, state: "missing" };
     return { item, state: "ambiguous", candidates: cands };

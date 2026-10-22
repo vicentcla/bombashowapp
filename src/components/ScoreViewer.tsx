@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  AlertTriangle,
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
@@ -373,7 +374,7 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
             {current.name.replace(/\.pdf$/i, "")}
           </p>
           <span className="text-xs font-bold text-muted-foreground">
-            {index + 1}/{list_.length}
+            {index + 1}/{viewList.length}
           </span>
           <button
             onClick={toggleFull}
@@ -396,11 +397,11 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
               <Minimize className="h-4 w-4" />
             </button>
             <span className="pointer-events-none absolute left-2 top-2 max-w-[70%] truncate rounded-full bg-card/60 px-3 py-1 text-[11px] font-bold backdrop-blur">
-              {index + 1}/{list_.length} · {current.name.replace(/\.pdf$/i, "")}
+              {index + 1}/{viewList.length} · {current.name.replace(/\.pdf$/i, "")}
             </span>
           </>
         )}
-        {list_.length > 1 && (
+        {viewList.length > 1 && (
           <>
             <button
               onClick={() => go(-1)}

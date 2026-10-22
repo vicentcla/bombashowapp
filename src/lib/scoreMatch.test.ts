@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { matchScores, type MatchItem } from "./scoreMatch";
 
-const it_ = (id: string, title: string, position: number, arr: string | null = null, pass_rank = 0): MatchItem => ({
+const it_ = (
+  id: string,
+  title: string,
+  position: number,
+  arr: string | null = null,
+  pass_rank = 0,
+): MatchItem => ({
   id,
   title,
   position,
@@ -34,7 +40,9 @@ describe("matchScores", () => {
     expect(r[0]!.state).toBe("ambiguous");
   });
   it("usa la asociación guardada", () => {
-    const r = matchScores([it_("a", "Paquito", 1, "x")], files, [{ arrangement_id: "x", file_id: "f4" }]);
+    const r = matchScores([it_("a", "Paquito", 1, "x")], files, [
+      { arrangement_id: "x", file_id: "f4" },
+    ]);
     expect(r[0]!.state === "ok" && r[0]!.file.id).toBe("f4");
   });
   it("ordena por pase antes que por posición", () => {
