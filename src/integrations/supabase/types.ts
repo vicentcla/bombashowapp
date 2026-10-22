@@ -417,6 +417,41 @@ export type Database = {
         }
         Relationships: []
       }
+      score_links: {
+        Row: {
+          arrangement_id: string
+          created_at: string
+          created_by: string | null
+          file_id: string
+          folder_id: string
+          id: string
+        }
+        Insert: {
+          arrangement_id: string
+          created_at?: string
+          created_by?: string | null
+          file_id: string
+          folder_id: string
+          id?: string
+        }
+        Update: {
+          arrangement_id?: string
+          created_at?: string
+          created_by?: string | null
+          file_id?: string
+          folder_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_links_arrangement_id_fkey"
+            columns: ["arrangement_id"]
+            isOneToOne: false
+            referencedRelation: "arrangements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       setlist_items: {
         Row: {
           arrangement_id: string | null
