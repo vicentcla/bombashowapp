@@ -363,6 +363,44 @@ export type Database = {
         }
         Relationships: []
       }
+      reportes_problemas: {
+        Row: {
+          creado_en: string
+          diagnostico: Json
+          estado: string
+          huella: string
+          id: string
+          resumen: string
+          usuario_id: string
+        }
+        Insert: {
+          creado_en?: string
+          diagnostico: Json
+          estado?: string
+          huella: string
+          id: string
+          resumen: string
+          usuario_id: string
+        }
+        Update: {
+          creado_en?: string
+          diagnostico?: Json
+          estado?: string
+          huella?: string
+          id?: string
+          resumen?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reportes_problemas_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reset_periods: {
         Row: {
           ended_at: string | null
@@ -681,7 +719,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      enviar_reporte_problema: {
+        Args: { datos: Json; reporte_id: string }
+        Returns: string
+      }
       get_profile_email: { Args: { _user_id: string }; Returns: string }
+      sanear_texto_reporte: {
+        Args: { limite?: number; valor: string }
+        Returns: string
+      }
       sanitize_lyrics_html: { Args: { _html: string }; Returns: string }
     }
     Enums: {
