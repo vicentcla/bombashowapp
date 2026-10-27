@@ -474,7 +474,10 @@ export function AdminManagement() {
             </span>
           )}
         </button>
+        <Button type="button" variant={adminSubTab === "reportes" ? "secondary" : "ghost"} className="h-auto min-w-fit py-2.5" onClick={() => setAdminSubTab("reportes")}><Bug />Problemas reportados</Button>
       </div>
+
+      {adminSubTab === "reportes" && <ProblemReportsAdmin />}
 
       {/* Sub-pestaña: Usuarios */}
       {adminSubTab === "usuarios" && (

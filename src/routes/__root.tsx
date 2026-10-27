@@ -14,6 +14,10 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ThemeProvider, themeInitScript } from "../lib/theme";
 import { Toaster } from "@/components/ui/sonner";
+import { ReportProblem } from "@/components/ReportProblem";
+import { ReportDiagnosticsMonitor } from "@/components/ReportDiagnosticsMonitor";
+import { recordReportError } from "@/lib/problemReports";
+import { sanitizeReportText } from "@/lib/reportDiagnostics";
 
 function NotFoundComponent() {
   return (
@@ -40,6 +44,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    recordReportError(error, { accion: "error de página" });
   }, [error]);
 
   return (
@@ -68,6 +73,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
             Ir al inicio
           </a>
         </div>
+        <div className="mt-4"><ReportProblem error={sanitizeReportText(error.message)} /></div>
       </div>
     </div>
   );
@@ -157,6 +163,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
+        <ReportDiagnosticsMonitor />
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
         <Toaster />
