@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { User, Shield, Clock, KeyRound, Mail, Save, Star, Gem } from "lucide-react";
 import { SousaphoneIcon } from "@/components/InstrumentIcons";
 import { InstallButton } from "@/components/InstallApp";
+import { ReportProblem } from "@/components/ReportProblem";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useRole, type AppRole } from "@/hooks/useAuth";
 import { useRoleRequests, useInvalidate } from "@/lib/queries";
@@ -193,6 +194,10 @@ export function ProfileSettings() {
         </h2>
         <InstallButton className="w-full" />
       </div>
+      <section className="space-y-3 border-b border-border py-4">
+        <h2 className="text-xl font-bold text-muted-foreground">Ayuda</h2>
+        <ReportProblem />
+      </section>
       <div className="comic rounded-xl bg-card p-5 space-y-4">
         <h2 className="text-xl font-bold uppercase text-muted-foreground border-b pb-2">
           Información de la Cuenta
