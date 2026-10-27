@@ -13,7 +13,10 @@ import {
   Gem,
   ShieldPlus,
   ShieldMinus,
+  Bug,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ProblemReportsAdmin } from "@/components/ProblemReportsAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useIsAdmin, useRole, type AppRole } from "@/hooks/useAuth";
 import { useRoleRequests, useSetlists, useInvalidate } from "@/lib/queries";
@@ -46,7 +49,7 @@ export function AdminManagement() {
   const invalidate = useInvalidate();
 
   const [adminSubTab, setAdminSubTab] = useState<
-    "usuarios" | "admin_requests" | "setlist_proposals"
+    "usuarios" | "admin_requests" | "setlist_proposals" | "reportes"
   >("usuarios");
 
   const allProfilesQuery = useQuery({
@@ -471,7 +474,18 @@ export function AdminManagement() {
             </span>
           )}
         </button>
+        <Button
+          type="button"
+          variant={adminSubTab === "reportes" ? "secondary" : "ghost"}
+          className="h-auto min-w-fit py-2.5"
+          onClick={() => setAdminSubTab("reportes")}
+        >
+          <Bug />
+          Problemas reportados
+        </Button>
       </div>
+
+      {adminSubTab === "reportes" && <ProblemReportsAdmin />}
 
       {/* Sub-pestaña: Usuarios */}
       {adminSubTab === "usuarios" && (

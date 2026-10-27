@@ -23,6 +23,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { matchScores, passRanks } from "@/lib/scoreMatch";
+import { ReportProblem } from "@/components/ReportProblem";
+import { reportEvent } from "@/lib/problemReports";
+import { sanitizeReportText } from "@/lib/reportDiagnostics";
 
 type WakeLockLike = { release: () => Promise<void> };
 
@@ -112,6 +115,14 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   const seq = entries.flatMap((e) => (e.state === "ok" ? [{ e, f: e.file }] : []));
   const viewList = setlistId ? seq.map((s) => s.f) : list_;
   const current = viewList[index];
+  useEffect(() => {
+    reportEvent("partituras", {
+      accion: open ? "abrir partitura" : "abrir carpeta",
+      carpeta_id: folder.folder_id,
+      setlist_id: setlistId,
+      archivo_id: open ? (current?.id ?? "") : "",
+    });
+  }, [folder.folder_id, setlistId, open, current?.id]);
   async function saveLink(arrangementId: string, fileId: string) {
     const { error } = await supabase
       .from("score_links")
@@ -130,14 +141,14 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
       const msg = files.error instanceof Error ? files.error.message : String(files.error);
       if (/unauthor|401|403|jwt|sesi/i.test(msg))
         return "Error de autenticación de la app: vuelve a iniciar sesión.";
-      return `Error de ejecución en el servidor: ${msg.slice(0, 150)}`;
+      return `Error de ejecución en el servidor: ${sanitizeReportText(msg, 150)}`;
     }
     const d = files.data;
     if (!d) return "No se han podido cargar las partituras de esta carpeta.";
     if (d.status === "missing_key")
       return "El servidor no puede acceder a la clave de Google Drive";
     if (d.status === "google_error")
-      return `Google Drive ha devuelto un error (HTTP ${d.httpStatus}): ${d.message}`;
+      return `Google Drive ha devuelto un error (HTTP ${d.httpStatus}): ${sanitizeReportText(d.message)}`;
     if (d.status === "empty")
       return "Google Drive ha respondido correctamente, pero no ha devuelto PDF o imágenes visibles en esta carpeta";
     return "No se han podido cargar las partituras de esta carpeta.";
@@ -226,6 +237,13 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
           ) : list_.length === 0 ? (
             <div className="p-6 text-center text-sm font-bold text-muted-foreground">
               <p>{errorText()}</p>
+              <div className="mt-4">
+                <ReportProblem
+                  error={errorText()}
+                  carpetaId={folder.folder_id}
+                  setlistId={setlistId}
+                />
+              </div>
               <a
                 href={driveUrl(folder.folder_id)}
                 target="_blank"

@@ -20,6 +20,13 @@ export const Route = createFileRoute("/_authenticated/centro")({
   head: () => ({
     meta: [
       { title: "Centro de control — La Bomba Show" },
+      { property: "og:title", content: "Centro de control — La Bomba Show" },
+      {
+        property: "og:description",
+        content: "Páginas, perfil y gestión privada de La Bomba Show.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "description",
         content:

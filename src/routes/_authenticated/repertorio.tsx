@@ -50,6 +50,8 @@ export const Route = createFileRoute("/_authenticated/repertorio")({
   head: () => ({
     meta: [
       { title: "Repertorio — La Bomba Show" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "description",
         content: "Catálogo de arreglos y canciones de calle con duración, etiquetas y letras.",

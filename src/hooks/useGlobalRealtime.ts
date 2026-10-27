@@ -44,6 +44,10 @@ export function useGlobalRealtime() {
             queryClient.invalidateQueries({ queryKey: ["role_requests"] });
             queryClient.invalidateQueries({ queryKey: ["pending-admin-badge"] });
             break;
+          case "reportes_problemas":
+            queryClient.invalidateQueries({ queryKey: ["reportes-problemas"] });
+            queryClient.invalidateQueries({ queryKey: ["pending-admin-badge"] });
+            break;
           case "user_roles":
             queryClient.invalidateQueries({ queryKey: ["profiles"] });
             break;

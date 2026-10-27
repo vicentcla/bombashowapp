@@ -843,7 +843,7 @@ export function usePendingCount() {
     enabled: isAdmin,
     refetchOnWindowFocus: true,
     queryFn: async () => {
-      const [profilesRes, requestsRes, setlistsRes] = await Promise.all([
+      const [profilesRes, requestsRes, setlistsRes, reportsRes] = await Promise.all([
         supabase
           .from("profiles")
           .select("id", { count: "exact", head: true })
@@ -853,10 +853,15 @@ export function usePendingCount() {
           .select("id", { count: "exact", head: true })
           .eq("status", "pending"),
         supabase.from("setlists").select("notes"),
+        supabase
+          .from("reportes_problemas")
+          .select("id", { count: "exact", head: true })
+          .neq("estado", "resuelto"),
       ]);
       if (profilesRes.error) throw profilesRes.error;
       if (requestsRes.error) throw requestsRes.error;
       if (setlistsRes.error) throw setlistsRes.error;
+      if (reportsRes.error) throw reportsRes.error;
 
       let proposals = 0;
       for (const row of setlistsRes.data ?? []) {
@@ -870,7 +875,9 @@ export function usePendingCount() {
         }
       }
 
-      return (profilesRes.count ?? 0) + (requestsRes.count ?? 0) + proposals;
+      return (
+        (profilesRes.count ?? 0) + (requestsRes.count ?? 0) + proposals + (reportsRes.count ?? 0)
+      );
     },
   });
 }

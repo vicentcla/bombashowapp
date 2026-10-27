@@ -81,6 +81,13 @@ export const Route = createFileRoute("/_authenticated/setlists")({
   head: () => ({
     meta: [
       { title: "Setlists — La Bomba Show" },
+      { property: "og:title", content: "Setlists — La Bomba Show" },
+      {
+        property: "og:description",
+        content: "Repertorio de conciertos organizado en pases para La Bomba Show.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "description",
         content:

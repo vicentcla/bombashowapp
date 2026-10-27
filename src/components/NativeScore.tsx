@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getDriveFile } from "@/lib/drive.functions";
+import { ReportProblem } from "@/components/ReportProblem";
+import { sanitizeReportText } from "@/lib/reportDiagnostics";
 
 const MIN = 1;
 const MAX = 4;
@@ -262,7 +264,8 @@ export function NativeScore({ fileId, name }: { fileId: string; name: string }) 
     };
   }, []);
 
-  const loading = !err && !imgUrl && !doc;
+  const displayError = err || (file.error ? "No se pudo cargar la partitura" : null);
+  const loading = !displayError && !imgUrl && !doc;
 
   return (
     <div
@@ -293,10 +296,13 @@ export function NativeScore({ fileId, name }: { fileId: string; name: string }) 
           Abriendo partitura…
         </p>
       )}
-      {err && (
-        <p className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm font-bold text-muted-foreground">
-          {err}
-        </p>
+      {displayError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center text-sm font-bold text-muted-foreground">
+          <p>{sanitizeReportText(displayError)}</p>
+          <div className="w-full max-w-sm">
+            <ReportProblem error={sanitizeReportText(displayError)} archivoId={fileId} />
+          </div>
+        </div>
       )}
       {scale > 1.05 && (
         <span className="pointer-events-none fixed bottom-[max(env(safe-area-inset-bottom),0.75rem)] left-1/2 -translate-x-1/2 rounded-full bg-card/70 px-3 py-1 text-[11px] font-bold backdrop-blur">

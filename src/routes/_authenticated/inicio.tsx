@@ -39,6 +39,8 @@ export const Route = createFileRoute("/_authenticated/inicio")({
   head: () => ({
     meta: [
       { title: "Inicio — La Bomba Show" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "description",
         content: "Panel de la xaranga: letras, repertorio, setlists y contadores.",

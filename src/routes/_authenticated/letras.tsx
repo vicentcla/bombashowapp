@@ -12,6 +12,8 @@ export const Route = createFileRoute("/_authenticated/letras")({
   head: () => ({
     meta: [
       { title: "Letras — La Bomba Show" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "description",
         content: "Buscador de letras de calle y de arreglos de La Bomba Show Xaranga.",
