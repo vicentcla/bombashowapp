@@ -15,6 +15,13 @@
       "when": 1792715262056,
       "tag": "0001_reportes_privados_problemas",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793086044523,
+      "tag": "0002_restringir_escritura_directa_reportes",
+      "breakpoints": true
     }
   ]
 }
