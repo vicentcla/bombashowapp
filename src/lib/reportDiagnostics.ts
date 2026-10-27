@@ -18,7 +18,9 @@ export function sanitizeReportText(value: unknown, limit = 500): string {
     )
     .replace(/[A-Za-z0-9_./+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[correo omitido]")
     .replace(/[A-Za-z0-9_+/.=-]{40,}/g, "[dato omitido]")
-    .replace(/[\u0000-\u001f]/g, " ")
+    .split("")
+    .map((character) => (character.charCodeAt(0) < 32 ? " " : character))
+    .join("")
     .slice(0, limit);
 }
 

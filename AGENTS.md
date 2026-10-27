@@ -72,10 +72,7 @@ Tablas (migraciones en `supabase/migrations/`): `profiles`, `user_roles`,
 - `play_events` = cada toque (+1) con `period_id`; el −1 borra el último evento.
 - `reset_periods` = periodos de fiestas; el "reiniciar contadores" cierra el
   periodo abierto (le pone `ended_at`) y abre uno nuevo.
-- `profiles.tab_order` (`text[]`) = orden personalizado de pestañas de la barra
-  inferior por usuario (migración `20260812120000_add_profiles_tab_order.sql`).
-  No está en los tipos generados de Supabase: al leerlo/escribirlo se usa un
-  cast tipado.
+- `profiles.tab_order` stores each user's navigation order; use generated types to keep schema access consistent.
 - RLS actual: **todos los autenticados** pueden escribir en `arrangements`,
   `street_songs`, `lyrics`, `setlists` y `setlist_items`. `play_events`,
   `reset_periods` y `user_roles` siguen siendo **solo admin** (helper
