@@ -51,6 +51,10 @@ export const Route = createFileRoute("/_authenticated/bolo")({
   head: () => ({
     meta: [
       { title: "Bolo — La Bomba Show" },
+      { property: "og:title", content: "Bolo — La Bomba Show" },
+      { property: "og:description", content: "Mensajes de bolo para WhatsApp de La Bomba Show." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "description",
         content: "Constructor de mensajes de bolo listos para enviar por WhatsApp.",

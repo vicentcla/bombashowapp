@@ -56,9 +56,6 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   const [full, setFull] = useState(false);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    reportEvent("partituras", { accion: open ? "abrir partitura" : "abrir carpeta", carpeta_id: folder.folder_id, setlist_id: setlistId, archivo_id: open ? (current?.id ?? "") : "" });
-  }, [folder.folder_id, setlistId, open, current?.id]);
 
   useEffect(() => {
     let lock: WakeLockLike | null = null;
@@ -118,6 +115,9 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   const seq = entries.flatMap((e) => (e.state === "ok" ? [{ e, f: e.file }] : []));
   const viewList = setlistId ? seq.map((s) => s.f) : list_;
   const current = viewList[index];
+  useEffect(() => {
+    reportEvent("partituras", { accion: open ? "abrir partitura" : "abrir carpeta", carpeta_id: folder.folder_id, setlist_id: setlistId, archivo_id: open ? (current?.id ?? "") : "" });
+  }, [folder.folder_id, setlistId, open, current?.id]);
   async function saveLink(arrangementId: string, fileId: string) {
     const { error } = await supabase
       .from("score_links")

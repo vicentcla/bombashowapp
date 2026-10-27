@@ -66,6 +66,10 @@ export const Route = createFileRoute("/_authenticated/social")({
   head: () => ({
     meta: [
       { title: "Redes Sociales — La Bomba Show" },
+      { property: "og:title", content: "Redes Sociales — La Bomba Show" },
+      { property: "og:description", content: "Textos para las redes sociales de La Bomba Show." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "description",
         content: "Textos y copies para las redes sociales de la xaranga.",

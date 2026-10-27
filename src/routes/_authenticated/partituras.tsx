@@ -12,6 +12,10 @@ export const Route = createFileRoute("/_authenticated/partituras")({
   head: () => ({
     meta: [
       { title: "Partituras — La Bomba Show" },
+      { property: "og:title", content: "Partituras — La Bomba Show" },
+      { property: "og:description", content: "Partituras por instrumento y setlist de La Bomba Show." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "description",
         content: "Carpetas de partituras por instrumento, vinculadas a Google Drive.",

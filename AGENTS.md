@@ -82,27 +82,11 @@ Tablas (migraciones en `supabase/migrations/`): `profiles`, `user_roles`,
   `private.has_role`). Los no-admin no deben poder escribir contadores: su
   flujo de cambios en setlists va por **propuestas** (ver abajo).
 
-## Funcionalidad por página
+## Report architecture
 
-- `/inicio`: portada con marca (logo, banner, sello X aniversario).
-- `/letras`: pestañas **Calle** y **Arreglos**, buscador instantáneo con
-  resaltado, editor enriquecido (negrita/cursiva/subrayado) y diálogo de letra.
-- `/repertorio`: catálogo de arreglos (crear/editar/borrar, duración mm:ss,
-  tags, reordenar) + pestaña de canciones de calle. Incluye importadores
-  (`ImportExcelDialog`, `ImportCalleDialog`) desde texto pegado.
-- `/setlists`: setlists por concierto con **pases** y **descansos**,
-  duración objetivo, comparativa de tiempos, barra de progreso, drag & drop
-  cross-pase, archivar/restaurar, copiar estructura, "Deshacer", y **modo
-  propuesta** para no-admins (ver "Propuestas").
-- `/calle` y `/arreglos`: contadores (tarjetas +1/−1) y estadísticas en vistas
-  Mes / Año / Periodo de reseteo.
-- `/miembros`: redirige a `/centro`.
-- `/centro`: **Centro de control**. Secciones internas **Páginas** (todas las
-  pestañas en cuadrícula + "Editar orden" con drag & drop), **Perfil** y
-  **Gestión** (solo admin). La sección Perfil y el panel de gestión viven aquí
-  (antes en `/ajustes`, que ahora redirige a `/centro`). El panel de gestión
-  usa sub-pestañas **Usuarios nuevos**, **Peticiones de Admin** y
-  **Modificación Setlist** (revisión de propuestas).
+- Reports use an allowlisted diagnostic module and an idempotent authenticated database RPC with server sanitization and rate limits, avoiding new hosting secrets.
+- Pending reports remain account-scoped and retry only while visible and online, preventing cross-account sends and unsupported background promises.
+- Build metadata comes from package metadata and hosting commit variables at build time; missing identifiers remain explicitly unavailable.
 
 ## Formato de `setlists.notes`
 

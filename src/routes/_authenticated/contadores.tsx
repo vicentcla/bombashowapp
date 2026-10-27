@@ -15,6 +15,8 @@ export const Route = createFileRoute("/_authenticated/contadores")({
   head: () => ({
     meta: [
       { title: "Contadores — La Bomba Show" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         name: "description",
         content:
