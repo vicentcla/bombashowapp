@@ -853,7 +853,10 @@ export function usePendingCount() {
           .select("id", { count: "exact", head: true })
           .eq("status", "pending"),
         supabase.from("setlists").select("notes"),
-        supabase.from("reportes_problemas").select("id", { count: "exact", head: true }).neq("estado", "resuelto"),
+        supabase
+          .from("reportes_problemas")
+          .select("id", { count: "exact", head: true })
+          .neq("estado", "resuelto"),
       ]);
       if (profilesRes.error) throw profilesRes.error;
       if (requestsRes.error) throw requestsRes.error;
@@ -872,7 +875,9 @@ export function usePendingCount() {
         }
       }
 
-      return (profilesRes.count ?? 0) + (requestsRes.count ?? 0) + proposals + (reportsRes.count ?? 0);
+      return (
+        (profilesRes.count ?? 0) + (requestsRes.count ?? 0) + proposals + (reportsRes.count ?? 0)
+      );
     },
   });
 }

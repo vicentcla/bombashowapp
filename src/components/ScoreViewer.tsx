@@ -116,7 +116,12 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   const viewList = setlistId ? seq.map((s) => s.f) : list_;
   const current = viewList[index];
   useEffect(() => {
-    reportEvent("partituras", { accion: open ? "abrir partitura" : "abrir carpeta", carpeta_id: folder.folder_id, setlist_id: setlistId, archivo_id: open ? (current?.id ?? "") : "" });
+    reportEvent("partituras", {
+      accion: open ? "abrir partitura" : "abrir carpeta",
+      carpeta_id: folder.folder_id,
+      setlist_id: setlistId,
+      archivo_id: open ? (current?.id ?? "") : "",
+    });
   }, [folder.folder_id, setlistId, open, current?.id]);
   async function saveLink(arrangementId: string, fileId: string) {
     const { error } = await supabase
@@ -232,7 +237,13 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
           ) : list_.length === 0 ? (
             <div className="p-6 text-center text-sm font-bold text-muted-foreground">
               <p>{errorText()}</p>
-              <div className="mt-4"><ReportProblem error={errorText()} carpetaId={folder.folder_id} setlistId={setlistId} /></div>
+              <div className="mt-4">
+                <ReportProblem
+                  error={errorText()}
+                  carpetaId={folder.folder_id}
+                  setlistId={setlistId}
+                />
+              </div>
               <a
                 href={driveUrl(folder.folder_id)}
                 target="_blank"

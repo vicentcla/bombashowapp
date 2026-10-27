@@ -7,11 +7,22 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { readFileSync } from "node:fs";
 
-const packageInfo = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version?: string };
-const buildId = process.env["CF_PAGES_COMMIT_SHA"] ?? process.env["COMMIT_SHA"] ?? process.env["GITHUB_SHA"] ?? "no disponible";
+const packageInfo = JSON.parse(
+  readFileSync(new URL("./package.json", import.meta.url), "utf8"),
+) as { version?: string };
+const buildId =
+  process.env["CF_PAGES_COMMIT_SHA"] ??
+  process.env["COMMIT_SHA"] ??
+  process.env["GITHUB_SHA"] ??
+  "no disponible";
 
 export default defineConfig({
-  vite: { define: { __APP_VERSION__: JSON.stringify(packageInfo.version ?? "sin versión publicada"), __APP_BUILD__: JSON.stringify(buildId) } },
+  vite: {
+    define: {
+      __APP_VERSION__: JSON.stringify(packageInfo.version ?? "sin versión publicada"),
+      __APP_BUILD__: JSON.stringify(buildId),
+    },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this

@@ -299,7 +299,9 @@ export function NativeScore({ fileId, name }: { fileId: string; name: string }) 
       {displayError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center text-sm font-bold text-muted-foreground">
           <p>{sanitizeReportText(displayError)}</p>
-          <div className="w-full max-w-sm"><ReportProblem error={sanitizeReportText(displayError)} archivoId={fileId} /></div>
+          <div className="w-full max-w-sm">
+            <ReportProblem error={sanitizeReportText(displayError)} archivoId={fileId} />
+          </div>
         </div>
       )}
       {scale > 1.05 && (

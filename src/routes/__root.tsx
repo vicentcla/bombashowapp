@@ -73,7 +73,9 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
             Ir al inicio
           </a>
         </div>
-        <div className="mt-4"><ReportProblem error={sanitizeReportText(error.message)} /></div>
+        <div className="mt-4">
+          <ReportProblem error={sanitizeReportText(error.message)} />
+        </div>
       </div>
     </div>
   );
