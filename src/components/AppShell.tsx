@@ -51,14 +51,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background pb-32 md:pb-8">
       {/* Cabecera: fluye con la página en móvil, sticky en escritorio */}
-      <header className="glass-strong rounded-none border-x-0 border-t-0 pt-[env(safe-area-inset-top)] md:sticky md:top-0 md:z-40">
+      <header className="glass-strong sticky top-0 z-40 rounded-none border-x-0 border-t-0 pt-[env(safe-area-inset-top)] shadow-none">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-3 py-2.5 sm:px-4">
           <div className="flex min-w-0 items-center gap-2">
             <Link to="/inicio" className="shrink-0 min-w-0">
               <img
                 src={LOGO_SRC}
                 alt="La Bomba Show Xaranga"
-                className="h-10 w-auto object-contain md:h-12"
+                className="h-9 w-auto object-contain md:h-11"
               />
             </Link>
             <TunerMetronome />
@@ -72,7 +72,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 to="/repertorio"
                 search={{ tab: "calle", editLyricId: undefined }}
-                className="comic-sm comic-press flex items-center justify-center rounded-xl p-2.5 text-foreground"
+                className="comic-sm comic-press flex items-center justify-center rounded-full p-2.5 text-foreground"
                 aria-label="Repertorio"
               >
                 <Library className="h-5 w-5 shrink-0" />
@@ -81,7 +81,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 to="/centro"
                 search={{ tab: isAdmin ? "gestion" : "perfil" }}
-                className="comic-sm comic-press relative flex items-center justify-center rounded-xl p-2.5 text-foreground"
+                className="comic-sm comic-press relative flex items-center justify-center rounded-full p-2.5 text-foreground"
                 aria-label="Centro de control"
               >
                 <Settings className="h-5 w-5 shrink-0" />
@@ -95,7 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <button
               onClick={signOut}
-              className="comic-press flex items-center justify-center rounded-xl bg-destructive p-2.5 text-destructive-foreground shadow-[0_6px_18px_-8px_var(--destructive)]"
+              className="comic-press flex items-center justify-center rounded-full bg-secondary p-2.5 text-destructive"
               aria-label="Cerrar sesión"
             >
               <LogOut className="h-5 w-5 shrink-0" />
@@ -104,19 +104,19 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         {/* Navegación escritorio */}
-        <nav className="mx-auto hidden max-w-5xl flex-wrap gap-1.5 px-4 pb-2.5 md:flex">
+        <nav className="mx-auto hidden max-w-5xl flex-wrap gap-1 px-4 pb-2.5 md:flex">
           {DESKTOP_NAV.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
               activeProps={{
                 className:
-                  "bg-primary text-primary-foreground shadow-[0_8px_20px_-10px_var(--primary)]",
+                  "bg-primary/12 text-primary",
               }}
               inactiveProps={{
                 className: "text-muted-foreground hover:bg-accent hover:text-foreground",
               }}
-              className="comic-press flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-bold uppercase tracking-wide transition-colors"
+              className="comic-press flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors"
             >
               <Icon className="h-4 w-4" />
               {label}
@@ -135,7 +135,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Barra de navegación inferior móvil — dock flotante de cristal */}
       <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] md:hidden">
-        <div className="glass-strong mx-auto flex max-w-md items-center gap-0.5 rounded-[1.75rem] px-1.5 py-1.5">
+        <div className="glass-strong mx-auto flex max-w-sm items-center gap-1 rounded-full p-1.5">
           {barNav.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
@@ -144,12 +144,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               title={label}
               activeProps={{
                 className:
-                  "bg-primary text-primary-foreground shadow-[0_8px_20px_-10px_var(--primary)]",
+                  "bg-primary/12 text-primary",
               }}
               inactiveProps={{ className: "text-muted-foreground" }}
-              className="flex min-w-0 flex-1 items-center justify-center rounded-[1.25rem] py-2.5 transition-all duration-200 active:scale-90"
+              className="flex min-w-0 flex-1 items-center justify-center rounded-full py-3 transition-all duration-200 active:scale-90"
             >
-              <Icon className="h-6 w-6 shrink-0" />
+              <Icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.9} />
             </Link>
           ))}
 
@@ -160,12 +160,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             title="Más"
             activeProps={{
               className:
-                "bg-primary text-primary-foreground shadow-[0_8px_20px_-10px_var(--primary)]",
+                "bg-primary/12 text-primary",
             }}
             inactiveProps={{ className: "text-muted-foreground" }}
-            className="flex min-w-0 flex-1 items-center justify-center rounded-[1.25rem] py-2.5 transition-all duration-200 active:scale-90"
+            className="flex min-w-0 flex-1 items-center justify-center rounded-full py-3 transition-all duration-200 active:scale-90"
           >
-            <LayoutGrid className="h-6 w-6 shrink-0" />
+            <LayoutGrid className="h-[22px] w-[22px] shrink-0" strokeWidth={1.9} />
           </Link>
         </div>
       </nav>

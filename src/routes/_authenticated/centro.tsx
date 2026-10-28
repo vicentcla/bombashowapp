@@ -100,59 +100,57 @@ function Centro() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <LayoutGrid className="h-7 w-7 shrink-0 text-muted-foreground" />
-        <div>
-          <h1 className="text-3xl font-extrabold leading-none">Centro de control</h1>
-          <p className="text-xs font-bold text-muted-foreground">
-            Todas las pestañas de la app y tus ajustes
-          </p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-extrabold tracking-tight">Centro de control</h1>
+        <p className="text-sm text-muted-foreground">Tus páginas, tu perfil y la gestión del grupo</p>
       </div>
 
-      {/* Navegación por secciones */}
-      <div className="comic-sm flex border-b border-border bg-card">
+      <div className="flex rounded-full bg-secondary p-1" role="tablist">
         <button
+          role="tab"
+          aria-selected={activeSection === "paginas"}
           onClick={() => setActiveSection("paginas")}
-          className={`flex items-center gap-2 border-b-4 px-4 py-3 text-sm font-extrabold uppercase transition-all ${
+          className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition-all ${
             activeSection === "paginas"
-              ? "border-primary bg-background text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground"
           }`}
         >
           <LayoutGrid className="h-4 w-4" />
           Páginas
         </button>
-
         <button
+          role="tab"
+          aria-selected={activeSection === "perfil"}
           onClick={() => setActiveSection("perfil")}
-          className={`flex items-center gap-2 border-b-4 px-4 py-3 text-sm font-extrabold uppercase transition-all ${
+          className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition-all ${
             activeSection === "perfil"
-              ? "border-primary bg-background text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground"
           }`}
         >
           <User className="h-4 w-4" />
           Perfil
         </button>
-
         {isAdmin && (
-          <button
-            onClick={() => setActiveSection("gestion")}
-            className={`flex items-center gap-2 border-b-4 px-4 py-3 text-sm font-extrabold uppercase transition-all ${
-              activeSection === "gestion"
-                ? "border-primary bg-background text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Shield className="h-4 w-4" />
-            Gestión
-            {pendingCount > 0 && (
-              <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-border bg-destructive px-1 text-[11px] font-extrabold leading-none text-destructive-foreground">
-                {pendingCount > 99 ? "99+" : pendingCount}
-              </span>
-            )}
-          </button>
+        <button
+          role="tab"
+          aria-selected={activeSection === "gestion"}
+          onClick={() => setActiveSection("gestion")}
+          className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition-all ${
+            activeSection === "gestion"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground"
+          }`}
+        >
+          <Shield className="h-4 w-4" />
+          Gestión
+          {pendingCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-bold leading-none text-destructive-foreground">
+              {pendingCount > 99 ? "99+" : pendingCount}
+            </span>
+          )}
+        </button>
         )}
       </div>
 
@@ -217,22 +215,23 @@ function Centro() {
               }}
             </SortableList>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
               {ordered.map((item, index) => {
                 const Icon = item.icon;
                 const active = pathname === item.to;
-                const className = `comic-sm comic-press relative flex flex-col items-center gap-1.5 rounded-xl bg-card p-4 text-foreground transition-all active:scale-95 ${
+                const className = `comic comic-press relative flex aspect-square flex-col justify-between rounded-3xl bg-card p-4 text-foreground transition-all active:scale-95 ${
                   active ? "ring-2 ring-primary" : ""
                 }`;
                 const content = (
                   <>
-                    <Icon className="h-6 w-6 shrink-0" />
-                    <span className="w-full truncate text-center text-xs font-extrabold uppercase leading-tight">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/12 text-primary">
+                      <Icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.9} />
+                    </span>
+                    <span className="w-full truncate text-left text-sm font-bold leading-tight">
                       {item.label}
                     </span>
                     {index < BAR_LIMIT && (
-                      <span className="absolute right-1.5 top-1.5 rounded bg-primary/15 px-1 py-0.5 text-[9px] font-extrabold uppercase leading-none text-primary">
-                        Barra
+                      <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-primary" aria-label="En la barra">
                       </span>
                     )}
                   </>
