@@ -187,21 +187,9 @@ export function ProfileSettings() {
   }
 
   return (
-    <form onSubmit={handleSaveProfile} className="space-y-4">
-      <div className="comic rounded-xl bg-card p-5 space-y-3">
-        <h2 className="text-xl font-bold uppercase text-muted-foreground border-b pb-2">
-          Instalar la app
-        </h2>
-        <InstallButton className="w-full" />
-      </div>
-      <section className="space-y-3 border-b border-border py-4">
-        <h2 className="text-xl font-bold text-muted-foreground">Ayuda</h2>
-        <ReportProblem />
-      </section>
-      <div className="comic rounded-xl bg-card p-5 space-y-4">
-        <h2 className="text-xl font-bold uppercase text-muted-foreground border-b pb-2">
-          Información de la Cuenta
-        </h2>
+    <form onSubmit={handleSaveProfile} className="space-y-6">
+      <h2 className="section-label -mb-4">Información de la cuenta</h2>
+      <div className="comic rounded-2xl bg-card p-5 space-y-4">
 
         {/* Nombre de Usuario */}
         <div>
@@ -396,6 +384,18 @@ export function ProfileSettings() {
           </div>
         </div>
       </div>
+      <section className="space-y-2">
+        <h2 className="section-label">Instalar la app</h2>
+        <div className="comic rounded-2xl bg-card p-4">
+          <InstallButton className="w-full" />
+        </div>
+      </section>
+      <section className="space-y-2">
+        <h2 className="section-label">Ayuda</h2>
+        <div className="comic rounded-2xl bg-card p-4">
+          <ReportProblem />
+        </div>
+      </section>
     </form>
   );
 }
