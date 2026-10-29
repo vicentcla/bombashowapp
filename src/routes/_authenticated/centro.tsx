@@ -102,7 +102,9 @@ function Centro() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight">Centro de control</h1>
-        <p className="text-sm text-muted-foreground">Tus páginas, tu perfil y la gestión del grupo</p>
+        <p className="text-sm text-muted-foreground">
+          Tus páginas, tu perfil y la gestión del grupo
+        </p>
       </div>
 
       <div className="flex rounded-full bg-secondary p-1" role="tablist">
@@ -133,24 +135,24 @@ function Centro() {
           Perfil
         </button>
         {isAdmin && (
-        <button
-          role="tab"
-          aria-selected={activeSection === "gestion"}
-          onClick={() => setActiveSection("gestion")}
-          className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition-all ${
-            activeSection === "gestion"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground"
-          }`}
-        >
-          <Shield className="h-4 w-4" />
-          Gestión
-          {pendingCount > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-bold leading-none text-destructive-foreground">
-              {pendingCount > 99 ? "99+" : pendingCount}
-            </span>
-          )}
-        </button>
+          <button
+            role="tab"
+            aria-selected={activeSection === "gestion"}
+            onClick={() => setActiveSection("gestion")}
+            className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition-all ${
+              activeSection === "gestion"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground"
+            }`}
+          >
+            <Shield className="h-4 w-4" />
+            Gestión
+            {pendingCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-bold leading-none text-destructive-foreground">
+                {pendingCount > 99 ? "99+" : pendingCount}
+              </span>
+            )}
+          </button>
         )}
       </div>
 
@@ -231,8 +233,10 @@ function Centro() {
                       {item.label}
                     </span>
                     {index < BAR_LIMIT && (
-                      <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-primary" aria-label="En la barra">
-                      </span>
+                      <span
+                        className="absolute right-3 top-3 h-2 w-2 rounded-full bg-primary"
+                        aria-label="En la barra"
+                      ></span>
                     )}
                   </>
                 );

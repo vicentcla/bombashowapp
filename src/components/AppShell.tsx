@@ -110,8 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               key={to}
               to={to}
               activeProps={{
-                className:
-                  "bg-primary/12 text-primary",
+                className: "bg-primary/12 text-primary",
               }}
               inactiveProps={{
                 className: "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -143,8 +142,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               aria-label={label}
               title={label}
               activeProps={{
-                className:
-                  "bg-primary/12 text-primary",
+                className: "bg-primary/12 text-primary",
               }}
               inactiveProps={{ className: "text-muted-foreground" }}
               className="flex min-w-0 flex-1 items-center justify-center rounded-full py-3 transition-all duration-200 active:scale-90"
@@ -159,8 +157,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label="Más"
             title="Más"
             activeProps={{
-              className:
-                "bg-primary/12 text-primary",
+              className: "bg-primary/12 text-primary",
             }}
             inactiveProps={{ className: "text-muted-foreground" }}
             className="flex min-w-0 flex-1 items-center justify-center rounded-full py-3 transition-all duration-200 active:scale-90"
