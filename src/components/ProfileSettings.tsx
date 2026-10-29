@@ -190,7 +190,6 @@ export function ProfileSettings() {
     <form onSubmit={handleSaveProfile} className="space-y-6">
       <h2 className="section-label -mb-4">Información de la cuenta</h2>
       <div className="comic rounded-2xl bg-card p-5 space-y-4">
-
         {/* Nombre de Usuario */}
         <div>
           <label className="mb-1 block text-sm font-bold uppercase">Nombre de usuario</label>
