@@ -128,10 +128,34 @@ export function AdminManagement() {
     pendingAdminRequests.length + allPendingProposals.length + pendingUsers.length;
 
   const tabs = [
-    { id: "usuarios", label: "Usuarios", short: "Usuarios", icon: UserPlus, count: pendingUsers.length },
-    { id: "admin_requests", label: "Peticiones de admin", short: "Roles", icon: UserCheck, count: pendingAdminRequests.length },
-    { id: "setlist_proposals", label: "Propuestas de setlist", short: "Propuestas", icon: Lightbulb, count: allPendingProposals.length },
-    { id: "reportes", label: "Problemas reportados", short: "Problemas", icon: Bug, count: pendingReports },
+    {
+      id: "usuarios",
+      label: "Usuarios",
+      short: "Usuarios",
+      icon: UserPlus,
+      count: pendingUsers.length,
+    },
+    {
+      id: "admin_requests",
+      label: "Peticiones de admin",
+      short: "Roles",
+      icon: UserCheck,
+      count: pendingAdminRequests.length,
+    },
+    {
+      id: "setlist_proposals",
+      label: "Propuestas de setlist",
+      short: "Propuestas",
+      icon: Lightbulb,
+      count: allPendingProposals.length,
+    },
+    {
+      id: "reportes",
+      label: "Problemas reportados",
+      short: "Problemas",
+      icon: Bug,
+      count: pendingReports,
+    },
   ] as const;
 
   function nameOf(userId: string) {
