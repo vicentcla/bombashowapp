@@ -225,7 +225,7 @@ function Centro() {
                 const content = (
                   <>
                     <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/12 text-primary">
-                      <Icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.9} />
+                      <Icon className="h-[22px] w-[22px] shrink-0" />
                     </span>
                     <span className="w-full truncate text-left text-sm font-bold leading-tight">
                       {item.label}

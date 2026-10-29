@@ -149,7 +149,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               inactiveProps={{ className: "text-muted-foreground" }}
               className="flex min-w-0 flex-1 items-center justify-center rounded-full py-3 transition-all duration-200 active:scale-90"
             >
-              <Icon className="h-[22px] w-[22px] shrink-0" strokeWidth={1.9} />
+              <Icon className="h-[22px] w-[22px] shrink-0" />
             </Link>
           ))}
 
@@ -165,7 +165,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             inactiveProps={{ className: "text-muted-foreground" }}
             className="flex min-w-0 flex-1 items-center justify-center rounded-full py-3 transition-all duration-200 active:scale-90"
           >
-            <LayoutGrid className="h-[22px] w-[22px] shrink-0" strokeWidth={1.9} />
+            <LayoutGrid className="h-[22px] w-[22px] shrink-0" />
           </Link>
         </div>
       </nav>
