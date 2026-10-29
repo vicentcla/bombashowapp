@@ -110,8 +110,53 @@ export function AdminManagement() {
     }
   }
 
+  const reportsPendingQuery = useQuery({
+    queryKey: ["reportes-problemas", "pendientes-count"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("reportes_problemas")
+        .select("id", { count: "exact", head: true })
+        .neq("estado", "resuelto");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  const pendingReports = reportsPendingQuery.data ?? 0;
+
   const totalPending =
     pendingAdminRequests.length + allPendingProposals.length + pendingUsers.length;
+
+  const tabs = [
+    {
+      id: "usuarios",
+      label: "Usuarios",
+      short: "Usuarios",
+      icon: UserPlus,
+      count: pendingUsers.length,
+    },
+    {
+      id: "admin_requests",
+      label: "Peticiones de admin",
+      short: "Roles",
+      icon: UserCheck,
+      count: pendingAdminRequests.length,
+    },
+    {
+      id: "setlist_proposals",
+      label: "Propuestas de setlist",
+      short: "Propuestas",
+      icon: Lightbulb,
+      count: allPendingProposals.length,
+    },
+    {
+      id: "reportes",
+      label: "Problemas reportados",
+      short: "Problemas",
+      icon: Bug,
+      count: pendingReports,
+    },
+  ] as const;
 
   function nameOf(userId: string) {
     const p = allProfilesQuery.data?.find((x) => x.id === userId);
@@ -412,77 +457,67 @@ export function AdminManagement() {
   };
 
   return (
-    <div className="comic rounded-xl bg-card p-5 space-y-4">
-      <div className="flex items-center justify-between border-b pb-2">
-        <h2 className="text-xl font-bold uppercase text-muted-foreground">
-          Panel de administración
-        </h2>
+    <div className="space-y-4">
+      <div className="flex items-end justify-between px-1">
+        <div>
+          <p className="section-label">Gestión</p>
+          <h2 className="text-2xl font-extrabold tracking-tight">Panel de administración</h2>
+        </div>
         {totalPending > 0 && (
-          <span className="text-xs font-bold rounded-md bg-destructive/10 text-destructive px-2.5 py-1">
+          <span className="rounded-full bg-destructive/12 px-2.5 py-1 text-xs font-bold text-destructive">
             {totalPending} pendiente{totalPending !== 1 ? "s" : ""}
           </span>
         )}
       </div>
 
-      {/* Sub-pestañas */}
-      <div className="flex gap-1.5 overflow-x-auto rounded-lg bg-muted p-1.5">
-        <button
-          onClick={() => setAdminSubTab("usuarios")}
-          className={`flex min-w-fit flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2.5 text-sm font-extrabold uppercase transition-colors ${
-            adminSubTab === "usuarios"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <UserPlus className="h-4 w-4" />
-          Usuarios
-          {pendingUsers.length > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-border bg-destructive px-1 text-[11px] font-extrabold leading-none text-destructive-foreground">
-              {pendingUsers.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setAdminSubTab("admin_requests")}
-          className={`flex min-w-fit flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2.5 text-sm font-extrabold uppercase transition-colors ${
-            adminSubTab === "admin_requests"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <UserCheck className="h-4 w-4" />
-          Peticiones de Admin
-          {pendingAdminRequests.length > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-border bg-destructive px-1 text-[11px] font-extrabold leading-none text-destructive-foreground">
-              {pendingAdminRequests.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setAdminSubTab("setlist_proposals")}
-          className={`flex min-w-fit flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2.5 text-sm font-extrabold uppercase transition-colors ${
-            adminSubTab === "setlist_proposals"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Lightbulb className="h-4 w-4" />
-          Modificación Setlist
-          {allPendingProposals.length > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-border bg-warning px-1 text-[11px] font-extrabold leading-none text-warning-foreground">
-              {allPendingProposals.length}
-            </span>
-          )}
-        </button>
-        <Button
-          type="button"
-          variant={adminSubTab === "reportes" ? "secondary" : "ghost"}
-          className="h-auto min-w-fit py-2.5"
-          onClick={() => setAdminSubTab("reportes")}
-        >
-          <Bug />
-          Problemas reportados
-        </Button>
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => {
+              haptic("selection");
+              setAdminSubTab(t.id);
+            }}
+            className={`rounded-2xl border p-3.5 text-left transition-all active:scale-[0.97] ${
+              adminSubTab === t.id
+                ? "border-primary/40 bg-primary/10"
+                : "border-border bg-card hover:bg-accent"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/12 text-primary">
+                <t.icon className="h-4 w-4" />
+              </span>
+              <span
+                className={`text-2xl font-extrabold tabular-nums ${
+                  t.count > 0 ? "text-destructive" : "text-muted-foreground"
+                }`}
+              >
+                {t.count}
+              </span>
+            </div>
+            <p className="mt-2 text-sm font-semibold leading-tight">{t.label}</p>
+            <p className="text-xs text-muted-foreground">pendientes</p>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-1 overflow-x-auto rounded-full bg-muted p-1">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setAdminSubTab(t.id)}
+            className={`min-w-fit flex-1 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
+              adminSubTab === t.id
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t.short}
+          </button>
+        ))}
       </div>
 
       {adminSubTab === "reportes" && <ProblemReportsAdmin />}

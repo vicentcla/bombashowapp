@@ -52,7 +52,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background pb-32 md:pb-8">
       {/* Cabecera: fluye con la página en móvil, sticky en escritorio */}
       <header className="glass-strong sticky top-0 z-40 rounded-none border-x-0 border-t-0 pt-[env(safe-area-inset-top)] shadow-none">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-3 py-2.5 sm:px-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-2.5 sm:px-4">
           <div className="flex min-w-0 items-center gap-2">
             <Link to="/inicio" className="shrink-0 min-w-0">
               <img
@@ -102,35 +102,36 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
           </div>
         </div>
-
-        {/* Navegación escritorio */}
-        <nav className="mx-auto hidden max-w-5xl flex-wrap gap-1 px-4 pb-2.5 md:flex">
-          {DESKTOP_NAV.map(({ to, label, icon: Icon }) => (
-            <Link
-              key={to}
-              to={to}
-              activeProps={{
-                className: "bg-primary/12 text-primary",
-              }}
-              inactiveProps={{
-                className: "text-muted-foreground hover:bg-accent hover:text-foreground",
-              }}
-              className="comic-press flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors"
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </Link>
-          ))}
-        </nav>
       </header>
       <InstallInvite />
 
-      {/* Contenido principal */}
-      <PullToRefresh>
-        <main className="mx-auto w-full max-w-5xl overflow-x-hidden px-3 py-4 sm:px-4 md:py-6">
-          {children}
-        </main>
-      </PullToRefresh>
+      <div className="mx-auto flex w-full max-w-6xl">
+        <aside className="hidden w-56 shrink-0 md:block">
+          <nav className="glass sticky top-24 m-4 mr-0 flex flex-col gap-0.5 rounded-3xl p-2">
+            {DESKTOP_NAV.map(({ to, label, icon: Icon }) => (
+              <Link
+                key={to}
+                to={to}
+                activeProps={{ className: "bg-primary/12 text-primary" }}
+                inactiveProps={{
+                  className: "text-muted-foreground hover:bg-accent hover:text-foreground",
+                }}
+                className="flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-colors"
+              >
+                <Icon className="h-[18px] w-[18px] shrink-0" />
+                {label}
+              </Link>
+            ))}
+          </nav>
+        </aside>
+        <div className="min-w-0 flex-1">
+          <PullToRefresh>
+            <main className="mx-auto w-full max-w-5xl overflow-x-hidden px-3 py-4 sm:px-4 md:py-6">
+              {children}
+            </main>
+          </PullToRefresh>
+        </div>
+      </div>
 
       {/* Barra de navegación inferior móvil — dock flotante de cristal */}
       <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] md:hidden">
