@@ -110,8 +110,29 @@ export function AdminManagement() {
     }
   }
 
+  const reportsPendingQuery = useQuery({
+    queryKey: ["reportes-problemas", "pendientes-count"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("reportes_problemas")
+        .select("id", { count: "exact", head: true })
+        .neq("estado", "resuelto");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  const pendingReports = reportsPendingQuery.data ?? 0;
+
   const totalPending =
     pendingAdminRequests.length + allPendingProposals.length + pendingUsers.length;
+
+  const tabs = [
+    { id: "usuarios", label: "Usuarios", short: "Usuarios", icon: UserPlus, count: pendingUsers.length },
+    { id: "admin_requests", label: "Peticiones de admin", short: "Roles", icon: UserCheck, count: pendingAdminRequests.length },
+    { id: "setlist_proposals", label: "Propuestas de setlist", short: "Propuestas", icon: Lightbulb, count: allPendingProposals.length },
+    { id: "reportes", label: "Problemas reportados", short: "Problemas", icon: Bug, count: pendingReports },
+  ] as const;
 
   function nameOf(userId: string) {
     const p = allProfilesQuery.data?.find((x) => x.id === userId);
