@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { LayoutGrid, Library, LogOut, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo } from "react";
@@ -33,6 +33,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     [tabOrderQuery.data],
   );
   const barNav = orderedNav.slice(0, BAR_LIMIT);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const slots = barNav.length + 1;
+  const activeIndex = pathname.startsWith("/centro")
+    ? barNav.length
+    : barNav.findIndex((n) => pathname === n.to || pathname.startsWith(`${n.to}/`));
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -133,22 +138,29 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      {/* Barra de navegación inferior móvil — dock flotante de cristal */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] md:hidden">
-        <div className="glass-strong mx-auto flex max-w-sm items-center gap-1 rounded-full p-1.5">
+      <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-5 pb-[max(env(safe-area-inset-bottom),0.9rem)] md:hidden">
+        <div className="liquid pointer-events-auto relative mx-auto flex max-w-[22rem] items-center rounded-full p-1.5">
+          {activeIndex >= 0 && (
+            <span
+              aria-hidden
+              className="absolute inset-y-1.5 left-1.5 rounded-full bg-primary/15 shadow-[inset_0_1px_0_0_var(--glass-border)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+              style={{
+                width: `calc((100% - 0.75rem) / ${slots})`,
+                transform: `translateX(${activeIndex * 100}%)`,
+              }}
+            />
+          )}
           {barNav.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
               aria-label={label}
               title={label}
-              activeProps={{
-                className: "bg-primary/12 text-primary",
-              }}
+              activeProps={{ className: "text-primary [&>svg]:scale-110" }}
               inactiveProps={{ className: "text-muted-foreground" }}
-              className="flex min-w-0 flex-1 items-center justify-center rounded-full py-3 transition-all duration-200 active:scale-90"
+              className="relative z-10 flex min-w-0 flex-1 items-center justify-center rounded-full py-3 transition-colors duration-200 active:scale-90"
             >
-              <Icon className="h-[22px] w-[22px] shrink-0" />
+              <Icon className="h-[22px] w-[22px] shrink-0 transition-transform duration-300" />
             </Link>
           ))}
 
@@ -157,13 +169,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             search={{ tab: "paginas" }}
             aria-label="Más"
             title="Más"
-            activeProps={{
-              className: "bg-primary/12 text-primary",
-            }}
+            activeProps={{ className: "text-primary [&>svg]:scale-110" }}
             inactiveProps={{ className: "text-muted-foreground" }}
-            className="flex min-w-0 flex-1 items-center justify-center rounded-full py-3 transition-all duration-200 active:scale-90"
+            className="relative z-10 flex min-w-0 flex-1 items-center justify-center rounded-full py-3 transition-colors duration-200 active:scale-90"
           >
-            <LayoutGrid className="h-[22px] w-[22px] shrink-0" />
+            <LayoutGrid className="h-[22px] w-[22px] shrink-0 transition-transform duration-300" />
           </Link>
         </div>
       </nav>
