@@ -19,6 +19,7 @@ import { driveUrl } from "@/lib/drive";
 import { haptic } from "@/lib/haptics";
 import { NativeScore } from "@/components/NativeScore";
 import { useSetlists, useSetlistItems, type DriveFolder } from "@/lib/queries";
+import { parseSetlistNotes } from "@/routes/_authenticated/setlists";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -205,7 +206,7 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
               className="comic-sm w-full rounded-lg bg-card px-3 py-2.5 text-base font-bold"
             >
               <option value="">Todas las partituras</option>
-              {(setlists.data ?? []).map((s) => (
+              {(setlists.data ?? []).filter((s) => !parseSetlistNotes(s.notes).archived).map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
