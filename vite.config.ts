@@ -6,6 +6,7 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const packageInfo = JSON.parse(
   readFileSync(new URL("./package.json", import.meta.url), "utf8"),
@@ -22,6 +23,21 @@ export default defineConfig({
       __APP_VERSION__: JSON.stringify(packageInfo.version ?? "sin versión publicada"),
       __APP_BUILD__: JSON.stringify(buildId),
     },
+    plugins: [
+      {
+        // pdfjs-dist solo se usa en el navegador (import dinámico en useEffect);
+        // en el bundle SSR se sustituye por un stub para que Rolldown no lo empaquete.
+        name: "stub-pdfjs-ssr",
+        enforce: "pre",
+        resolveId(id) {
+          const clean = id.replace(/\?.*$/, "");
+          if (this.environment?.name === "ssr" && /^pdfjs-dist(\/.*)?$/.test(clean)) {
+            return fileURLToPath(new URL("./src/lib/pdfjs-stub.ts", import.meta.url));
+          }
+          return null;
+        },
+      },
+    ],
   },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).

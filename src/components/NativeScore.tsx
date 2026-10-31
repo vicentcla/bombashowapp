@@ -77,6 +77,7 @@ export function NativeScore({ fileId, name }: { fileId: string; name: string }) 
     let loaded: PdfDoc | null = null;
     void (async () => {
       try {
+        if (typeof window === "undefined") return;
         const pdfjs = await import("pdfjs-dist");
         const worker = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
         pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
