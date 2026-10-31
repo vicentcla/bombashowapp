@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireDriveAuth } from "@/lib/drive-auth";
 
 export type DriveFile = { id: string; name: string; mimeType: string };
 
@@ -36,7 +36,7 @@ function sanitize(msg: unknown): string {
 }
 
 export const listDriveFiles = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireDriveAuth])
   .inputValidator((d: { folderId: string }) => {
     if (!/^[\w-]{10,}$/.test(d.folderId)) throw new Error("Carpeta no válida");
     return d;
@@ -96,7 +96,7 @@ export type DriveFileResult =
   { status: "ok"; mimeType: string; base64: string } | { status: "error"; message: string };
 
 export const getDriveFile = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireDriveAuth])
   .inputValidator((d: { fileId: string }) => {
     if (!/^[\w-]{10,}$/.test(d.fileId)) throw new Error("Archivo no válido");
     return d;
