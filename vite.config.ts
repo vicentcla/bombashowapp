@@ -6,6 +6,7 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const packageInfo = JSON.parse(
   readFileSync(new URL("./package.json", import.meta.url), "utf8"),
