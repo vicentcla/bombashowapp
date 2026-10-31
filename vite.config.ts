@@ -22,6 +22,20 @@ export default defineConfig({
       __APP_VERSION__: JSON.stringify(packageInfo.version ?? "sin versión publicada"),
       __APP_BUILD__: JSON.stringify(buildId),
     },
+    environments: {
+      ssr: {
+        resolve: {
+          alias: [
+            {
+              // pdfjs-dist solo se usa en el navegador (import dinámico en useEffect);
+              // en el bundle SSR se sustituye por un stub para que Rolldown no lo empaquete.
+              find: /^pdfjs-dist(\/.*)?$/,
+              replacement: fileURLToPath(new URL("./src/lib/pdfjs-stub.ts", import.meta.url)),
+            },
+          ],
+        },
+      },
+    },
   },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
