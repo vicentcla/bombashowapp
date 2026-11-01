@@ -11,3 +11,10 @@
 - [x] C. Verificar envío, reintento, saneado del servidor, idempotencia y lectura de reportes desde Lovable
 - [ ] C. Comprobar con una cuenta de miembro: espera a una sesión autorizada de miembro
 - [ ] C. Comprobar la versión desplegada en Cloudflare y en iPhone real: espera al despliegue y al dispositivo
+
+## Mejoras directo y datos
+- [x] Cambiar partitura deslizando y manteniendo (círculo + vibración, también con zoom en el borde), sin flechas
+- [x] Modo Bolo en Inicio bajo avisos: setlists asignados, marcar arreglos tocados, guardar a contadores (admin)
+- [x] Fluidez: animación al cambiar de partitura, precarga de la siguiente
+- [x] Copias: descargar (sin contraseña), cargar con contraseña maestra visible/cambiable en perfil del superadmin, copia automática previa
+- [ ] Probar gestos en iPhone real: espera al despliegue

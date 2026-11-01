@@ -155,7 +155,8 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   }
   const lastDir = useRef<1 | -1 | 0>(0);
   const fetchDrive = useServerFn(getDriveFile);
-  const prevItem = viewList.length > 1 ? viewList[(index - 1 + viewList.length) % viewList.length] : undefined;
+  const prevItem =
+    viewList.length > 1 ? viewList[(index - 1 + viewList.length) % viewList.length] : undefined;
   const nextItem = viewList.length > 1 ? viewList[(index + 1) % viewList.length] : undefined;
   useEffect(() => {
     if (!open || !nextItem) return;
@@ -217,11 +218,13 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
               className="comic-sm w-full rounded-lg bg-card px-3 py-2.5 text-base font-bold"
             >
               <option value="">Todas las partituras</option>
-              {(setlists.data ?? []).filter((s) => !parseSetlistNotes(s.notes).archived).map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
+              {(setlists.data ?? [])
+                .filter((s) => !parseSetlistNotes(s.notes).archived)
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
             </select>
             <label
               className={`comic-sm flex items-center gap-2 rounded-lg bg-card px-3 py-2.5 ${setlistId ? "hidden" : ""}`}

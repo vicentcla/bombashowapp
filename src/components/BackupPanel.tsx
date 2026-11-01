@@ -99,7 +99,12 @@ export function MasterPasswordSection() {
             </Button>
           </div>
         ) : (
-          <Button type="button" variant="secondary" className="w-full" onClick={() => setEditing(true)}>
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full"
+            onClick={() => setEditing(true)}
+          >
             <KeyRound className="mr-2 h-4 w-4" /> Cambiar contraseña
           </Button>
         )}
@@ -216,8 +221,7 @@ export function BackupPanel() {
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Copia del{" "}
-              {pending ? new Date(pending.creado).toLocaleString("es-ES") : ""}
+              Copia del {pending ? new Date(pending.creado).toLocaleString("es-ES") : ""}
             </p>
             <ul className="grid grid-cols-2 gap-1 text-sm">
               {summary.map(([k, n]) => (
