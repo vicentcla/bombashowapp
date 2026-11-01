@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProblemReportsAdmin } from "@/components/ProblemReportsAdmin";
+import { BackupPanel } from "@/components/BackupPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useIsAdmin, useRole, type AppRole } from "@/hooks/useAuth";
 import { useRoleRequests, useSetlists, useInvalidate } from "@/lib/queries";
@@ -49,7 +50,7 @@ export function AdminManagement() {
   const invalidate = useInvalidate();
 
   const [adminSubTab, setAdminSubTab] = useState<
-    "usuarios" | "admin_requests" | "setlist_proposals" | "reportes"
+    "usuarios" | "admin_requests" | "setlist_proposals" | "reportes" | "copias"
   >("usuarios");
 
   const allProfilesQuery = useQuery({
@@ -518,9 +519,23 @@ export function AdminManagement() {
             {t.short}
           </button>
         ))}
+        {isSuperAdmin && (
+          <button
+            type="button"
+            onClick={() => setAdminSubTab("copias")}
+            className={`min-w-fit flex-1 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
+              adminSubTab === "copias"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Copias
+          </button>
+        )}
       </div>
 
       {adminSubTab === "reportes" && <ProblemReportsAdmin />}
+      {adminSubTab === "copias" && isSuperAdmin && <BackupPanel />}
 
       {/* Sub-pestaña: Usuarios */}
       {adminSubTab === "usuarios" && (
