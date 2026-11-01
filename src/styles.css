@@ -353,3 +353,32 @@
   text-transform: uppercase;
   color: var(--color-muted-foreground);
 }
+
+@keyframes score-ring {
+  from {
+    stroke-dashoffset: 283;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes score-in-left {
+  from {
+    transform: translateX(30%);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes score-in-right {
+  from {
+    transform: translateX(-30%);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}

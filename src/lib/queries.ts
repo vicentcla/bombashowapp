@@ -220,7 +220,7 @@ export function useInvalidate() {
   };
 }
 
-async function ensurePeriod(scope: Scope) {
+export async function ensurePeriod(scope: Scope) {
   const { data: period, error } = await supabase
     .from("reset_periods")
     .select("id")

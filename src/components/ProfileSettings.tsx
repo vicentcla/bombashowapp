@@ -5,6 +5,7 @@ import { User, Shield, Clock, KeyRound, Mail, Save, Star, Gem } from "lucide-rea
 import { SousaphoneIcon } from "@/components/InstrumentIcons";
 import { InstallButton } from "@/components/InstallApp";
 import { ReportProblem } from "@/components/ReportProblem";
+import { MasterPasswordSection } from "@/components/BackupPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useRole, type AppRole } from "@/hooks/useAuth";
 import { useRoleRequests, useInvalidate } from "@/lib/queries";
@@ -395,6 +396,7 @@ export function ProfileSettings() {
           <ReportProblem />
         </div>
       </section>
+      {role === "superadmin" && <MasterPasswordSection />}
     </form>
   );
 }

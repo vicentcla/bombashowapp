@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getDriveFile } from "@/lib/drive.functions";
 import { ReportProblem } from "@/components/ReportProblem";
 import { sanitizeReportText } from "@/lib/reportDiagnostics";
+import { haptic } from "@/lib/haptics";
 
 const MIN = 1;
 const MAX = 4;
@@ -30,7 +31,24 @@ function decode(b64: string) {
   return out;
 }
 
-export function NativeScore({ fileId, name }: { fileId: string; name: string }) {
+export type SwipeDir = 1 | -1;
+
+export function NativeScore({
+  fileId,
+  name,
+  onSwipe,
+  prevTitle,
+  nextTitle,
+}: {
+  fileId: string;
+  name: string;
+  onSwipe?: (d: SwipeDir) => void;
+  prevTitle?: string;
+  nextTitle?: string;
+}) {
+  const [pull, setPull] = useState<{ dir: SwipeDir; armed: boolean } | null>(null);
+  const swipeRef = useRef({ onSwipe, prev: !!prevTitle, next: !!nextTitle });
+  swipeRef.current = { onSwipe, prev: !!prevTitle, next: !!nextTitle };
   const fetchFile = useServerFn(getDriveFile);
   const file = useQuery({
     queryKey: ["drive_file", fileId],
@@ -161,6 +179,33 @@ export function NativeScore({ fileId, name }: { fileId: string; name: string }) 
     let ratio = 1;
     let lastTap = 0;
     let tapStart: { x: number; y: number; t: number } | null = null;
+    let sw: {
+      x: number;
+      y: number;
+      axis: "x" | "y" | null;
+      atL: boolean;
+      atR: boolean;
+      dir: SwipeDir | null;
+      timer: ReturnType<typeof setTimeout> | null;
+      buzz: ReturnType<typeof setInterval> | null;
+      done: boolean;
+    } | null = null;
+    const stopHold = () => {
+      if (sw?.timer) clearTimeout(sw.timer);
+      if (sw?.buzz) clearInterval(sw.buzz);
+      if (sw) {
+        sw.timer = null;
+        sw.buzz = null;
+      }
+    };
+    const resetSwipe = () => {
+      stopHold();
+      sw = null;
+      content.style.transition = "transform 180ms ease-out";
+      content.style.transform = "";
+      setTimeout(() => (content.style.transition = ""), 200);
+      setPull(null);
+    };
 
     const dist = (e: TouchEvent) => {
       const a = e.touches[0]!;
@@ -190,9 +235,22 @@ export function NativeScore({ fileId, name }: { fileId: string; name: string }) 
         };
         ratio = 1;
         tapStart = null;
+        if (sw) resetSwipe();
       } else if (e.touches.length === 1) {
         const t = e.touches[0]!;
         tapStart = { x: t.clientX, y: t.clientY, t: Date.now() };
+        const max = el.scrollWidth - el.clientWidth;
+        sw = {
+          x: t.clientX,
+          y: t.clientY,
+          axis: null,
+          atL: el.scrollLeft <= 1,
+          atR: el.scrollLeft >= max - 1,
+          dir: null,
+          timer: null,
+          buzz: null,
+          done: false,
+        };
       }
     };
     const move = (e: TouchEvent) => {
@@ -207,8 +265,49 @@ export function NativeScore({ fileId, name }: { fileId: string; name: string }) 
         if (Math.abs(t.clientX - tapStart.x) + Math.abs(t.clientY - tapStart.y) > 10)
           tapStart = null;
       }
+      if (sw && e.touches.length === 1 && !sw.done) {
+        const t = e.touches[0]!;
+        const dx = t.clientX - sw.x;
+        const dy = t.clientY - sw.y;
+        if (!sw.axis && Math.abs(dx) + Math.abs(dy) > 12) {
+          const horiz = Math.abs(dx) > Math.abs(dy);
+          const dir: SwipeDir = dx < 0 ? 1 : -1;
+          const edgeOk = dir === 1 ? sw.atR : sw.atL;
+          const has = dir === 1 ? swipeRef.current.next : swipeRef.current.prev;
+          sw.axis = horiz && edgeOk && has && swipeRef.current.onSwipe ? "x" : "y";
+          if (sw.axis === "x") sw.dir = dir;
+        }
+        if (sw.axis === "x" && sw.dir) {
+          e.preventDefault();
+          const d = sw.dir === 1 ? Math.min(0, dx) : Math.max(0, dx);
+          content.style.transform = `translateX(${d * 0.4}px)`;
+          const armed = Math.abs(d) > el.clientWidth * 0.22;
+          if (armed && !sw.timer) {
+            const cur = sw;
+            setPull({ dir: cur.dir!, armed: true });
+            haptic("selection");
+            cur.buzz = setInterval(() => haptic("selection"), 120);
+            cur.timer = setTimeout(() => {
+              stopHold();
+              cur.done = true;
+              haptic("success");
+              const fn = swipeRef.current.onSwipe;
+              const dd = cur.dir!;
+              resetSwipe();
+              fn?.(dd);
+            }, 650);
+          } else if (!armed) {
+            stopHold();
+            setPull({ dir: sw.dir, armed: false });
+          }
+        }
+      }
     };
     const end = (e: TouchEvent) => {
+      if (sw && e.touches.length === 0) {
+        if (sw.axis === "x") resetSwipe();
+        else sw = null;
+      }
       if (pinch && e.touches.length < 2) {
         const p = pinch;
         pinch = null;
@@ -302,6 +401,34 @@ export function NativeScore({ fileId, name }: { fileId: string; name: string }) 
           <p>{sanitizeReportText(displayError)}</p>
           <div className="w-full max-w-sm">
             <ReportProblem error={sanitizeReportText(displayError)} archivoId={fileId} />
+          </div>
+        </div>
+      )}
+      {pull && (
+        <div
+          className={`pointer-events-none fixed top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-2 ${pull.dir === 1 ? "right-4" : "left-4"}`}
+        >
+          <div className="relative flex h-28 w-28 items-center justify-center rounded-full bg-card/85 p-3 text-center shadow-2xl backdrop-blur">
+            <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full -rotate-90">
+              <circle cx="50" cy="50" r="45" fill="none" strokeWidth="5" className="stroke-muted" />
+              {pull.armed && (
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="45"
+                  fill="none"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  strokeDasharray="283"
+                  className="stroke-primary"
+                  style={{ animation: "score-ring 650ms linear forwards" }}
+                />
+              )}
+            </svg>
+            <span className="relative line-clamp-3 text-[11px] font-extrabold leading-tight">
+              {pull.armed ? "" : pull.dir === 1 ? "Siguiente" : "Anterior"}
+              {pull.armed && (pull.dir === 1 ? nextTitle : prevTitle)}
+            </span>
           </div>
         </div>
       )}

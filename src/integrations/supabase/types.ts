@@ -95,6 +95,42 @@ export type Database = {
         }
         Relationships: []
       }
+      bolos: {
+        Row: {
+          archived: boolean
+          created_at: string
+          created_by: string | null
+          fecha: string | null
+          id: string
+          played_item_ids: string[]
+          saved_at: string | null
+          setlist_ids: string[]
+          title: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          created_by?: string | null
+          fecha?: string | null
+          id?: string
+          played_item_ids?: string[]
+          saved_at?: string | null
+          setlist_ids?: string[]
+          title: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          created_by?: string | null
+          fecha?: string | null
+          id?: string
+          played_item_ids?: string[]
+          saved_at?: string | null
+          setlist_ids?: string[]
+          title?: string
+        }
+        Relationships: []
+      }
       drive_folders: {
         Row: {
           created_at: string
@@ -723,12 +759,19 @@ export type Database = {
         Args: { datos: Json; reporte_id: string }
         Returns: string
       }
+      export_backup: { Args: never; Returns: Json }
+      get_master_password: { Args: never; Returns: string }
       get_profile_email: { Args: { _user_id: string }; Returns: string }
+      restore_backup: {
+        Args: { clave: string; datos: Json }
+        Returns: undefined
+      }
       sanear_texto_reporte: {
         Args: { limite?: number; valor: string }
         Returns: string
       }
       sanitize_lyrics_html: { Args: { _html: string }; Returns: string }
+      set_master_password: { Args: { nueva: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "miembro" | "superadmin"
