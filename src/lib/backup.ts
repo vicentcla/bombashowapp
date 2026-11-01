@@ -19,7 +19,7 @@ export type BackupData = {
 export function parseBackup(raw: unknown): BackupData {
   if (!raw || typeof raw !== "object") throw new Error("Archivo no válido");
   const o = raw as Record<string, unknown>;
-  if (o.app !== "la-bomba-show" || typeof o.version !== "number" || o.version > 1)
+  if (o["app"] !== "la-bomba-show" || typeof o["version"] !== "number" || o["version"] > 1)
     throw new Error("Archivo no válido");
   for (const k of Object.keys(BACKUP_TABLES)) {
     if (o[k] === undefined) o[k] = [];
