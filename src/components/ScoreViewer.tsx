@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
-  ChevronLeft,
   ChevronRight,
   Expand,
   FileMusic,
