@@ -14,7 +14,7 @@ import { normalize } from "@/lib/format";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { GoogleDriveIcon } from "@/components/BrandIcons";
-import { listDriveFiles } from "@/lib/drive.functions";
+import { getDriveFile, listDriveFiles } from "@/lib/drive.functions";
 import { driveUrl } from "@/lib/drive";
 import { haptic } from "@/lib/haptics";
 import { NativeScore } from "@/components/NativeScore";
@@ -154,6 +154,18 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
       return "Google Drive ha respondido correctamente, pero no ha devuelto PDF o imágenes visibles en esta carpeta";
     return "No se han podido cargar las partituras de esta carpeta.";
   }
+  const lastDir = useRef<1 | -1 | 0>(0);
+  const fetchDrive = useServerFn(getDriveFile);
+  const prevItem = viewList.length > 1 ? viewList[(index - 1 + viewList.length) % viewList.length] : undefined;
+  const nextItem = viewList.length > 1 ? viewList[(index + 1) % viewList.length] : undefined;
+  useEffect(() => {
+    if (!open || !nextItem) return;
+    void qc.prefetchQuery({
+      queryKey: ["drive_file", nextItem.id],
+      queryFn: () => fetchDrive({ data: { fileId: nextItem.id } }),
+      staleTime: 30 * 60 * 1000,
+    });
+  }, [open, nextItem?.id]);
   const go = (d: number) => {
     if (!viewList.length) return;
     setIndex((i) => (i + d + viewList.length) % viewList.length);
@@ -405,7 +417,28 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
         </div>
       )}
       <div className="relative flex-1 overflow-hidden">
-        <NativeScore key={current.id} fileId={current.id} name={current.name} />
+        <div
+          key={current.id}
+          className="absolute inset-0"
+          style={
+            lastDir.current
+              ? {
+                  animation: `${lastDir.current === 1 ? "score-in-left" : "score-in-right"} 260ms ease-out`,
+                }
+              : undefined
+          }
+        >
+          <NativeScore
+            fileId={current.id}
+            name={current.name}
+            onSwipe={(d) => {
+              lastDir.current = d;
+              go(d);
+            }}
+            {...(prevItem ? { prevTitle: prevItem.name.replace(/\.pdf$/i, "") } : {})}
+            {...(nextItem ? { nextTitle: nextItem.name.replace(/\.pdf$/i, "") } : {})}
+          />
+        </div>
         {full && (
           <>
             <button
@@ -418,24 +451,6 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
             <span className="pointer-events-none absolute left-2 top-2 max-w-[70%] truncate rounded-full bg-card/60 px-3 py-1 text-[11px] font-bold backdrop-blur">
               {index + 1}/{viewList.length} · {current.name.replace(/\.pdf$/i, "")}
             </span>
-          </>
-        )}
-        {viewList.length > 1 && (
-          <>
-            <button
-              onClick={() => go(-1)}
-              aria-label="Anterior"
-              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-card/60 p-3 backdrop-blur"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => go(1)}
-              aria-label="Siguiente"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-card/60 p-3 backdrop-blur"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
           </>
         )}
       </div>
