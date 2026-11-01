@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 const ANIVERSARIO_SRC = "/logo-x-final-3.png";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { BoloMode } from "@/components/BoloMode";
 import { TunerMetronome } from "@/components/TunerMetronome";
 import { GoogleDriveIcon, InstagramIcon } from "@/components/BrandIcons";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
@@ -80,6 +81,8 @@ function Inicio() {
       <GlobalSearch />
 
       <NoticeBoard />
+
+      <BoloMode />
 
       {/* Accesos del grupo (desplegable, solo iconos) */}
       <div className="mt-6 flex justify-center gap-3">
