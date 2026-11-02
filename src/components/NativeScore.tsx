@@ -269,6 +269,7 @@ export function NativeScore({
           axis: null,
           atL: el.scrollLeft <= 1,
           atR: el.scrollLeft >= max - 1,
+          atB: el.scrollTop >= el.scrollHeight - el.clientHeight - 2,
           dir: null,
           timer: null,
           buzz: null,
