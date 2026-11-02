@@ -208,6 +208,27 @@ export function NativeScore({
       setTimeout(() => (content.style.transition = ""), 200);
       setPull(null);
     };
+    const armHold = (armed: boolean) => {
+      if (!sw || !sw.dir) return;
+      if (armed && !sw.timer) {
+        const cur = sw;
+        setPull({ dir: cur.dir, armed: true });
+        haptic("selection");
+        cur.buzz = setInterval(() => haptic("selection"), 120);
+        cur.timer = setTimeout(() => {
+          stopHold();
+          cur.done = true;
+          haptic("success");
+          const fn = swipeRef.current.onSwipe;
+          const dd = cur.dir!;
+          resetSwipe();
+          fn?.(dd);
+        }, HOLD_MS);
+      } else if (!armed) {
+        stopHold();
+        setPull({ dir: sw.dir, armed: false });
+      }
+    };
 
     const dist = (e: TouchEvent) => {
       const a = e.touches[0]!;
