@@ -10,6 +10,7 @@ const MIN = 1;
 const MAX = 4;
 const FIT = 2;
 const MAX_PIXELS = 12_000_000;
+const HOLD_MS = 400;
 
 type PdfDoc = {
   numPages: number;
@@ -182,9 +183,10 @@ export function NativeScore({
     let sw: {
       x: number;
       y: number;
-      axis: "x" | "y" | null;
+      axis: "x" | "y" | "v" | null;
       atL: boolean;
       atR: boolean;
+      atB: boolean;
       dir: SwipeDir | null;
       timer: ReturnType<typeof setTimeout> | null;
       buzz: ReturnType<typeof setInterval> | null;
