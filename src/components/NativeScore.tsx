@@ -323,7 +323,7 @@ export function NativeScore({
     };
     const end = (e: TouchEvent) => {
       if (sw && e.touches.length === 0) {
-        if (sw.axis === "x") resetSwipe();
+        if (sw.axis === "x" || sw.axis === "v") resetSwipe();
         else sw = null;
       }
       if (pinch && e.touches.length < 2) {
@@ -439,13 +439,12 @@ export function NativeScore({
                   strokeLinecap="round"
                   strokeDasharray="283"
                   className="stroke-primary"
-                  style={{ animation: "score-ring 650ms linear forwards" }}
+                  style={{ animation: `score-ring ${HOLD_MS}ms linear forwards` }}
                 />
               )}
             </svg>
-            <span className="relative line-clamp-3 text-[11px] font-extrabold leading-tight">
-              {pull.armed ? "" : pull.dir === 1 ? "Siguiente" : "Anterior"}
-              {pull.armed && (pull.dir === 1 ? nextTitle : prevTitle)}
+            <span className="relative text-[11px] font-extrabold leading-tight">
+              {pull.dir === 1 ? "Siguiente" : "Anterior"}
             </span>
           </div>
         </div>
