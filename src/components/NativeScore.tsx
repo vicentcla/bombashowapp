@@ -295,35 +295,29 @@ export function NativeScore({
         const dy = t.clientY - sw.y;
         if (!sw.axis && Math.abs(dx) + Math.abs(dy) > 12) {
           const horiz = Math.abs(dx) > Math.abs(dy);
-          const dir: SwipeDir = dx < 0 ? 1 : -1;
-          const edgeOk = dir === 1 ? sw.atR : sw.atL;
-          const has = dir === 1 ? swipeRef.current.next : swipeRef.current.prev;
-          sw.axis = horiz && edgeOk && has && swipeRef.current.onSwipe ? "x" : "y";
-          if (sw.axis === "x") sw.dir = dir;
+          if (horiz) {
+            const dir: SwipeDir = dx < 0 ? 1 : -1;
+            const edgeOk = dir === 1 ? sw.atR : sw.atL;
+            const has = dir === 1 ? swipeRef.current.next : swipeRef.current.prev;
+            if (edgeOk && has && swipeRef.current.onSwipe) {
+              sw.axis = "x";
+              sw.dir = dir;
+            } else sw.axis = "y";
+          } else if (dy < 0 && sw.atB && swipeRef.current.next && swipeRef.current.onSwipe) {
+            sw.axis = "v";
+            sw.dir = 1;
+          } else sw.axis = "y";
         }
         if (sw.axis === "x" && sw.dir) {
           e.preventDefault();
           const d = sw.dir === 1 ? Math.min(0, dx) : Math.max(0, dx);
           content.style.transform = `translateX(${d * 0.4}px)`;
-          const armed = Math.abs(d) > el.clientWidth * 0.22;
-          if (armed && !sw.timer) {
-            const cur = sw;
-            setPull({ dir: cur.dir!, armed: true });
-            haptic("selection");
-            cur.buzz = setInterval(() => haptic("selection"), 120);
-            cur.timer = setTimeout(() => {
-              stopHold();
-              cur.done = true;
-              haptic("success");
-              const fn = swipeRef.current.onSwipe;
-              const dd = cur.dir!;
-              resetSwipe();
-              fn?.(dd);
-            }, 650);
-          } else if (!armed) {
-            stopHold();
-            setPull({ dir: sw.dir, armed: false });
-          }
+          armHold(Math.abs(d) > el.clientWidth * 0.22);
+        } else if (sw.axis === "v") {
+          e.preventDefault();
+          const d = Math.min(0, dy);
+          content.style.transform = `translateY(${d * 0.35}px)`;
+          armHold(Math.abs(d) > el.clientHeight * 0.15);
         }
       }
     };
