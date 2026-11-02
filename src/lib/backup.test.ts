@@ -9,7 +9,12 @@ describe("parseBackup", () => {
     expect(() => parseBackup({ app: "la-bomba-show", version: 2 })).toThrow();
   });
   it("acepta una copia válida y cuenta sus filas", () => {
-    const d = parseBackup({ app: "la-bomba-show", version: 1, creado: "x", arrangements: [{}, {}] });
+    const d = parseBackup({
+      app: "la-bomba-show",
+      version: 1,
+      creado: "x",
+      arrangements: [{}, {}],
+    });
     expect(backupSummary(d)[0]).toEqual(["arreglos", 2]);
   });
 });
