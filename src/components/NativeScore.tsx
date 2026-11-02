@@ -10,6 +10,7 @@ const MIN = 1;
 const MAX = 4;
 const FIT = 2;
 const MAX_PIXELS = 12_000_000;
+const HOLD_MS = 400;
 
 type PdfDoc = {
   numPages: number;
@@ -182,9 +183,10 @@ export function NativeScore({
     let sw: {
       x: number;
       y: number;
-      axis: "x" | "y" | null;
+      axis: "x" | "y" | "v" | null;
       atL: boolean;
       atR: boolean;
+      atB: boolean;
       dir: SwipeDir | null;
       timer: ReturnType<typeof setTimeout> | null;
       buzz: ReturnType<typeof setInterval> | null;
@@ -205,6 +207,27 @@ export function NativeScore({
       content.style.transform = "";
       setTimeout(() => (content.style.transition = ""), 200);
       setPull(null);
+    };
+    const armHold = (armed: boolean) => {
+      if (!sw || !sw.dir) return;
+      const dir = sw.dir;
+      if (armed && !sw.timer) {
+        const cur = sw;
+        setPull({ dir, armed: true });
+        haptic("selection");
+        cur.buzz = setInterval(() => haptic("selection"), 120);
+        cur.timer = setTimeout(() => {
+          stopHold();
+          cur.done = true;
+          haptic("success");
+          const fn = swipeRef.current.onSwipe;
+          resetSwipe();
+          fn?.(dir);
+        }, HOLD_MS);
+      } else if (!armed) {
+        stopHold();
+        setPull({ dir, armed: false });
+      }
     };
 
     const dist = (e: TouchEvent) => {
@@ -246,6 +269,7 @@ export function NativeScore({
           axis: null,
           atL: el.scrollLeft <= 1,
           atR: el.scrollLeft >= max - 1,
+          atB: el.scrollTop >= el.scrollHeight - el.clientHeight - 2,
           dir: null,
           timer: null,
           buzz: null,
@@ -271,41 +295,35 @@ export function NativeScore({
         const dy = t.clientY - sw.y;
         if (!sw.axis && Math.abs(dx) + Math.abs(dy) > 12) {
           const horiz = Math.abs(dx) > Math.abs(dy);
-          const dir: SwipeDir = dx < 0 ? 1 : -1;
-          const edgeOk = dir === 1 ? sw.atR : sw.atL;
-          const has = dir === 1 ? swipeRef.current.next : swipeRef.current.prev;
-          sw.axis = horiz && edgeOk && has && swipeRef.current.onSwipe ? "x" : "y";
-          if (sw.axis === "x") sw.dir = dir;
+          if (horiz) {
+            const dir: SwipeDir = dx < 0 ? 1 : -1;
+            const edgeOk = dir === 1 ? sw.atR : sw.atL;
+            const has = dir === 1 ? swipeRef.current.next : swipeRef.current.prev;
+            if (edgeOk && has && swipeRef.current.onSwipe) {
+              sw.axis = "x";
+              sw.dir = dir;
+            } else sw.axis = "y";
+          } else if (dy < 0 && sw.atB && swipeRef.current.next && swipeRef.current.onSwipe) {
+            sw.axis = "v";
+            sw.dir = 1;
+          } else sw.axis = "y";
         }
         if (sw.axis === "x" && sw.dir) {
           e.preventDefault();
           const d = sw.dir === 1 ? Math.min(0, dx) : Math.max(0, dx);
           content.style.transform = `translateX(${d * 0.4}px)`;
-          const armed = Math.abs(d) > el.clientWidth * 0.22;
-          if (armed && !sw.timer) {
-            const cur = sw;
-            setPull({ dir: cur.dir!, armed: true });
-            haptic("selection");
-            cur.buzz = setInterval(() => haptic("selection"), 120);
-            cur.timer = setTimeout(() => {
-              stopHold();
-              cur.done = true;
-              haptic("success");
-              const fn = swipeRef.current.onSwipe;
-              const dd = cur.dir!;
-              resetSwipe();
-              fn?.(dd);
-            }, 650);
-          } else if (!armed) {
-            stopHold();
-            setPull({ dir: sw.dir, armed: false });
-          }
+          armHold(Math.abs(d) > el.clientWidth * 0.22);
+        } else if (sw.axis === "v") {
+          e.preventDefault();
+          const d = Math.min(0, dy);
+          content.style.transform = `translateY(${d * 0.35}px)`;
+          armHold(Math.abs(d) > el.clientHeight * 0.15);
         }
       }
     };
     const end = (e: TouchEvent) => {
       if (sw && e.touches.length === 0) {
-        if (sw.axis === "x") resetSwipe();
+        if (sw.axis === "x" || sw.axis === "v") resetSwipe();
         else sw = null;
       }
       if (pinch && e.touches.length < 2) {
@@ -421,13 +439,12 @@ export function NativeScore({
                   strokeLinecap="round"
                   strokeDasharray="283"
                   className="stroke-primary"
-                  style={{ animation: "score-ring 650ms linear forwards" }}
+                  style={{ animation: `score-ring ${HOLD_MS}ms linear forwards` }}
                 />
               )}
             </svg>
-            <span className="relative line-clamp-3 text-[11px] font-extrabold leading-tight">
-              {pull.armed ? "" : pull.dir === 1 ? "Siguiente" : "Anterior"}
-              {pull.armed && (pull.dir === 1 ? nextTitle : prevTitle)}
+            <span className="relative text-[11px] font-extrabold leading-tight">
+              {pull.dir === 1 ? "Siguiente" : "Anterior"}
             </span>
           </div>
         </div>

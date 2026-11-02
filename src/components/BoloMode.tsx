@@ -1,24 +1,22 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, Check, ChevronRight, FileMusic, Music2, Plus, Save } from "lucide-react";
+import { Archive, Check, ChevronRight, FileMusic, FileText, Music2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsAdmin } from "@/hooks/useAuth";
-import { ensurePeriod, useSetlists } from "@/lib/queries";
+import { useLyrics, useSetlists, type Lyric } from "@/lib/queries";
 import { parseSetlistNotes } from "@/routes/_authenticated/setlists";
 import { haptic } from "@/lib/haptics";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { LyricViewerModal } from "@/components/LyricViewerModal";
 
 type Bolo = {
   id: string;
   title: string;
   fecha: string | null;
   setlist_ids: string[];
-  played_item_ids: string[];
-  saved_at: string | null;
   archived: boolean;
 };
 
@@ -37,7 +35,7 @@ function useBolos() {
     queryFn: async (): Promise<Bolo[]> => {
       const { data, error } = await supabase
         .from("bolos")
-        .select("*")
+        .select("id, title, fecha, setlist_ids, archived")
         .eq("archived", false)
         .order("fecha", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false });
@@ -129,7 +127,6 @@ export function BoloMode() {
                 <span className="block text-xs text-muted-foreground">
                   {fmtDate(b.fecha)} · {b.setlist_ids.length} setlist
                   {b.setlist_ids.length === 1 ? "" : "s"}
-                  {b.played_item_ids.length > 0 && ` · ${b.played_item_ids.length} tocadas`}
                 </span>
               </span>
               <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -167,12 +164,11 @@ export function BoloMode() {
 }
 
 function BoloDetail({ bolo, onClose }: { bolo: Bolo; onClose: () => void }) {
-  const { isAdmin } = useIsAdmin();
   const setlists = useSetlists();
+  const lyrics = useLyrics();
   const update = useUpdateBolo();
-  const qc = useQueryClient();
   const [picking, setPicking] = useState(bolo.setlist_ids.length === 0);
-  const [saving, setSaving] = useState(false);
+  const [viewing, setViewing] = useState<{ title: string; lyric: Lyric } | null>(null);
 
   const active = useMemo(
     () => (setlists.data ?? []).filter((s) => !parseSetlistNotes(s.notes).archived),
@@ -200,7 +196,12 @@ function BoloDetail({ bolo, onClose }: { bolo: Bolo; onClose: () => void }) {
     },
   });
 
-  const played = new Set(bolo.played_item_ids);
+  const lyricFor = (arrangementId: string | null): Lyric | null =>
+    arrangementId
+      ? ((lyrics.data ?? []).find(
+          (l) => l.kind === "arreglo" && l.arrangement_id === arrangementId,
+        ) ?? null)
+      : null;
 
   function toggleSetlist(id: string) {
     const next = bolo.setlist_ids.includes(id)
@@ -209,41 +210,15 @@ function BoloDetail({ bolo, onClose }: { bolo: Bolo; onClose: () => void }) {
     update.mutate({ id: bolo.id, patch: { setlist_ids: next } });
   }
 
-  function togglePlayed(id: string) {
-    haptic("light");
-    const next = played.has(id)
-      ? bolo.played_item_ids.filter((x) => x !== id)
-      : [...bolo.played_item_ids, id];
-    update.mutate({ id: bolo.id, patch: { played_item_ids: next } });
-  }
-
-  async function saveAll() {
-    const rows = (items.data ?? []).filter((i) => played.has(i.id) && i.arrangement_id);
-    if (!rows.length) return;
-    setSaving(true);
-    try {
-      const periodId = await ensurePeriod("arreglo");
-      const { error } = await supabase.from("play_events").insert(
-        rows.map((r) => ({
-          scope: "arreglo" as const,
-          period_id: periodId,
-          arrangement_id: r.arrangement_id,
-          street_song_id: null,
-        })),
-      );
-      if (error) throw error;
-      await update.mutateAsync({
-        id: bolo.id,
-        patch: { played_item_ids: [], saved_at: new Date().toISOString() },
-      });
-      void qc.invalidateQueries({ queryKey: ["play_events"] });
-      haptic("success");
-      toast.success(`${rows.length} toques guardados en los contadores`);
-    } catch {
-      toast.error("No se pudieron guardar los toques");
-    } finally {
-      setSaving(false);
+  function openLyric(item: Item) {
+    const title = item.arrangements?.title ?? item.manual_title ?? "Sin título";
+    const lyric = lyricFor(item.arrangement_id);
+    if (!lyric) {
+      toast.info(`«${title}» no tiene letra guardada`);
+      return;
     }
+    haptic("light");
+    setViewing({ title, lyric });
   }
 
   return (
@@ -251,9 +226,8 @@ function BoloDetail({ bolo, onClose }: { bolo: Bolo; onClose: () => void }) {
       <DialogHeader>
         <DialogTitle className="truncate">{bolo.title}</DialogTitle>
         <p className="text-xs text-muted-foreground">
-          {fmtDate(bolo.fecha)}
-          {bolo.saved_at &&
-            ` · Guardado ${new Date(bolo.saved_at).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" })}`}
+          {fmtDate(bolo.fecha)} · {chosen.length} setlist{chosen.length === 1 ? "" : "s"} ·{" "}
+          {items.data?.length ?? 0} canciones
         </p>
       </DialogHeader>
 
@@ -304,26 +278,22 @@ function BoloDetail({ bolo, onClose }: { bolo: Bolo; onClose: () => void }) {
             <h3 className="section-label truncate">{s.name}</h3>
             <div className="group-list">
               {list.map((i, n) => {
-                const on = played.has(i.id);
+                const lyric = lyricFor(i.arrangement_id);
                 return (
                   <button
                     key={i.id}
-                    onClick={() => togglePlayed(i.id)}
+                    onClick={() => openLyric(i)}
                     className="flex min-h-11 w-full items-center gap-3 px-4 py-2 text-left"
                   >
                     <span className="w-5 shrink-0 text-xs font-bold text-muted-foreground">
                       {n + 1}
                     </span>
-                    <span
-                      className={`min-w-0 flex-1 truncate font-semibold ${on ? "text-muted-foreground line-through" : ""}`}
-                    >
+                    <span className="min-w-0 flex-1 truncate font-semibold">
                       {i.arrangements?.title ?? i.manual_title ?? "Sin título"}
                     </span>
-                    <span
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${on ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}
-                    >
-                      {on && <Check className="h-4 w-4" />}
-                    </span>
+                    <FileText
+                      className={`h-4 w-4 shrink-0 ${lyric ? "text-primary" : "text-muted-foreground/40"}`}
+                    />
                   </button>
                 );
               })}
@@ -335,17 +305,6 @@ function BoloDetail({ bolo, onClose }: { bolo: Bolo; onClose: () => void }) {
         );
       })}
 
-      {isAdmin && chosen.length > 0 && (
-        <Button
-          className="w-full"
-          onClick={saveAll}
-          disabled={saving || bolo.played_item_ids.length === 0}
-        >
-          <Save className="mr-2 h-4 w-4" /> Guardar todo a los contadores (
-          {bolo.played_item_ids.length})
-        </Button>
-      )}
-
       <button
         onClick={() => {
           update.mutate({ id: bolo.id, patch: { archived: true } });
@@ -355,6 +314,15 @@ function BoloDetail({ bolo, onClose }: { bolo: Bolo; onClose: () => void }) {
       >
         <Archive className="h-3.5 w-3.5" /> Archivar bolo
       </button>
+
+      {viewing && (
+        <LyricViewerModal
+          title={viewing.title}
+          kind="arreglo"
+          lyric={viewing.lyric}
+          onClose={() => setViewing(null)}
+        />
+      )}
     </div>
   );
 }

@@ -159,13 +159,16 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
     viewList.length > 1 ? viewList[(index - 1 + viewList.length) % viewList.length] : undefined;
   const nextItem = viewList.length > 1 ? viewList[(index + 1) % viewList.length] : undefined;
   useEffect(() => {
-    if (!open || !nextItem) return;
-    void qc.prefetchQuery({
-      queryKey: ["drive_file", nextItem.id],
-      queryFn: () => fetchDrive({ data: { fileId: nextItem.id } }),
-      staleTime: 30 * 60 * 1000,
-    });
-  }, [open, nextItem?.id]);
+    if (!open) return;
+    for (const item of [nextItem, prevItem]) {
+      if (!item) continue;
+      void qc.prefetchQuery({
+        queryKey: ["drive_file", item.id],
+        queryFn: () => fetchDrive({ data: { fileId: item.id } }),
+        staleTime: 30 * 60 * 1000,
+      });
+    }
+  }, [open, nextItem?.id, prevItem?.id]);
   const go = (d: number) => {
     if (!viewList.length) return;
     setIndex((i) => (i + d + viewList.length) % viewList.length);
@@ -425,7 +428,8 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
           style={
             lastDir.current
               ? {
-                  animation: `${lastDir.current === 1 ? "score-in-left" : "score-in-right"} 260ms ease-out`,
+                  animation: `${lastDir.current === 1 ? "score-in-left" : "score-in-right"} 320ms cubic-bezier(0.22, 1, 0.36, 1)`,
+                  willChange: "transform, opacity",
                 }
               : undefined
           }

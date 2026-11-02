@@ -364,7 +364,7 @@
 }
 @keyframes score-in-left {
   from {
-    transform: translateX(30%);
+    transform: translateX(60%) scale(0.97);
     opacity: 0;
   }
   to {
@@ -374,7 +374,7 @@
 }
 @keyframes score-in-right {
   from {
-    transform: translateX(-30%);
+    transform: translateX(-60%) scale(0.97);
     opacity: 0;
   }
   to {
