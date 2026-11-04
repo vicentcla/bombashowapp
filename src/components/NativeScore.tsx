@@ -10,7 +10,6 @@ const MIN = 1;
 const MAX = 4;
 const FIT = 2;
 const MAX_PIXELS = 12_000_000;
-const HOLD_MS = 400;
 
 type PdfDoc = {
   numPages: number;
@@ -47,7 +46,9 @@ export function NativeScore({
   prevTitle?: string;
   nextTitle?: string;
 }) {
-  const [pull, setPull] = useState<{ dir: SwipeDir; armed: boolean } | null>(null);
+  const [pull, setPull] = useState<{ dir: SwipeDir; progress: number; ready: boolean } | null>(
+    null,
+  );
   const swipeRef = useRef({ onSwipe, prev: !!prevTitle, next: !!nextTitle });
   swipeRef.current = { onSwipe, prev: !!prevTitle, next: !!nextTitle };
   const fetchFile = useServerFn(getDriveFile);
@@ -188,46 +189,23 @@ export function NativeScore({
       atR: boolean;
       atB: boolean;
       dir: SwipeDir | null;
-      timer: ReturnType<typeof setTimeout> | null;
-      buzz: ReturnType<typeof setInterval> | null;
+      ready: boolean;
       done: boolean;
     } | null = null;
-    const stopHold = () => {
-      if (sw?.timer) clearTimeout(sw.timer);
-      if (sw?.buzz) clearInterval(sw.buzz);
-      if (sw) {
-        sw.timer = null;
-        sw.buzz = null;
-      }
-    };
     const resetSwipe = () => {
-      stopHold();
       sw = null;
       content.style.transition = "transform 180ms ease-out";
       content.style.transform = "";
       setTimeout(() => (content.style.transition = ""), 200);
       setPull(null);
     };
-    const armHold = (armed: boolean) => {
+    const updatePull = (progress: number) => {
       if (!sw || !sw.dir) return;
-      const dir = sw.dir;
-      if (armed && !sw.timer) {
-        const cur = sw;
-        setPull({ dir, armed: true });
-        haptic("selection");
-        cur.buzz = setInterval(() => haptic("selection"), 120);
-        cur.timer = setTimeout(() => {
-          stopHold();
-          cur.done = true;
-          haptic("success");
-          const fn = swipeRef.current.onSwipe;
-          resetSwipe();
-          fn?.(dir);
-        }, HOLD_MS);
-      } else if (!armed) {
-        stopHold();
-        setPull({ dir, armed: false });
-      }
+      const ready = progress >= 1;
+      if (ready && !sw.ready) haptic("success");
+      else if (!ready && sw.ready) haptic("selection");
+      sw.ready = ready;
+      setPull({ dir: sw.dir, progress, ready });
     };
 
     const dist = (e: TouchEvent) => {
@@ -271,8 +249,7 @@ export function NativeScore({
           atR: el.scrollLeft >= max - 1,
           atB: el.scrollTop >= el.scrollHeight - el.clientHeight - 2,
           dir: null,
-          timer: null,
-          buzz: null,
+          ready: false,
           done: false,
         };
       }
@@ -311,20 +288,27 @@ export function NativeScore({
         if (sw.axis === "x" && sw.dir) {
           e.preventDefault();
           const d = sw.dir === 1 ? Math.min(0, dx) : Math.max(0, dx);
-          content.style.transform = `translateX(${d * 0.4}px)`;
-          armHold(Math.abs(d) > el.clientWidth * 0.22);
+          const p = Math.min(1, Math.abs(d) / (el.clientWidth * 0.4));
+          content.style.transform = `translateX(${d * 0.4 * (1 - p * 0.4)}px)`;
+          updatePull(p);
         } else if (sw.axis === "v") {
           e.preventDefault();
           const d = Math.min(0, dy);
-          content.style.transform = `translateY(${d * 0.35}px)`;
-          armHold(Math.abs(d) > el.clientHeight * 0.15);
+          const p = Math.min(1, Math.abs(d) / (el.clientHeight * 0.3));
+          content.style.transform = `translateY(${d * 0.35 * (1 - p * 0.4)}px)`;
+          updatePull(p);
         }
       }
     };
     const end = (e: TouchEvent) => {
       if (sw && e.touches.length === 0) {
-        if (sw.axis === "x" || sw.axis === "v") resetSwipe();
-        else sw = null;
+        if (sw.axis === "x" || sw.axis === "v") {
+          const dir = sw.dir;
+          const ready = sw.ready;
+          const fn = swipeRef.current.onSwipe;
+          resetSwipe();
+          if (ready && dir) fn?.(dir);
+        } else sw = null;
       }
       if (pinch && e.touches.length < 2) {
         const p = pinch;
@@ -429,22 +413,26 @@ export function NativeScore({
           <div className="relative flex h-28 w-28 items-center justify-center rounded-full bg-card/85 p-3 text-center shadow-2xl backdrop-blur">
             <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full -rotate-90">
               <circle cx="50" cy="50" r="45" fill="none" strokeWidth="5" className="stroke-muted" />
-              {pull.armed && (
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="none"
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                  strokeDasharray="283"
-                  className="stroke-primary"
-                  style={{ animation: `score-ring ${HOLD_MS}ms linear forwards` }}
-                />
-              )}
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeDasharray="283"
+                strokeDashoffset={283 * (1 - pull.progress)}
+                className="stroke-primary"
+              />
             </svg>
             <span className="relative text-[11px] font-extrabold leading-tight">
-              {pull.dir === 1 ? "Siguiente" : "Anterior"}
+              {pull.ready
+                ? pull.dir === 1
+                  ? "Suelta para siguiente"
+                  : "Suelta para anterior"
+                : pull.dir === 1
+                  ? "Siguiente"
+                  : "Anterior"}
             </span>
           </div>
         </div>
