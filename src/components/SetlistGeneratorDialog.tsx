@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { DurationInput } from "@/components/DurationInput";
 import { RefreshCw, Shuffle, Sparkles, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -124,14 +125,12 @@ export function SetlistGeneratorDialog({
                   {m} min
                 </button>
               ))}
-              <input
-                type="number"
-                min={5}
-                max={240}
-                value={minutes}
-                onChange={(e) => setMinutes(Math.max(1, Number(e.target.value) || 0))}
+              <DurationInput
                 className="comic-sm w-20 rounded-lg bg-card px-2 py-2 text-sm font-bold"
                 aria-label="Minutos"
+                mode="hmm"
+                value={minutes}
+                onValueChange={(v) => setMinutes(Math.max(1, v || 0))}
               />
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { DurationInput } from "@/components/DurationInput";
 import { useEffect, useMemo, useState } from "react";
 import {
   Plus,
@@ -36,7 +37,6 @@ import {
   durationInputToSeconds,
   durationSecondsToInput,
   formatDuration,
-  formatDurationInput,
   formatLongDuration,
   normalize,
 } from "@/lib/format";
@@ -941,13 +941,9 @@ function ArrangementDialog({
 
         <label className="mb-3 block text-sm font-bold uppercase">
           Duración (mm:ss)
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            placeholder="0:00"
-            value={formatDurationInput(duration)}
-            onChange={(e) => setDuration(e.target.value)}
+          <DurationInput
+            value={durationInputToSeconds(duration)}
+            onValueChange={(v) => setDuration(durationSecondsToInput(v))}
             className="comic-sm mt-1 w-full rounded-md bg-background px-3 py-2 text-base font-normal outline-none"
           />
         </label>

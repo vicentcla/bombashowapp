@@ -9,15 +9,36 @@ export type MatchItem = {
   pass_rank: number;
 };
 export type MatchEntry =
-  | { item: MatchItem; state: "ok"; file: MatchFile; linked: boolean }
+  | { item: MatchItem; state: "ok"; file: MatchFile; linked: boolean; extra?: MatchFile[] }
   | { item: MatchItem; state: "missing" }
   | { item: MatchItem; state: "ambiguous"; candidates: MatchFile[] };
 
 const clean = (s: string) =>
   normalize(s.replace(/\.(pdf|png|jpe?g|webp)$/i, ""))
     .toLowerCase()
+    .replace(/['’´`]/g, "")
     .replace(/[^a-z0-9ñ]+/g, " ")
+    .replace(/\bpopu\b/g, "popular")
     .trim();
+
+const OTHER_PART = /\b(percu\w*|bateria|drum|bombo|caja)\b/;
+
+function findFiles(title: string, files: MatchFile[]): MatchFile[] {
+  const t = clean(title);
+  if (!t) return [];
+  const names = files.map((f) => ({ f, c: clean(f.name) }));
+  let cands = names.filter((n) => n.c === t);
+  if (!cands.length) cands = names.filter((n) => ` ${n.c} `.includes(` ${t} `));
+  if (!cands.length) {
+    const ts = t.replace(/ /g, "");
+    cands = names.filter((n) => n.c.replace(/ /g, "").includes(ts));
+  }
+  if (cands.length > 1) {
+    const pref = cands.filter((n) => !OTHER_PART.test(n.c));
+    if (pref.length) cands = pref;
+  }
+  return cands.map((n) => n.f);
+}
 
 export function passRanks(notes: string | null): Record<string, number> {
   try {
@@ -53,14 +74,15 @@ export function matchScores(
       : undefined;
     const linked = link && files.find((f) => f.id === link.file_id);
     if (linked) return { item, state: "ok", file: linked, linked: true };
-    const t = clean(item.title);
-    if (!t) return { item, state: "missing" };
-    const exact = files.filter((f) => clean(f.name) === t);
-    const cands = exact.length
-      ? exact
-      : files.filter((f) => ` ${clean(f.name)} `.includes(` ${t} `));
+    const cands = findFiles(item.title, files);
     if (cands.length === 1) return { item, state: "ok", file: cands[0]!, linked: false };
-    if (cands.length === 0) return { item, state: "missing" };
-    return { item, state: "ambiguous", candidates: cands };
+    if (cands.length > 1) return { item, state: "ambiguous", candidates: cands };
+    if (item.title.includes("+")) {
+      const parts = item.title.split("+").map((p) => findFiles(p, files));
+      const found = parts.filter((c) => c.length === 1).map((c) => c[0]!);
+      if (found.length)
+        return { item, state: "ok", file: found[0]!, linked: false, extra: found.slice(1) };
+    }
+    return { item, state: "missing" };
   });
 }

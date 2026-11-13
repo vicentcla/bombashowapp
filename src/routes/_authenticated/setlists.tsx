@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { DurationInput } from "@/components/DurationInput";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus,
@@ -62,7 +63,7 @@ import {
 import {
   durationInputToSeconds,
   formatDuration,
-  formatDurationInput,
+  durationSecondsToInput,
   formatLongDuration,
   formatMinutesToHours,
   formatTimeComparison,
@@ -1028,15 +1029,11 @@ function SetlistsPage() {
                 Duración objetivo total (minutos)
               </label>
               <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  min={1}
-                  max={600}
-                  value={targetMinutes}
-                  onChange={(e) => setTargetMinutes(Number(e.target.value))}
+                <DurationInput
                   className="comic-sm w-32 rounded-md bg-background px-3 py-2 text-base font-bold outline-none"
+                  mode="hmm"
+                  value={targetMinutes}
+                  onValueChange={(v) => setTargetMinutes(v)}
                 />
                 <span className="text-xs font-bold text-muted-foreground">
                   ({formatMinutesToHours(targetMinutes)})
@@ -1564,13 +1561,9 @@ function AddSongsToPassModal({
 
               <label className="block text-xs font-bold uppercase">
                 Duración (mm:ss)
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="0:00"
-                  value={formatDurationInput(duration)}
-                  onChange={(e) => setDuration(e.target.value)}
+                <DurationInput
+                  value={durationInputToSeconds(duration)}
+                  onValueChange={(v) => setDuration(durationSecondsToInput(v))}
                   className="comic-sm mt-0.5 w-full rounded-md border border-border bg-background px-3 py-1.5 text-base outline-none"
                 />
               </label>
@@ -1766,13 +1759,11 @@ function AddBreakModal({
                   </button>
                 ))}
               </div>
-              <input
-                type="number"
-                min={1}
-                max={180}
-                value={minutes}
-                onChange={(e) => setMinutes(Number(e.target.value))}
+              <DurationInput
                 className="comic-sm w-full rounded-md bg-background px-3 py-2 text-base font-bold outline-none"
+                mode="hmm"
+                value={minutes}
+                onValueChange={(v) => setMinutes(v)}
               />
             </div>
 
@@ -1880,14 +1871,11 @@ function ConfigSectionRow({
             className="comic-sm min-w-0 flex-1 rounded bg-card px-2.5 py-1 text-xs font-bold outline-none border border-border focus:border-primary"
           />
           <div className="flex items-center gap-1 shrink-0">
-            <input
-              type="number"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              min={0}
-              value={pass.target_minutes}
-              onChange={(e) => onUpdatePass({ ...pass, target_minutes: Number(e.target.value) })}
+            <DurationInput
               className="comic-sm w-14 rounded bg-card px-2 py-1 text-xs font-bold text-center outline-none border border-border focus:border-primary"
+              mode="hmm"
+              value={pass.target_minutes}
+              onValueChange={(v) => onUpdatePass({ ...pass, target_minutes: v })}
             />
             <span className="text-[10px] font-bold text-muted-foreground">min</span>
           </div>
@@ -1913,15 +1901,11 @@ function ConfigSectionRow({
             className="comic-sm min-w-0 flex-1 rounded bg-card px-2.5 py-1 text-xs font-bold outline-none border border-border focus:border-amber-500"
           />
           <div className="flex items-center gap-1 shrink-0">
-            <input
-              type="number"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              min={1}
-              max={180}
-              value={breakItem.minutes}
-              onChange={(e) => onUpdateBreak({ ...breakItem, minutes: Number(e.target.value) })}
+            <DurationInput
               className="comic-sm w-14 rounded bg-card px-2 py-1 text-xs font-bold text-center outline-none border border-border focus:border-amber-500"
+              mode="hmm"
+              value={breakItem.minutes}
+              onValueChange={(v) => onUpdateBreak({ ...breakItem, minutes: v })}
             />
             <span className="text-[10px] font-bold text-muted-foreground">min</span>
           </div>
@@ -3299,15 +3283,11 @@ function SetlistDetail({
                 Duración objetivo total (minutos)
               </label>
               <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  min={1}
-                  max={600}
-                  value={editTargetMinutes}
-                  onChange={(e) => setEditTargetMinutes(Number(e.target.value))}
+                <DurationInput
                   className="comic-sm w-32 rounded-md bg-background px-3 py-2 text-base font-bold outline-none"
+                  mode="hmm"
+                  value={editTargetMinutes}
+                  onValueChange={(v) => setEditTargetMinutes(v)}
                 />
                 <span className="text-xs font-bold text-muted-foreground">
                   ({formatMinutesToHours(editTargetMinutes)})

@@ -112,7 +112,9 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
         links.data ?? [],
       )
     : [];
-  const seq = entries.flatMap((e) => (e.state === "ok" ? [{ e, f: e.file }] : []));
+  const seq = entries.flatMap((e) =>
+    e.state === "ok" ? [e.file, ...(e.extra ?? [])].map((f) => ({ e, f })) : [],
+  );
   const viewList = setlistId ? seq.map((s) => s.f) : list_;
   const current = viewList[index];
   useEffect(() => {
