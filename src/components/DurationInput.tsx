@@ -28,6 +28,15 @@ function display(digits: string): string {
   return `${parseInt(d.slice(0, -2), 10)}:${d.slice(-2)}`;
 }
 
+export function nextDurationDigits(digits: string, input: string): string {
+  const typed = input.replace(/\D/g, "");
+  if (!digits) return typed.replace(/^0+/, "").slice(0, 4);
+  const shown = digits.padStart(3, "0");
+  if (typed.length < shown.length) return digits.slice(0, -1);
+  const added = typed.startsWith(shown) ? typed.slice(shown.length) : typed.slice(-1);
+  return (digits + added).replace(/^0+/, "").slice(0, 4);
+}
+
 export function DurationInput({ value, onValueChange, mode = "mmss", onBlur, ...rest }: Props) {
   const ref = useRef<HTMLInputElement>(null);
   const [digits, setDigits] = useState(() => valueToDigits(value));
@@ -66,14 +75,7 @@ export function DurationInput({ value, onValueChange, mode = "mmss", onBlur, ...
         }
       }}
       onChange={(e) => {
-        const typed = e.target.value.replace(/\D/g, "");
-        const shown = digits.padStart(3, "0");
-        let next: string;
-        if (typed.length < shown.length) next = digits.slice(0, -1);
-        else {
-          const added = typed.startsWith(shown) ? typed.slice(shown.length) : typed.slice(-1);
-          next = (digits + added).replace(/^0+/, "").slice(0, 4);
-        }
+        const next = nextDurationDigits(digits, e.target.value);
         setDigits(next);
         onValueChange(digitsToValue(next));
         toEnd();
