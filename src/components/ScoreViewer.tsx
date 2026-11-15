@@ -54,6 +54,7 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   });
   const [query, setQuery] = useState("");
   const [full, setFull] = useState(false);
+  const [nativeFull, setNativeFull] = useState(false);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -72,7 +73,10 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
     };
     acquire();
     document.addEventListener("visibilitychange", acquire);
-    const onFs = () => setFull(!!document.fullscreenElement);
+    const onFs = () => {
+      setFull(!!document.fullscreenElement);
+      setNativeFull(!!document.fullscreenElement);
+    };
     document.addEventListener("fullscreenchange", onFs);
     return () => {
       document.removeEventListener("visibilitychange", acquire);
@@ -92,7 +96,8 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
       return;
     }
     const el = ref.current;
-    if (el?.requestFullscreen) void el.requestFullscreen().catch(() => setFull(true));
+    if (el?.requestFullscreen)
+      void el.requestFullscreen({ navigationUI: "hide" }).catch(() => setFull(true));
     else setFull(true);
   }
 
@@ -397,7 +402,9 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   return (
     <div
       ref={ref}
-      className="fixed inset-0 z-[60] flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      className={`fixed inset-0 z-[60] flex flex-col bg-background ${
+        full && nativeFull ? "" : "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+      }`}
     >
       {!full && (
         <div className="flex items-center gap-2 border-b border-border px-2 py-2">
