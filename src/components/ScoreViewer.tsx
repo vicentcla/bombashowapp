@@ -57,6 +57,16 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
   const [nativeFull, setNativeFull] = useState(false);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const [chrome, setChrome] = useState(true);
+  const [chromeTick, setChromeTick] = useState(0);
+  const tapStart = useRef<{ x: number; y: number; t: number } | null>(null);
+
+  useEffect(() => {
+    if (!full) return;
+    setChrome(true);
+    const t = setTimeout(() => setChrome(false), 2500);
+    return () => clearTimeout(t);
+  }, [full, index, chromeTick]);
 
   useEffect(() => {
     let lock: WakeLockLike | null = null;
@@ -405,6 +415,19 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
       className={`fixed inset-0 z-[60] flex flex-col bg-background ${
         full && nativeFull ? "" : "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
       }`}
+      onPointerDownCapture={(e) => {
+        tapStart.current = e.isPrimary ? { x: e.clientX, y: e.clientY, t: Date.now() } : null;
+      }}
+      onPointerUpCapture={(e) => {
+        const s = tapStart.current;
+        tapStart.current = null;
+        if (!full || !s) return;
+        if ((e.target as HTMLElement).closest("button")) return;
+        const moved = Math.hypot(e.clientX - s.x, e.clientY - s.y);
+        if (moved > 10 || Date.now() - s.t > 300) return;
+        if (chrome) setChrome(false);
+        else setChromeTick((n) => n + 1);
+      }}
     >
       {!full && (
         <div className="flex items-center gap-2 border-b border-border px-2 py-2">
@@ -459,11 +482,13 @@ export function ScoreViewer({ folder, onClose }: { folder: DriveFolder; onClose:
             <button
               onClick={toggleFull}
               aria-label="Salir de pantalla completa"
-              className="absolute right-2 top-2 rounded-full bg-card/70 p-2 backdrop-blur"
+              className={`absolute right-2 top-2 rounded-full bg-card/70 p-2 backdrop-blur transition-opacity duration-300 ${chrome ? "opacity-100" : "pointer-events-none opacity-0"}`}
             >
               <Minimize className="h-4 w-4" />
             </button>
-            <span className="pointer-events-none absolute left-2 top-2 max-w-[70%] truncate rounded-full bg-card/60 px-3 py-1 text-[11px] font-bold backdrop-blur">
+            <span
+              className={`pointer-events-none absolute left-2 top-2 max-w-[70%] truncate rounded-full bg-card/60 px-3 py-1 text-[11px] font-bold backdrop-blur transition-opacity duration-300 ${chrome ? "opacity-100" : "opacity-0"}`}
+            >
               {index + 1}/{viewList.length} · {current.name.replace(/\.pdf$/i, "")}
             </span>
           </>
